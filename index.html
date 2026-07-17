@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+    <meta name="theme-color" content="#74d5ff" />
+    <meta name="description" content="支持跨设备账号、金币隐私、共享排名、黑暗洞穴、随机二连跳悬崖和二十个主题关卡的原创手机横版闯关游戏。" />
+    <title>云朵小勇士｜20关渐进挑战</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./globals.css?v=36" />
+    <script src="./game.js?v=36" defer></script>
+  </head>
+  <body>
+    <main class="game-shell" id="gameShell">
+      <canvas id="gameCanvas" aria-label="云朵小勇士横版闯关游戏区域" tabindex="0"></canvas>
+
+      <header class="hud" aria-label="游戏状态">
+        <button class="pause-button is-hidden" id="pauseButton" type="button" aria-label="暂停游戏">
+          <span aria-hidden="true">Ⅱ</span>
+        </button>
+
+        <div class="hud-chip life-chip">
+          <span class="hud-label">生命</span>
+          <div class="life-row">
+            <strong id="hearts" aria-label="3 条生命">♥ ♥ ♥</strong>
+            <span class="wallet-mini" aria-label="金币"><i>●</i><b id="walletMini">0</b></span>
+          </div>
+        </div>
+
+        <div class="score-card">
+          <div class="score-row">
+            <span id="levelLabel">第 1 / 20 关</span>
+            <strong id="score">000/100</strong>
+          </div>
+          <div class="progress-track" aria-label="关卡进度">
+            <span id="progressBar"></span>
+          </div>
+          <div class="stamina-row">
+            <span>体力 <b id="staminaStars">★</b></span>
+            <em id="staminaValue">70 / 70</em>
+          </div>
+          <div class="stamina-track" aria-label="人物体力 100%">
+            <span id="staminaBar"></span>
+          </div>
+        </div>
+
+        <button class="sound-button" id="soundButton" type="button" aria-label="关闭声音">
+          <span aria-hidden="true" id="soundIcon">♪</span>
+        </button>
+      </header>
+
+      <div class="mission-hud is-hidden" id="missionHud" aria-live="polite">
+        <span id="missionLabel">本关任务</span>
+        <strong id="missionProgress">0 / 0</strong>
+      </div>
+
+      <div class="battle-live-hud is-hidden" id="battleLiveHud" aria-live="polite">
+        <span><small>好友对战</small><strong id="battleTimeLeft">01:00</strong></span>
+        <span class="battle-score-me"><small>我的积分</small><strong id="battleMyScore">0</strong></span>
+        <span><small id="battleOpponentName">等待对手</small><strong id="battleOpponentScore">0</strong></span>
+      </div>
+
+      <div class="game-controls is-hidden" id="gameControls" aria-label="游戏方向控制器">
+        <div class="game-dpad" aria-label="方向键">
+          <button class="dpad-up" type="button" data-game-control="up" aria-label="跳跃">▲</button>
+          <button class="dpad-left" type="button" data-game-control="left" aria-label="减速或后退">◀</button>
+          <span class="dpad-center" aria-hidden="true">AUTO</span>
+          <button class="dpad-right" type="button" data-game-control="right" aria-label="触发角色加速技能">▶</button>
+          <button class="dpad-down" type="button" data-game-control="down" aria-label="蹲下">▼</button>
+        </div>
+        <button class="battle-ultimate is-hidden" id="battleUltimateButton" type="button" aria-label="释放本局唯一一次大招">
+          <span aria-hidden="true">✦</span><strong>大招</strong><small>1 次</small>
+        </button>
+      </div>
+
+      <div class="gesture-hint" id="gestureHint" aria-hidden="true">
+        <span><b>自动前进</b> 并逐渐加速</span>
+        <i></i>
+        <span><b>↑ / 空格</b> 跳跃</span>
+      </div>
+
+      <section class="account-gate" id="accountGate" aria-modal="true" role="dialog" aria-labelledby="accountGateTitle">
+        <div class="account-gate-card">
+          <div class="account-cloud" aria-hidden="true">☁</div>
+          <div class="eyebrow">跨设备云端账号</div>
+          <h2 id="accountGateTitle">注册或登录后继续</h2>
+          <p>游戏记录会保存在 Cloudflare，更换手机或电脑后也能恢复。</p>
+          <div class="account-tabs" role="tablist">
+            <button class="is-active" id="registerTab" type="button" role="tab" aria-selected="true" aria-controls="registerForm">注册账号</button>
+            <button id="loginTab" type="button" role="tab" aria-selected="false" aria-controls="loginForm" tabindex="-1">已有账号登录</button>
+          </div>
+
+          <form id="registerForm" class="account-form" role="tabpanel" aria-labelledby="registerTab">
+            <label>玩家名称<input id="registerNameInput" type="text" maxlength="12" autocomplete="username" placeholder="1–12 个字符" required /></label>
+            <label>设置密码<input id="registerPasswordInput" type="password" minlength="4" maxlength="64" autocomplete="new-password" placeholder="至少 4 个字符" required /></label>
+            <label>确认密码<input id="registerConfirmInput" type="password" minlength="4" maxlength="64" autocomplete="new-password" placeholder="再次输入密码" required /></label>
+            <label class="coin-privacy-option"><input id="registerShowCoins" type="checkbox" /><span><b>允许别人看到我的金币</b><small>不勾选时排行榜只显示成绩</small></span></label>
+            <button class="account-submit" id="registerAccountButton" type="submit">注册并保存当前记录</button>
+          </form>
+
+          <form id="loginForm" class="account-form is-hidden" role="tabpanel" aria-labelledby="loginTab" hidden>
+            <label>玩家名称<input id="loginNameInput" type="text" maxlength="12" autocomplete="username" placeholder="输入注册时的名称" required /></label>
+            <label>账号密码<input id="loginPasswordInput" type="password" maxlength="64" autocomplete="current-password" placeholder="输入密码" required /></label>
+            <button class="account-submit" id="loginAccountButton" type="submit">登录并恢复云端记录</button>
+          </form>
+          <div class="account-gate-message" id="accountGateMessage" role="status">首次使用请选择“注册账号”</div>
+        </div>
+      </section>
+
+      <section class="name-gate" id="nameGate" aria-modal="true" role="dialog" aria-labelledby="nameGateTitle">
+        <div class="name-gate-card">
+          <div class="name-gate-icon" aria-hidden="true">☁</div>
+          <div class="eyebrow">首次进入</div>
+          <h2 id="nameGateTitle">先告诉我你的名字</h2>
+          <p>名字会显示在全站排行榜，输入后才能进入游戏。</p>
+          <input id="entryNameInput" type="text" maxlength="12" autocomplete="nickname" placeholder="请输入玩家名字" aria-label="玩家名字" />
+          <small id="entryNameError">请输入 1–12 个字符</small>
+          <button id="entryNameButton" type="button">进入游戏 <span aria-hidden="true">→</span></button>
+        </div>
+      </section>
+
+      <section class="game-overlay" id="gameOverlay" aria-modal="true" role="dialog" aria-labelledby="overlayTitle">
+        <div class="game-card">
+          <section class="home-panel" id="homePanel">
+            <header class="home-game-header">
+              <div class="home-brand">
+                <span class="brand-cloud" aria-hidden="true">☁</span>
+                <div>
+                  <div class="eyebrow" id="overlayEyebrow">20 关云端冒险</div>
+                  <h1 id="overlayTitle">云朵小勇士</h1>
+                </div>
+              </div>
+              <button class="profile-button" id="profileButton" type="button" aria-label="打开个人中心">
+                <span class="profile-button-avatar" id="profileButtonAvatar" aria-hidden="true">☁</span>
+                <span><small id="profileButtonStatus">个人中心</small><b id="profileButtonName">玩家</b></span>
+              </button>
+            </header>
+
+            <p class="overlay-copy home-intro" id="overlayCopy">选择一个功能，马上开始。</p>
+
+            <div class="home-stats" aria-label="玩家概况">
+              <div><span class="stat-icon coin-stat" aria-hidden="true">●</span><small>金币</small><strong id="homeWallet">0</strong></div>
+              <div><span class="stat-icon" aria-hidden="true">🏁</span><small>已解锁</small><strong><b id="homeUnlockedLevel">1</b>/20</strong></div>
+              <div><span class="stat-icon heart-stat" aria-hidden="true">♥</span><small>生命</small><strong id="homeHeartCount">3</strong></div>
+            </div>
+
+            <nav class="home-tabs" aria-label="主界面功能" role="tablist">
+              <button class="is-active" id="homeTabPlay" type="button" data-home-tab="play" role="tab" aria-selected="true" aria-controls="homePanelPlay"><span aria-hidden="true">▶</span>挑战</button>
+              <button id="homeTabShop" type="button" data-home-tab="shop" role="tab" aria-selected="false" aria-controls="homePanelShop" tabindex="-1"><span aria-hidden="true">★</span>角色</button>
+              <button id="homeTabRank" type="button" data-home-tab="rank" role="tab" aria-selected="false" aria-controls="homePanelRank" tabindex="-1"><span aria-hidden="true">♛</span>排行</button>
+              <button id="homeTabChat" type="button" data-home-tab="chat" role="tab" aria-selected="false" aria-controls="homePanelChat" aria-label="聊天" tabindex="-1"><span class="home-tab-chat-icon" aria-hidden="true">💬<b class="chat-unread-badge is-hidden" id="chatUnreadBadge">0</b></span>聊天</button>
+            </nav>
+
+            <div class="home-tab-panel" id="homePanelPlay" data-home-panel="play" role="tabpanel" aria-labelledby="homeTabPlay">
+              <div class="play-mission-card">
+                <div class="mission-art" aria-hidden="true"><span>🏃</span><i>☁</i></div>
+                <div><small>当前挑战</small><strong>冲过 100 分终点</strong><p>隐藏洞穴、突然落物与二连跳悬崖随机出现</p></div>
+              </div>
+
+              <button class="start-button play-start-button" id="primaryButton" type="button">
+                <span aria-hidden="true">🏁</span>选择关卡
+                <span aria-hidden="true">→</span>
+              </button>
+
+              <button class="battle-entry-button" id="battleEntryButton" type="button">
+                <span class="battle-entry-icon" aria-hidden="true">⚔</span>
+                <span><small>实时好友玩法</small><strong>好友对战</strong><em>邀请朋友 · 60 秒积分赛 · 每局一次大招</em></span>
+                <b aria-hidden="true">→</b>
+              </button>
+
+              <div class="result-line is-hidden" id="resultLine">
+                <span>挑战进度</span>
+                <strong id="finalScore">0</strong>
+                <span class="best-score" id="bestScore">最高 0</span>
+              </div>
+
+              <div class="control-preview" id="controlPreview">
+                <div>
+                  <span class="tap-symbol" aria-hidden="true">●</span>
+                  <strong>自动前进</strong>
+                  <small>速度会逐渐加快，按 ← 可减速或后退</small>
+                </div>
+                <div>
+                  <span class="swipe-symbol" aria-hidden="true">↓</span>
+                  <strong>下滑按住</strong>
+                  <small>松手后人物立即站起</small>
+                </div>
+              </div>
+
+              <details class="home-tools">
+                <summary><span>🎁 账号升级与兑换码</span><small>展开</small></summary>
+                <div class="account-upgrade-card">
+                  <div>
+                    <strong>♥ 账号生命升级</strong>
+                    <small id="accountUpgradeStatus">先用 1000 金币升到 5 滴血，再用 9999 金币升到 7 滴血</small>
+                  </div>
+                  <button id="accountUpgradeButton" type="button">1000 金币升级</button>
+                </div>
+                <div class="redeem-card redeem-card-inline">
+                  <strong>礼物兑换码</strong>
+                  <div class="redeem-row">
+                    <input id="redeemCodeInput" type="text" maxlength="24" autocomplete="off" placeholder="输入兑换码" aria-label="礼物兑换码" />
+                    <button id="redeemCodeButton" type="button">兑换</button>
+                  </div>
+                  <p id="redeemMessage">正确兑换码可获得礼物</p>
+                </div>
+              </details>
+              <p class="keyboard-tip play-keyboard-tip" id="keyboardTip">自动前进并逐渐加速 · ← 减速/后退 · ↑/空格跳跃 · 按住 ↓ 蹲下</p>
+            </div>
+
+            <div class="home-tab-panel is-hidden" id="homePanelShop" data-home-panel="shop" role="tabpanel" aria-labelledby="homeTabShop" hidden>
+              <div class="character-shop" id="characterShop">
+                <div class="shop-heading">
+                  <div><small>选择最适合你的能力</small><strong>角色商店</strong></div>
+                  <span>● <b id="walletBalance">0</b> · 限时 399 起</span>
+                </div>
+                <div class="limited-offer-strip" id="beibeiOffer">
+                  <span><b>限时人物 · 贝贝</b><small>满星体力 · 三连跳 · 落地快速回血</small></span>
+                  <strong id="beibeiCountdown">优惠倒计时</strong>
+                </div>
+                <div class="character-grid" id="characterGrid" aria-label="角色商店"></div>
+                <p class="shop-message" id="shopMessage">价格越高，跳跃越灵活，花式动作越丰富</p>
+              </div>
+            </div>
+
+            <div class="home-tab-panel is-hidden" id="homePanelRank" data-home-panel="rank" role="tabpanel" aria-labelledby="homeTabRank" hidden>
+              <div class="leaderboard-card">
+                <div class="leaderboard-heading">
+                  <div><small>点击玩家头像查看资料</small><strong>全站所有账号排名</strong></div>
+                  <button id="refreshLeaderboard" type="button">↻ 刷新</button>
+                </div>
+                <div class="leaderboard-modes" role="group" aria-label="排名方式">
+                  <button class="is-active" type="button" data-ranking-mode="overall">综合排名</button>
+                  <button type="button" data-ranking-mode="solo">闯关排名</button>
+                  <button type="button" data-ranking-mode="battle">对战排名</button>
+                </div>
+                <div class="season-strip">
+                  <span id="leaderboardSeason">正在读取赛季时间…</span>
+                  <b id="leaderboardReward">冠军奖励：哆啦A梦</b>
+                </div>
+                <ol class="leaderboard-list" id="leaderboardList">
+                  <li class="is-empty"><span>还没有成绩</span><b>—</b></li>
+                </ol>
+                <p class="leaderboard-winner" id="leaderboardWinner">两周后第一名自动获得冠军角色</p>
+                <p id="leaderboardStatus">完成关卡后自动更新成绩</p>
+              </div>
+            </div>
+
+            <div class="home-tab-panel is-hidden" id="homePanelChat" data-home-panel="chat" role="tabpanel" aria-labelledby="homeTabChat" hidden>
+              <section class="chat-card" id="chatCard" aria-labelledby="chatTitle">
+                <div class="chat-heading">
+                  <div><small>全站公共聊天室</small><strong id="chatTitle">实时聊天</strong></div>
+                  <div class="chat-heading-actions">
+                    <button id="chatRefreshButton" type="button" aria-label="刷新聊天">↻ 刷新</button>
+                    <button id="chatFullscreenButton" type="button" aria-label="全屏显示聊天">⛶ 全屏</button>
+                  </div>
+                </div>
+                <p class="chat-status" id="chatStatus" role="status">打开聊天后自动更新</p>
+                <div class="chat-list" id="chatList" aria-live="polite">
+                  <div class="chat-empty">还没有消息，来打个招呼吧！</div>
+                </div>
+                <div class="chat-image-preview is-hidden" id="chatImagePreview">
+                  <img id="chatImagePreviewImage" alt="待发送图片预览" />
+                  <button id="chatImageRemove" type="button" aria-label="移除图片">×</button>
+                </div>
+                <form class="chat-composer" id="chatForm">
+                  <label class="chat-image-button" for="chatImageInput" aria-label="选择图片">＋图片</label>
+                  <input class="sr-only" id="chatImageInput" type="file" accept="image/jpeg,image/png,image/webp" aria-label="选择聊天图片" />
+                  <input id="chatTextInput" type="text" maxlength="240" autocomplete="off" placeholder="输入消息…" aria-label="聊天消息" />
+                  <button id="chatSendButton" type="submit">发送</button>
+                </form>
+                <small class="chat-note">点击头像看资料 · 长按头像 @玩家 · 自己的消息 5 分钟内可撤回</small>
+              </section>
+            </div>
+          </section>
+
+          <section class="level-panel is-hidden" id="levelPanel">
+            <div class="level-nav">
+              <button class="back-home-button" id="homeButton" type="button">← 主页面</button>
+              <span class="level-wallet"><i aria-hidden="true">●</i><b id="levelWallet">0</b></span>
+            </div>
+            <div class="eyebrow">独立关卡</div>
+            <h2>选择要挑战的关卡</h2>
+            <p class="overlay-copy">每关跑满 100 分才算成功；通过后自动解锁下一关。</p>
+            <div class="level-result is-hidden" id="levelResultBanner"></div>
+            <div class="level-grid" id="levelGrid" aria-label="20 个游戏关卡"></div>
+            <p class="level-footnote">第 1–5 关轻松入门；第 11 关开始明显变难；第 15–20 关第 5 次挑战才可正式通过。</p>
+          </section>
+
+          <section class="pause-panel is-hidden" id="pausePanel">
+            <div class="pause-symbol" aria-hidden="true">Ⅱ</div>
+            <div class="eyebrow">游戏已暂停</div>
+            <h2>要退出这一局吗？</h2>
+            <p class="overlay-copy">继续游戏会保留当前进度；退出后，本局分数和本局金币都不会保存。</p>
+            <button class="start-button" id="resumeButton" type="button">继续游戏 <span aria-hidden="true">▶</span></button>
+            <button class="exit-run-button" id="exitRunButton" type="button">退出本局，不保存</button>
+          </section>
+        </div>
+      </section>
+
+      <section class="profile-dialog is-hidden" id="profileDialog" aria-modal="true" role="dialog" aria-labelledby="profileDialogTitle">
+        <div class="profile-card">
+          <button class="profile-close" id="profileCloseButton" type="button" aria-label="关闭个人资料">×</button>
+          <div class="profile-hero">
+            <span class="profile-large-avatar" id="profileDialogAvatar" aria-hidden="true">☁</span>
+            <div>
+              <small id="profileDialogKicker">我的个人中心</small>
+              <h2 id="profileDialogTitle">玩家</h2>
+              <p id="profileDialogSubtitle">云端记录已同步</p>
+            </div>
+          </div>
+
+          <div id="ownProfileEditor">
+            <label class="profile-name-field" for="playerNameInput">
+              <span>玩家名称</span>
+              <input id="playerNameInput" type="text" maxlength="12" autocomplete="nickname" placeholder="请输入名字" />
+              <small id="nameError">修改后将使用新名称登录</small>
+            </label>
+
+            <div class="profile-choice-block">
+              <div class="section-heading"><strong>选择头像</strong><small>会显示在全站排行榜</small></div>
+              <div class="avatar-options" id="avatarOptions" aria-label="选择账号头像"></div>
+            </div>
+
+            <div class="skin-picker">
+              <div class="section-heading"><strong>选择肤色</strong><small>人物外观会立即更新</small></div>
+              <div class="skin-options" id="skinOptions" aria-label="选择人物肤色">
+                <button type="button" data-skin="light" style="--skin:#f2c49a" aria-label="浅肤色"></button>
+                <button type="button" data-skin="warm" style="--skin:#d99869" aria-label="暖肤色"></button>
+                <button type="button" data-skin="tan" style="--skin:#b87852" aria-label="小麦肤色"></button>
+                <button type="button" data-skin="deep" style="--skin:#75452f" aria-label="深肤色"></button>
+              </div>
+            </div>
+
+            <div class="cloud-account-card">
+              <div><strong id="loggedAccountName">云端账号未连接</strong><small id="accountSyncStatus">登录后自动同步游戏记录</small></div>
+              <label class="privacy-switch"><input id="showCoinsToggle" type="checkbox" /><span></span><b>公开金币</b></label>
+            </div>
+
+            <button class="profile-save-button" id="profileSaveButton" type="button">保存个人资料</button>
+            <button class="profile-logout-button" id="logoutAccountButton" type="button">退出登录</button>
+          </div>
+
+          <button class="profile-invite-button is-hidden" id="profileInviteButton" type="button">⚔ 邀请这位玩家对战</button>
+
+          <div class="profile-public-stats" id="profilePublicStats"></div>
+          <section class="coin-history-section is-hidden" id="coinHistorySection" aria-labelledby="coinHistoryTitle">
+            <div class="coin-history-heading">
+              <div>
+                <strong id="coinHistoryTitle">金币明细</strong>
+                <small id="coinHistoryCount">仅自己可见</small>
+              </div>
+              <b id="coinHistoryBalance">●0</b>
+            </div>
+            <div class="coin-history-list" id="coinHistoryList" role="list"></div>
+          </section>
+          <div class="profile-character-section">
+            <div class="section-heading"><strong>正在使用</strong><small id="profileCharacterTrait"></small></div>
+            <div class="profile-current-character" id="profileCurrentCharacter"></div>
+          </div>
+          <div class="profile-character-section">
+            <div class="section-heading"><strong>已拥有角色</strong><small id="profileOwnedCount">0 个</small></div>
+            <div class="profile-owned-list" id="profileOwnedCharacters"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="battle-dialog is-hidden" id="battleDialog" aria-modal="true" role="dialog" aria-labelledby="battleDialogTitle">
+        <div class="battle-dialog-card">
+          <button class="battle-dialog-close" id="battleCloseButton" type="button" aria-label="关闭好友对战">×</button>
+          <header class="battle-dialog-header">
+            <span aria-hidden="true">⚔</span>
+            <div><small>独立实时入口</small><h2 id="battleDialogTitle">好友对战</h2><p>60 秒收集积分，不比谁先到终点。</p></div>
+          </header>
+
+          <div class="battle-connection" id="battleConnectionStatus" role="status"><i></i><span>正在连接实时房间…</span></div>
+
+          <div class="battle-invite-alert is-hidden" id="battleInviteAlert">
+            <span class="battle-invite-avatar" id="battleInviteAvatar" aria-hidden="true">☁</span>
+            <div><small>收到对战邀请</small><strong id="battleInviteName">朋友</strong><em id="battleInviteCode">房间 ------</em></div>
+            <button id="battleAcceptInviteButton" type="button">接受</button>
+            <button id="battleDeclineInviteButton" type="button">忽略</button>
+          </div>
+
+          <div class="battle-start-actions" id="battleStartActions">
+            <button class="battle-create-button" id="battleCreateButton" type="button"><span aria-hidden="true">＋</span><strong>创建对战房间</strong><small>创建后邀请排行榜里的玩家</small></button>
+            <form class="battle-join-form" id="battleJoinForm">
+              <label for="battleRoomInput">输入朋友的房间码</label>
+              <span><input id="battleRoomInput" type="text" maxlength="6" autocomplete="off" placeholder="6 位房间码" aria-label="好友对战房间码" /><button type="submit">加入</button></span>
+            </form>
+          </div>
+
+          <div class="battle-room is-hidden" id="battleRoomPanel">
+            <div class="battle-room-code"><span><small>房间码</small><strong id="battleRoomCode">------</strong></span><button id="battleCopyLinkButton" type="button">复制邀请链接</button></div>
+            <div class="battle-player-slots" id="battlePlayerSlots"></div>
+            <section class="battle-difficulty" aria-labelledby="battleDifficultyTitle">
+              <div><strong id="battleDifficultyTitle">选择难度</strong><small id="battleDifficultyHint">房主可在准备前选择</small></div>
+              <div class="battle-difficulty-options" id="battleDifficultyOptions" role="group" aria-label="好友对战难度">
+                <button type="button" data-battle-difficulty="easy"><b>轻松</b><small>熟悉路线</small></button>
+                <button class="is-active" type="button" data-battle-difficulty="normal"><b>标准</b><small>推荐玩法</small></button>
+                <button type="button" data-battle-difficulty="hard"><b>困难</b><small>意外更多</small></button>
+                <button type="button" data-battle-difficulty="extreme"><b>疯狂</b><small>高手挑战</small></button>
+              </div>
+            </section>
+            <p class="battle-room-message" id="battleRoomMessage">等待朋友加入…</p>
+            <div class="battle-room-actions">
+              <button id="battleReadyButton" type="button">我准备好了</button>
+              <button id="battleLeaveButton" type="button">离开房间</button>
+            </div>
+            <div class="battle-friends">
+              <div><strong>邀请玩家</strong><small>也可以去排行榜点击头像邀请</small></div>
+              <div class="battle-friend-list" id="battleFriendList"><p>正在读取玩家列表…</p></div>
+            </div>
+          </div>
+
+          <div class="battle-rules">
+            <span>● 普通金币 +1 分</span><span>◎ 大金币 +5 分</span><span>每拾取 4 枚金币兑换 ●1</span><span>♥ 剩余生命用于平分判定</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="battle-result-dialog is-hidden" id="battleResultDialog" aria-modal="true" role="dialog" aria-labelledby="battleResultTitle">
+        <div class="battle-result-card">
+          <span class="battle-result-icon" id="battleResultIcon" aria-hidden="true">🏆</span>
+          <small>好友对战结束</small>
+          <h2 id="battleResultTitle">对战结果</h2>
+          <div class="battle-result-scores" id="battleResultScores"></div>
+          <p id="battleResultMessage">积分更多的玩家获胜</p>
+          <button id="battleResultReturnButton" type="button">返回对战房间</button>
+          <button id="battleResultHomeButton" type="button">回到主页面</button>
+        </div>
+      </section>
+
+      <section class="notice-dialog is-hidden" id="noticeDialog" aria-modal="true" role="dialog" aria-labelledby="noticeTitle">
+        <div class="notice-card">
+          <div class="notice-sparkles" aria-hidden="true"><i>✦</i><i>★</i><i>✦</i></div>
+          <span class="notice-icon" id="noticeIcon" aria-hidden="true">🎁</span>
+          <small class="notice-kicker" id="noticeKicker">游戏消息</small>
+          <h2 id="noticeTitle">收到新消息</h2>
+          <p id="noticeMessage">快来看看吧！</p>
+          <div class="notice-detail" id="noticeDetail"></div>
+          <button class="notice-action" id="noticeActionButton" type="button">立即查看</button>
+          <button class="notice-close" id="noticeCloseButton" type="button">稍后再看</button>
+        </div>
+      </section>
+
+      <div class="sr-only" id="gameAnnouncement" aria-live="polite"></div>
+    </main>
+  </body>
+</html>
