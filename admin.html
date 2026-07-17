@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#17364a" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>云朵小勇士｜管理后台</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./admin.css?v=36" />
+    <script src="./admin.js?v=36" defer></script>
+  </head>
+  <body>
+    <main class="admin-shell">
+      <section class="login-screen" id="loginScreen">
+        <form class="login-card" id="loginForm">
+          <div class="brand-icon" aria-hidden="true">☁</div>
+          <p class="eyebrow">Cloud Jumper Control</p>
+          <h1>游戏管理后台</h1>
+          <p>密码只发送到 Cloudflare 后台验证，不会显示在排行榜页面。</p>
+          <label for="passwordInput">管理员密码</label>
+          <input id="passwordInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="请输入密码" required />
+          <button type="submit" id="loginButton">进入后台</button>
+          <small id="loginError" role="alert"></small>
+          <a href="./">← 返回游戏</a>
+        </form>
+      </section>
+
+      <section class="dashboard is-hidden" id="dashboard">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Cloud Jumper Control</p>
+            <h1>玩家管理后台</h1>
+            <p id="seasonText">正在读取赛季…</p>
+          </div>
+          <div class="top-actions">
+            <a href="./">打开游戏</a>
+            <button type="button" id="logoutButton">退出后台</button>
+          </div>
+        </header>
+
+        <section class="stats-grid" aria-label="玩家统计">
+          <article><span>登记玩家</span><strong id="statTotal">0</strong></article>
+          <article><span>已挑战</span><strong id="statChallenged">0</strong></article>
+          <article><span>有通关记录</span><strong id="statPassed">0</strong></article>
+          <article><span>待执行重置</span><strong id="statResets">0</strong></article>
+          <article><span>已发金币礼物</span><strong id="statGifts">0</strong></article>
+        </section>
+
+        <section class="manager-card">
+          <div class="manager-heading">
+            <div>
+              <h2>全部玩家</h2>
+              <p>“删除并重置”会让该玩家下次连接时清除金币、人物和关卡进度。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button type="button" id="refreshButton">刷新</button>
+              <button type="button" id="exportButton">导出 CSV</button>
+              <button class="danger-outline" type="button" id="clearButton">清空排行榜</button>
+            </div>
+          </div>
+
+          <label class="search-box" for="searchInput">
+            <span aria-hidden="true">⌕</span>
+            <input id="searchInput" type="search" autocomplete="off" placeholder="搜索玩家名字或编号" />
+            <b id="visibleCount">0 人</b>
+          </label>
+
+          <div class="status-line" id="adminStatus" role="status">准备就绪</div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>排名</th>
+                  <th>玩家</th>
+                  <th>成绩</th>
+                  <th>更新时间</th>
+                  <th>管理操作</th>
+                </tr>
+              </thead>
+              <tbody id="playerRows"></tbody>
+            </table>
+            <div class="empty-state is-hidden" id="emptyState">没有找到玩家</div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
