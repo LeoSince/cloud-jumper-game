@@ -1,4 +1,5 @@
 const SEASON_KEY = "cloud-jumper:season:v4-accounts-20260713";
+const ACCOUNT_RECORD_PREFIX = "cloud-jumper:account:";
 const SEASON_LENGTH_MS = 14 * 24 * 60 * 60 * 1000;
 const ACCOUNT_SESSION_MS = 180 * 24 * 60 * 60 * 1000;
 const CHARACTER_CATALOG_KEY = "cloud-jumper:characters:v1";
@@ -1177,11 +1178,12 @@ function normalizeGifts(gifts) {
 
 function newSeason(now, entries = []) {
   return {
-    version: 3,
+    version: 4,
     seasonNumber: 1,
     startAt: now,
     endAt: now + SEASON_LENGTH_MS,
     entries: rank(entries),
+    accountsBackfilledAt: 0,
     winners: [],
     resets: [],
     gifts: [],
@@ -1193,11 +1195,12 @@ function normalizeState(value, now) {
   const startAt = Number(value.startAt) || now;
   const endAt = Number(value.endAt) > startAt ? Number(value.endAt) : startAt + SEASON_LENGTH_MS;
   return {
-    version: 3,
+    version: 4,
     seasonNumber: Math.max(1, Math.round(Number(value.seasonNumber) || 1)),
     startAt,
     endAt,
     entries: rank(Array.isArray(value.entries) ? value.entries : []),
+    accountsBackfilledAt: Math.max(0, Number(value.accountsBackfilledAt) || 0),
     winners: Array.isArray(value.winners)
       ? value.winners.filter((winner) => winner && cleanName(winner.name) && cleanPlayerId(winner.playerId)).slice(-26)
       : [],
@@ -1231,7 +1234,14 @@ function rollSeason(state, now) {
     state.seasonNumber += 1;
     state.startAt = state.endAt;
     state.endAt = state.startAt + SEASON_LENGTH_MS;
-    state.entries = [];
+    // A new season resets competitive progress, but registered accounts must
+    // remain visible as "registered, not challenged yet".
+    state.entries = rank(state.entries.map((entry) => ({
+      ...entry,
+      level: 1,
+      score: 0,
+      time: 0,
+    })));
     changed = true;
     loops += 1;
   }
@@ -1288,7 +1298,8 @@ async function getLeaderboard(request, env) {
     const loaded = await loadState(env.LEADERBOARD, now);
     const rivalRestartAt = await loadRivalRestartAt(env.LEADERBOARD, now);
     const rolled = rollSeason(loaded.state, now);
-    if (loaded.dirty || rolled) await env.LEADERBOARD.put(SEASON_KEY, JSON.stringify(loaded.state));
+    const backfilled = await backfillRegisteredAccounts(env.LEADERBOARD, loaded.state, now);
+    if (loaded.dirty || rolled || backfilled) await env.LEADERBOARD.put(SEASON_KEY, JSON.stringify(loaded.state));
     const playerId = cleanPlayerId(new URL(request.url).searchParams.get("playerId"));
     return json(publicPayload(loaded.state, playerId, rivalRestartAt));
   } catch {
@@ -1329,7 +1340,11 @@ async function postLeaderboard(request, env) {
     const now = Date.now();
     const loaded = await loadState(env.LEADERBOARD, now);
     const rivalRestartAt = await loadRivalRestartAt(env.LEADERBOARD, now);
-    rollSeason(loaded.state, now);
+    const rolled = rollSeason(loaded.state, now);
+    const backfilled = await backfillRegisteredAccounts(env.LEADERBOARD, loaded.state, now);
+    if (loaded.dirty || rolled || backfilled) {
+      await env.LEADERBOARD.put(SEASON_KEY, JSON.stringify(loaded.state));
+    }
     if (loaded.state.resets.some((item) => item.playerId === playerId)) {
       await env.LEADERBOARD.put(SEASON_KEY, JSON.stringify(loaded.state));
       return json(publicPayload(loaded.state, playerId, rivalRestartAt));
@@ -1454,7 +1469,7 @@ async function accountNameIndexKey(name) {
 }
 
 function accountRecordKey(accountId) {
-  return `cloud-jumper:account:${accountId}`;
+  return `${ACCOUNT_RECORD_PREFIX}${accountId}`;
 }
 
 function accountSessionKey(tokenHash) {
@@ -1958,7 +1973,9 @@ function accountPayload(account, token = "") {
 }
 
 async function syncAccountRanking(binding, account) {
-  const loaded = await loadState(binding, Date.now());
+  const now = Date.now();
+  const loaded = await loadState(binding, now);
+  rollSeason(loaded.state, now);
   if (loaded.state.resets.some((item) => item.playerId === account.playerId)) return;
   const index = loaded.state.entries.findIndex((entry) => entry.playerId === account.playerId);
   const gameData = sanitizeGameData(account.gameData);
@@ -1980,7 +1997,7 @@ async function syncAccountRanking(binding, account) {
       battlePoints: gameData.battlePoints,
       battleBestScore: gameData.battleBestScore,
       battleCoinsEarned: gameData.battleCoinsEarned,
-      updatedAt: Date.now(),
+      updatedAt: now,
     };
   } else {
     loaded.state.entries.push({
@@ -2003,7 +2020,7 @@ async function syncAccountRanking(binding, account) {
       battlePoints: gameData.battlePoints,
       battleBestScore: gameData.battleBestScore,
       battleCoinsEarned: gameData.battleCoinsEarned,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
   }
   loaded.state.entries = rank(loaded.state.entries);
@@ -2693,6 +2710,62 @@ function updateRankingEntryFromAccount(entry, account, now = Date.now()) {
   return entry;
 }
 
+async function listRegisteredAccounts(binding) {
+  if (!binding || typeof binding.list !== "function") return null;
+  const accounts = [];
+  let cursor = "";
+  let pageCount = 0;
+  try {
+    do {
+      const options = { prefix: ACCOUNT_RECORD_PREFIX, limit: 1000 };
+      if (cursor) options.cursor = cursor;
+      const page = await binding.list(options);
+      const keys = Array.isArray(page?.keys) ? page.keys : [];
+      for (let offset = 0; offset < keys.length; offset += 40) {
+        const batch = keys.slice(offset, offset + 40);
+        const records = await Promise.all(batch.map((item) =>
+          binding.get(String(item?.name || ""), { type: "json" }).catch(() => null)));
+        for (const account of records) {
+          if (account && cleanName(account.name) && cleanPlayerId(account.playerId)) accounts.push(account);
+        }
+      }
+      cursor = page?.list_complete === false ? String(page.cursor || "") : "";
+      pageCount += 1;
+    } while (cursor && pageCount < 20);
+    return accounts;
+  } catch {
+    return null;
+  }
+}
+
+async function backfillRegisteredAccounts(binding, state, now = Date.now()) {
+  if (!state || Math.max(0, Number(state.accountsBackfilledAt) || 0) > 0) return false;
+  const accounts = await listRegisteredAccounts(binding);
+  if (!accounts) return false;
+  const entriesByPlayerId = new Map(state.entries.map((entry) => [entry.playerId, entry]));
+  for (const account of accounts) {
+    const playerId = cleanPlayerId(account.playerId);
+    if (!playerId) continue;
+    let entry = entriesByPlayerId.get(playerId);
+    if (!entry) {
+      entry = {
+        name: cleanName(account.name),
+        playerId,
+        level: 1,
+        score: 0,
+        time: 0,
+        updatedAt: Math.max(0, Number(account.updatedAt) || now),
+      };
+      state.entries.push(entry);
+      entriesByPlayerId.set(playerId, entry);
+    }
+    updateRankingEntryFromAccount(entry, account, now);
+  }
+  state.entries = rank(state.entries);
+  state.accountsBackfilledAt = now;
+  return true;
+}
+
 function patchRawWalletBalance(rawValue, amount) {
   const text = String(rawValue || "");
   const target = Math.max(0, Math.min(1000000000, Math.round(Number(amount) || 0)));
@@ -3079,8 +3152,9 @@ async function handleAdmin(request, env) {
   const now = Date.now();
   const loaded = await loadState(env.LEADERBOARD, now);
   const rolled = rollSeason(loaded.state, now);
+  const backfilled = await backfillRegisteredAccounts(env.LEADERBOARD, loaded.state, now);
   if (request.method === "GET") {
-    if (loaded.dirty || rolled) await env.LEADERBOARD.put(SEASON_KEY, JSON.stringify(loaded.state));
+    if (loaded.dirty || rolled || backfilled) await env.LEADERBOARD.put(SEASON_KEY, JSON.stringify(loaded.state));
     return json(adminPayload(loaded.state));
   }
 
@@ -3220,7 +3294,7 @@ export default {
         const lockStatus = siteLockPayload(await loadSiteLock(env.LEADERBOARD), Date.now()).lock;
         return json({
           ok: true,
-          version: "v49",
+          version: "v50",
           kvBound: Boolean(env.LEADERBOARD),
           battleBound: Boolean(env.BATTLE_ROOMS),
           siteLocked: lockStatus.active,
