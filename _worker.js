@@ -1,21 +1,59 @@
 const SEASON_KEY = "cloud-jumper:season:v4-accounts-20260713";
 const SEASON_LENGTH_MS = 14 * 24 * 60 * 60 * 1000;
 const ACCOUNT_SESSION_MS = 180 * 24 * 60 * 60 * 1000;
-const ACCOUNT_CHARACTERS = new Set(["cloud", "beibei", "messi", "guoguo", "mbappe", "haaland", "qiang", "sponge", "patrick", "qihang", "yunqing", "zhixuan", "doraemon"]);
+const CHARACTER_CATALOG_KEY = "cloud-jumper:characters:v1";
+const REDEEM_CODE_STORE_KEY = "cloud-jumper:redeem-codes:v1";
+const SITE_LOCK_KEY = "cloud-jumper:site-lock:v1";
+const BEIBEI_DELISTED_AT = Date.parse("2026-07-26T00:00:00+08:00");
+const YUANYUAN_RELEASE_AT = Date.parse("2026-07-27T10:00:00+08:00");
+const YUANYUAN_SALES_KEY = "cloud-jumper:store:yuanyuan-sales:v1";
+const YUANYUAN_PRICE = 999;
+const YUANYUAN_LIMIT = 3;
+const DORAEMON_CHAMPION_PRICE = 14999;
+const BUILTIN_CHARACTER_CATALOG = [
+  { id: "cloud", name: "云朵小勇士", cost: 0, badge: "云", color: "#58c88b", agility: 0.96, jumpPower: 650, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 0, freeSmash: 0, staminaCapacity: 62, staminaStars: 1, staminaRecovery: 0, speedBoost: 1, gravityScale: 1, doorCharges: 0, trait: "稳定基础二连跳 · 体力较少 · 第4–5关灵敏度降低" },
+  { id: "beibei", name: "贝贝", cost: 1899, regularCost: 1899, badge: "贝", color: "#f5a8cf", agility: 1.14, jumpPower: 735, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 9, freeSmash: 0, staminaCapacity: 132, staminaStars: 5, staminaRecovery: 38, speedBoost: 1, gravityScale: 1, doorCharges: 0, active: false, trait: "三次连跳 · 满星体力 · 不跳时快速恢复" },
+  { id: "messi", name: "梅西", cost: 499, badge: "10", color: "#8ed6ef", agility: 1.02, jumpPower: 682, airJumps: 1, flipTurns: 1, flipDuration: 0.66, magnetRadius: 0, freeSmash: 0, staminaCapacity: 72, staminaStars: 2, staminaRecovery: 0, speedBoost: 1, gravityScale: 1, doorCharges: 0, trait: "灵敏转身 · 二次跳 · 单圈后空翻" },
+  { id: "guoguo", name: "果果", cost: 699, badge: "果", color: "#86d7b0", agility: 1.1, jumpPower: 700, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 4, freeSmash: 0, staminaCapacity: 80, staminaStars: 2, staminaRecovery: 0, speedBoost: 1, gravityScale: 1, doorCharges: 0, trait: "性价比之选 · 眼镜专注 · 特技少但很灵敏" },
+  { id: "mbappe", name: "姆巴佩", cost: 999, badge: "⚡", color: "#5066b8", agility: 1.07, jumpPower: 712, airJumps: 1, flipTurns: 1, flipDuration: 0.58, magnetRadius: 7, freeSmash: 0, speedBoost: 1.3, staminaCapacity: 88, staminaStars: 3, staminaRecovery: 0, gravityScale: 1, doorCharges: 0, trait: "极速响应 · 二次跳 · 长按/右键冲刺 · 快速后空翻" },
+  { id: "yuanyuan", name: "元元", cost: YUANYUAN_PRICE, regularCost: YUANYUAN_PRICE, badge: "元", color: "#eea45d", agility: 1.08, jumpPower: 720, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 6, freeSmash: 5, staminaCapacity: 140, staminaStars: 5, staminaRecovery: 0, speedBoost: 1, gravityScale: 1.02, doorCharges: 0, availableFrom: YUANYUAN_RELEASE_AT, newCharacter: true, trait: "厚实体型 · 每局撞碎5块石头 · 满星耐力 · 稳定二连跳，清障特别省心" },
+  { id: "haaland", name: "哈兰德", cost: 1399, badge: "9", color: "#78d7eb", agility: 1.09, jumpPower: 730, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 8, freeSmash: 0, staminaCapacity: 96, staminaStars: 3, staminaRecovery: 0, speedBoost: 1, gravityScale: 1, doorCharges: 0, trait: "强力高跳 · 三次连跳 · 第三跳需要蓄力" },
+  { id: "qiang", name: "强哥", cost: 1699, badge: "强", color: "#e7904d", agility: 1.1, jumpPower: 742, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 12, freeSmash: 0, stoneImmune: true, speedBoost: 1.1, sunCaveDaily: true, staminaCapacity: 104, staminaStars: 4, staminaRecovery: 0, gravityScale: 1, doorCharges: 0, trait: "肌肉护体 · 三次连跳 · 头顶碎石免伤 · 每日洞穴太阳" },
+  { id: "sponge", name: "海绵宝宝", cost: 1999, badge: "▦", color: "#f4d84c", agility: 1.11, jumpPower: 740, airJumps: 2, flipTurns: 1, flipDuration: 0.54, magnetRadius: 14, freeSmash: 0, sunCaveDaily: true, staminaCapacity: 108, staminaStars: 4, staminaRecovery: 0, speedBoost: 1, gravityScale: 1, doorCharges: 0, trait: "三次连跳 · 金币吸附 · 后空翻 · 每日洞穴太阳" },
+  { id: "patrick", name: "派大星", cost: 2999, badge: "★", color: "#f49aa5", agility: 1.14, jumpPower: 752, airJumps: 2, flipTurns: 1, flipDuration: 0.68, magnetRadius: 18, freeSmash: 1, sunCaveDaily: true, staminaCapacity: 122, staminaStars: 4, staminaRecovery: 0, speedBoost: 1, gravityScale: 1, doorCharges: 0, trait: "三次连跳 · 吸币碎石 · 后空翻 · 每日洞穴太阳" },
+  { id: "qihang", name: "启航", cost: 3999, badge: "航", color: "#486a9c", agility: 0.97, jumpPower: 660, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 2, freeSmash: 0, staminaCapacity: 64, staminaStars: 1, staminaRecovery: 0, speedBoost: 1, gravityScale: 1, doorCharges: 0, newCharacter: true, trait: "稳健基础型 · 二次跳 · 普通体力" },
+  { id: "yunqing", name: "云青", cost: 5999, badge: "青", color: "#49a99a", agility: 0.99, jumpPower: 670, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 3, freeSmash: 0, staminaCapacity: 68, staminaStars: 1, staminaRecovery: 0, speedBoost: 1, gravityScale: 1, doorCharges: 0, newCharacter: true, trait: "均衡基础型 · 二次跳 · 普通体力" },
+  { id: "krabs", name: "蟹老板", cost: 7499, badge: "蟹", color: "#e75448", agility: 1.23, jumpPower: 770, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 12, tripleMagnetRadius: 110, freeSmash: 3, staminaCapacity: 144, staminaStars: 5, staminaRecovery: 14, speedBoost: 1, gravityScale: 1, doorCharges: 0, newCharacter: true, trait: "三局一次金蟹局：强力吸币且金币三倍 · 蟹钳碎石三次 · 落地慢回体力" },
+  { id: "zhixuan", name: "志炫", cost: 9999, badge: "炫", color: "#c64f3c", agility: 1.34, jumpPower: 800, airJumps: 2, instantTripleJump: true, flipTurns: 1, flipDuration: 0.5, magnetRadius: 30, freeSmash: 2, speedBoost: 1.24, sunCaveDaily: true, staminaCapacity: 170, staminaStars: 5, staminaRecovery: 0, gravityScale: 1, doorCharges: 0, flairMoves: ["explosiveStepover", "dragToChop"], newCharacter: true, trait: "最高灵敏 · 无延迟三连跳 · 碎石两次 · 每日洞穴太阳" },
+  { id: "doraemon", name: "哆啦A梦", cost: DORAEMON_CHAMPION_PRICE, regularCost: DORAEMON_CHAMPION_PRICE, rewardOnly: true, badge: "铃", color: "#42aee8", agility: 1.18, jumpPower: 765, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 34, freeSmash: 0, gravityScale: 0.78, doorCharges: 1, sunCaveDaily: true, staminaCapacity: 138, staminaStars: 5, staminaRecovery: 0, speedBoost: 1, newCharacter: true, trait: "两周冠军专属 · 竹蜻蜓 · 任意门 · 每日太阳灯" },
+];
+const ACCOUNT_CHARACTERS = new Set(BUILTIN_CHARACTER_CATALOG.map((character) => character.id));
 const ACCOUNT_SKINS = new Set(["light", "warm", "tan", "deep"]);
 const ACCOUNT_AVATARS = new Set(["cloud", "lightning", "star", "crown", "football", "muscle", "rocket", "moon"]);
 const CHAT_INDEX_KEY = "cloud-jumper:chat:index:v1";
 const CHAT_IMAGE_PREFIX = "cloud-jumper:chat:image:";
 const CHAT_RATE_PREFIX = "cloud-jumper:chat:rate:";
-const CHAT_MAX_MESSAGES = 60;
+const CHAT_MAX_MESSAGES = 120;
 const CHAT_RECALL_MS = 5 * 60 * 1000;
 const CHAT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const CHAT_RETENTION_SECONDS = 7 * 24 * 60 * 60;
+const PRESENCE_ONLINE_MS = 5 * 60 * 1000;
+const PRESENCE_RECENT_MS = 24 * 60 * 60 * 1000;
+const PRESENCE_WRITE_THROTTLE_MS = 75 * 1000;
 const YUNQING_UNLOCK_AT = Date.parse("2026-07-16T00:00:00+08:00");
 const YUNQING_RESERVATIONS_KEY = "cloud-jumper:store:yunqing-reservations:v1";
 const YUNQING_RESERVATION_PRICE = 500;
 const YUNQING_RESERVATION_LIMIT = 3;
 const COIN_LEDGER_LIMIT = 1000;
+const HEART_RESET_VERSION = 2;
+const DAILY_CHECKIN_REWARDS = [
+  { coins: 30 }, { coins: 40 }, { coins: 50 }, { coins: 60 }, { coins: 80 }, { coins: 100 },
+  { character: "messi", characterName: "梅西", fallbackCoins: 200 },
+  { coins: 50 }, { coins: 70 }, { coins: 100 }, { coins: 60 }, { coins: 80 }, { coins: 100 }, { coins: 150 }, { coins: 200 },
+  { character: "guoguo", characterName: "果果", fallbackCoins: 300 },
+  { coins: 70 }, { coins: 90 }, { coins: 110 }, { coins: 130 }, { coins: 180 }, { coins: 80 }, { coins: 100 }, { coins: 120 }, { coins: 150 }, { coins: 200 }, { coins: 250 }, { coins: 300 }, { coins: 350 },
+  { character: "mbappe", characterName: "姆巴佩", fallbackCoins: 500 },
+];
 
 const apiHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -33,6 +71,294 @@ function cleanName(value) {
   return String(value || "").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, 12);
 }
 
+function cleanCharacterId(value) {
+  const id = String(value || "").trim().toLowerCase().slice(0, 56);
+  return /^(?:[a-z][a-z0-9-]{1,31}|custom-[a-z0-9][a-z0-9-]{2,48})$/.test(id) ? id : "";
+}
+
+function isAccountCharacterId(value) {
+  const id = cleanCharacterId(value);
+  return Boolean(id && (ACCOUNT_CHARACTERS.has(id) || id.startsWith("custom-")));
+}
+
+function cleanCharacterText(value, maximum, fallback = "") {
+  const text = String(value ?? fallback).replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, maximum);
+  return text || String(fallback || "").slice(0, maximum);
+}
+
+function boundedNumber(value, fallback, minimum, maximum, precision = 2) {
+  const number = Number(value);
+  const safe = Number.isFinite(number) ? number : Number(fallback);
+  const clamped = Math.max(minimum, Math.min(maximum, Number.isFinite(safe) ? safe : minimum));
+  const factor = 10 ** precision;
+  return Math.round(clamped * factor) / factor;
+}
+
+function cleanCharacterTimestamp(value) {
+  if (value === null || value === undefined || value === "") return 0;
+  const parsed = typeof value === "number" ? value : Date.parse(String(value));
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 4102444800000) return 0;
+  return Math.round(parsed);
+}
+
+function sanitizeCharacterRecord(value, fallback = {}, options = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  const base = fallback && typeof fallback === "object" ? fallback : {};
+  const forcedId = cleanCharacterId(options.id || source.id || base.id);
+  const colorValue = String(source.color || base.color || "#58c88b").trim();
+  const color = /^#[0-9a-f]{6}$/i.test(colorValue) ? colorValue.toLowerCase() : "#58c88b";
+  const salePriceValue = source.salePrice === null || source.salePrice === undefined || source.salePrice === ""
+    ? (base.salePrice ?? null)
+    : boundedNumber(source.salePrice, 0, 0, 999999, 0);
+  const allowedFlairMoves = new Set(["explosiveStepover", "dragToChop"]);
+  const flairMoves = [...new Set((Array.isArray(source.flairMoves) ? source.flairMoves : (Array.isArray(base.flairMoves) ? base.flairMoves : []))
+    .map(String)
+    .filter((move) => allowedFlairMoves.has(move)))];
+  return {
+    id: forcedId,
+    name: cleanCharacterText(source.name, 16, base.name || "新人物"),
+    badge: cleanCharacterText(source.badge, 4, base.badge || "新"),
+    color,
+    cost: boundedNumber(source.cost, base.cost ?? 499, 0, 999999, 0),
+    regularCost: boundedNumber(source.regularCost, base.regularCost ?? source.cost ?? base.cost ?? 499, 0, 999999, 0),
+    salePrice: salePriceValue === null ? null : boundedNumber(salePriceValue, 0, 0, 999999, 0),
+    saleStartAt: cleanCharacterTimestamp(source.saleStartAt ?? base.saleStartAt),
+    saleEndAt: cleanCharacterTimestamp(source.saleEndAt ?? base.saleEndAt),
+    availableFrom: cleanCharacterTimestamp(source.availableFrom ?? base.availableFrom),
+    availableUntil: cleanCharacterTimestamp(source.availableUntil ?? base.availableUntil),
+    active: source.active === undefined ? base.active !== false : source.active !== false,
+    rewardOnly: source.rewardOnly === undefined ? base.rewardOnly === true : source.rewardOnly === true,
+    newCharacter: source.newCharacter === undefined ? base.newCharacter === true : source.newCharacter === true,
+    agility: boundedNumber(source.agility, base.agility ?? 1, 0.72, 1.6, 2),
+    jumpPower: boundedNumber(source.jumpPower, base.jumpPower ?? 680, 560, 900, 0),
+    airJumps: boundedNumber(source.airJumps, base.airJumps ?? 1, 0, 3, 0),
+    flipTurns: boundedNumber(source.flipTurns, base.flipTurns ?? 0, 0, 3, 0),
+    flipDuration: boundedNumber(source.flipDuration, base.flipDuration ?? 0, 0, 1.5, 2),
+    magnetRadius: boundedNumber(source.magnetRadius, base.magnetRadius ?? 0, 0, 180, 0),
+    tripleMagnetRadius: boundedNumber(source.tripleMagnetRadius, base.tripleMagnetRadius ?? 0, 0, 240, 0),
+    freeSmash: boundedNumber(source.freeSmash, base.freeSmash ?? 0, 0, 10, 0),
+    stoneImmune: source.stoneImmune === undefined ? base.stoneImmune === true : source.stoneImmune === true,
+    instantTripleJump: source.instantTripleJump === undefined ? base.instantTripleJump === true : source.instantTripleJump === true,
+    sunCaveDaily: source.sunCaveDaily === undefined ? base.sunCaveDaily === true : source.sunCaveDaily === true,
+    speedBoost: boundedNumber(source.speedBoost, base.speedBoost ?? 1, 1, 1.6, 2),
+    gravityScale: boundedNumber(source.gravityScale, base.gravityScale ?? 1, 0.65, 1.2, 2),
+    doorCharges: boundedNumber(source.doorCharges, base.doorCharges ?? 0, 0, 3, 0),
+    staminaCapacity: boundedNumber(source.staminaCapacity, base.staminaCapacity ?? 72, 50, 220, 0),
+    staminaStars: boundedNumber(source.staminaStars, base.staminaStars ?? 1, 1, 5, 0),
+    staminaRecovery: boundedNumber(source.staminaRecovery, base.staminaRecovery ?? 0, 0, 80, 0),
+    flairMoves,
+    trait: cleanCharacterText(source.trait, 140, base.trait || "均衡型人物"),
+    builtIn: options.builtIn === true,
+    updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || Number(base.updatedAt) || 0)),
+  };
+}
+
+function emptyCharacterStore() {
+  return { version: 1, updatedAt: 0, overrides: {}, custom: [] };
+}
+
+function normalizeCharacterStore(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const overrides = {};
+  const rawOverrides = source.overrides && typeof source.overrides === "object" ? source.overrides : {};
+  for (const base of BUILTIN_CHARACTER_CATALOG) {
+    if (!rawOverrides[base.id]) continue;
+    overrides[base.id] = sanitizeCharacterRecord(rawOverrides[base.id], base, { id: base.id, builtIn: true });
+  }
+  const custom = [];
+  const seen = new Set();
+  for (const raw of (Array.isArray(source.custom) ? source.custom : [])) {
+    const id = cleanCharacterId(raw?.id);
+    if (!id.startsWith("custom-") || seen.has(id)) continue;
+    seen.add(id);
+    custom.push(sanitizeCharacterRecord(raw, {}, { id, builtIn: false }));
+    if (custom.length >= 100) break;
+  }
+  return {
+    version: 1,
+    updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || 0)),
+    overrides,
+    custom,
+  };
+}
+
+function resolvedCharacterCatalog(storeValue) {
+  const store = normalizeCharacterStore(storeValue);
+  const builtIns = BUILTIN_CHARACTER_CATALOG.map((base) => {
+    const override = store.overrides[base.id];
+    const resolved = sanitizeCharacterRecord(override || base, base, { id: base.id, builtIn: true });
+    // v47 automatically ends the old Beibei event. A later explicit admin edit
+    // still wins, so the character can be listed again from the control panel.
+    if (base.id === "beibei" && (!override || Number(override.updatedAt) < BEIBEI_DELISTED_AT)) {
+      resolved.active = false;
+    }
+    return resolved;
+  });
+  return [...builtIns, ...store.custom.map((character) =>
+    sanitizeCharacterRecord(character, {}, { id: character.id, builtIn: false }))];
+}
+
+async function loadCharacterStore(binding) {
+  if (!binding) return emptyCharacterStore();
+  try {
+    return normalizeCharacterStore(await binding.get(CHARACTER_CATALOG_KEY, { type: "json" }));
+  } catch {
+    return emptyCharacterStore();
+  }
+}
+
+async function saveCharacterStore(binding, store) {
+  const normalized = normalizeCharacterStore({ ...store, updatedAt: Date.now() });
+  normalized.updatedAt = Date.now();
+  await binding.put(CHARACTER_CATALOG_KEY, JSON.stringify(normalized));
+  return normalized;
+}
+
+function sanitizeSiteLock(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const startsAt = cleanCharacterTimestamp(source.startsAt);
+  const endsAt = cleanCharacterTimestamp(source.endsAt);
+  return {
+    version: 1,
+    enabled: source.enabled === true,
+    startsAt,
+    endsAt,
+    message: cleanCharacterText(source.message, 90, "云端正在进行临时维护，请稍后回来。"),
+    updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || 0)),
+  };
+}
+
+function siteLockPayload(value, now = Date.now(), message = "") {
+  const lock = sanitizeSiteLock(value);
+  const active = Boolean(
+    lock.enabled &&
+    lock.startsAt > 0 &&
+    now >= lock.startsAt &&
+    lock.endsAt > now
+  );
+  const scheduled = Boolean(
+    lock.enabled &&
+    lock.startsAt > now &&
+    lock.endsAt > lock.startsAt
+  );
+  return {
+    ok: true,
+    message,
+    serverTime: now,
+    lock: {
+      ...lock,
+      active,
+      scheduled,
+      remainingMs: active ? Math.max(0, lock.endsAt - now) : 0,
+    },
+  };
+}
+
+async function loadSiteLock(binding) {
+  if (!binding) return sanitizeSiteLock({});
+  try {
+    return sanitizeSiteLock(await binding.get(SITE_LOCK_KEY, { type: "json" }));
+  } catch {
+    return sanitizeSiteLock({});
+  }
+}
+
+async function saveSiteLock(binding, value) {
+  const lock = sanitizeSiteLock({ ...value, updatedAt: Date.now() });
+  lock.updatedAt = Date.now();
+  await binding.put(SITE_LOCK_KEY, JSON.stringify(lock));
+  return lock;
+}
+
+async function handlePublicSiteStatus(request, env) {
+  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+  const now = Date.now();
+  const lock = await loadSiteLock(env.LEADERBOARD);
+  return json(siteLockPayload(lock, now));
+}
+
+function cleanRedeemCode(value) {
+  const code = String(value || "").trim().toLowerCase().slice(0, 24);
+  return /^[a-z0-9][a-z0-9_-]{2,23}$/.test(code) ? code : "";
+}
+
+function sanitizeRedeemCodeRecord(value, fallback = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  const base = fallback && typeof fallback === "object" ? fallback : {};
+  const characterId = cleanCharacterId(source.characterId ?? base.characterId);
+  return {
+    code: cleanRedeemCode(source.code || base.code),
+    label: cleanCharacterText(source.label, 32, base.label || "兑换码奖励"),
+    coins: boundedNumber(source.coins, base.coins ?? 0, 0, 10000, 0),
+    characterId: isAccountCharacterId(characterId) && characterId !== "cloud" ? characterId : "",
+    startsAt: cleanCharacterTimestamp(source.startsAt ?? base.startsAt),
+    expiresAt: cleanCharacterTimestamp(source.expiresAt ?? base.expiresAt),
+    active: source.active === undefined ? base.active !== false : source.active !== false,
+    uses: boundedNumber(source.uses, base.uses ?? 0, 0, 1000000000, 0),
+    createdAt: Math.max(0, Math.round(Number(source.createdAt) || Number(base.createdAt) || Date.now())),
+    updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || Number(base.updatedAt) || Date.now())),
+  };
+}
+
+function defaultRedeemCodeStore() {
+  const createdAt = Date.parse("2026-07-13T00:00:00+08:00");
+  return {
+    version: 1,
+    updatedAt: createdAt,
+    codes: [sanitizeRedeemCodeRecord({
+      code: "leosince",
+      label: "Leo 专属礼物",
+      coins: 200,
+      active: true,
+      uses: 0,
+      createdAt,
+      updatedAt: createdAt,
+    })],
+  };
+}
+
+function normalizeRedeemCodeStore(value, useDefaults = false) {
+  const source = value && typeof value === "object" ? value : {};
+  const rawCodes = Array.isArray(source.codes)
+    ? source.codes
+    : useDefaults
+      ? defaultRedeemCodeStore().codes
+      : [];
+  const codes = [];
+  const seen = new Set();
+  for (const raw of rawCodes) {
+    const code = cleanRedeemCode(raw?.code);
+    if (!code || seen.has(code)) continue;
+    const record = sanitizeRedeemCodeRecord(raw, { code });
+    if (!record.coins && !record.characterId) continue;
+    seen.add(code);
+    codes.push(record);
+    if (codes.length >= 200) break;
+  }
+  return {
+    version: 1,
+    updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || 0)),
+    codes,
+  };
+}
+
+async function loadRedeemCodeStore(binding) {
+  if (!binding) return defaultRedeemCodeStore();
+  try {
+    const stored = await binding.get(REDEEM_CODE_STORE_KEY, { type: "json" });
+    return stored ? normalizeRedeemCodeStore(stored) : defaultRedeemCodeStore();
+  } catch {
+    return defaultRedeemCodeStore();
+  }
+}
+
+async function saveRedeemCodeStore(binding, store) {
+  const normalized = normalizeRedeemCodeStore({ ...store, updatedAt: Date.now() });
+  normalized.updatedAt = Date.now();
+  await binding.put(REDEEM_CODE_STORE_KEY, JSON.stringify(normalized));
+  return normalized;
+}
+
 function cleanPlayerId(value) {
   const id = String(value || "").trim().slice(0, 80);
   return /^[a-z0-9-]{16,80}$/i.test(id) ? id : "";
@@ -45,7 +371,7 @@ function cleanAvatar(value) {
 function cleanPublicCharacters(value) {
   const unlocked = [...new Set((Array.isArray(value) ? value : ["cloud"])
     .map(String)
-    .filter((id) => ACCOUNT_CHARACTERS.has(id)))];
+    .filter((id) => isAccountCharacterId(id)))];
   if (!unlocked.includes("cloud")) unlocked.unshift("cloud");
   return unlocked;
 }
@@ -60,6 +386,13 @@ function compareEntries(a, b) {
     Number(b.updatedAt) - Number(a.updatedAt);
 }
 
+function presenceState(lastActiveAt, now = Date.now()) {
+  const timestamp = Math.max(0, Number(lastActiveAt) || 0);
+  if (timestamp > 0 && now - timestamp <= PRESENCE_ONLINE_MS) return "online";
+  if (timestamp > 0 && now - timestamp <= PRESENCE_RECENT_MS) return "recent";
+  return "away";
+}
+
 function rank(entries) {
   return entries
     .filter((entry) => entry && cleanName(entry.name) && cleanPlayerId(entry.playerId))
@@ -72,7 +405,7 @@ function rank(entries) {
       coins: Math.max(0, Math.min(1000000000, Math.round(Number(entry.coins) || 0))),
       showCoins: entry.showCoins === true,
       avatar: cleanAvatar(entry.avatar),
-      selectedCharacter: ACCOUNT_CHARACTERS.has(String(entry.selectedCharacter)) ? String(entry.selectedCharacter) : "cloud",
+      selectedCharacter: isAccountCharacterId(entry.selectedCharacter) ? String(entry.selectedCharacter) : "cloud",
       unlockedCharacters: cleanPublicCharacters(entry.unlockedCharacters),
       selectedSkin: ACCOUNT_SKINS.has(String(entry.selectedSkin)) ? String(entry.selectedSkin) : "light",
       battleMatches: Math.max(0, Math.min(1000000, Math.round(Number(entry.battleMatches) || 0))),
@@ -81,6 +414,9 @@ function rank(entries) {
       battlePoints: Math.max(0, Math.min(1000000000, Math.round(Number(entry.battlePoints) || 0))),
       battleBestScore: Math.max(0, Math.min(100000, Math.round(Number(entry.battleBestScore) || 0))),
       battleCoinsEarned: Math.max(0, Math.min(1000000000, Math.round(Number(entry.battleCoinsEarned) || 0))),
+      systemRival: entry.systemRival === true,
+      showOnlineStatus: entry.showOnlineStatus === true,
+      lastActiveAt: Math.max(0, Number(entry.lastActiveAt) || 0),
       updatedAt: Math.max(0, Number(entry.updatedAt) || 0),
     }))
     .sort(compareEntries);
@@ -222,6 +558,331 @@ const DAILY_COMPETITORS = [
 const RESERVED_COMPETITOR_NAMES = new Set(DAILY_COMPETITORS.map((profile) => profile.name.toLocaleLowerCase()));
 let rivalRestartMemoryAt = 0;
 
+const RIVAL_CHAT_THREADS = [
+  [
+    [0, "第{level}关那个长悬崖你们怎么过的"],
+    [1, "@风停在十七楼 先别急着补第二跳，掉下去再按还有机会"],
+    [2, "真的假的，掉下去还能回来？"],
+    [4, "三连跳人物可以，基础人物就别硬试了"],
+    [0, "@雾中第七码头 你每次都说得很轻松"],
+    [4, "不信你今晚自己试，我可没说一次过"],
+    [3, "你俩先别吵，我刚试了，确实能救回来一次"],
+  ],
+  [
+    [2, "我刚被足球精准砸头，这游戏是不是盯着我"],
+    [3, "你站着不动当然砸你啊😂"],
+    [2, "@枝枝 我明明在跳"],
+    [1, "我作证，他那个跳更像原地举手"],
+    [2, "@404号月亮 你礼貌吗"],
+    [0, "先别吵，下一架飞机来了"],
+  ],
+  [
+    [1, "有人觉得第三跳变矮以后反而好控制吗"],
+    [4, "好控制？你昨天还掉了两次"],
+    [1, "@雾中第七码头 那是我在测悬崖"],
+    [3, "懂了，掉下去也算测试"],
+    [1, "你们等着，我今天肯定把记录抬上去"],
+    [0, "这句话我先截图了"],
+  ],
+  [
+    [3, "贝贝站着回体力真的快，我刚发现"],
+    [0, "可是我一站着就容易被树枝敲"],
+    [3, "@风停在十七楼 那你倒是蹲一下"],
+    [2, "我支持站着回，反正被砸的不是我"],
+    [4, "你们这么聊，下一局肯定全翻车"],
+  ],
+  [
+    [4, "洞穴里别追金币了，根本没有"],
+    [2, "我第一次进去找了半天，还以为没加载"],
+    [0, "手电筒亮的那一小块够看路吗"],
+    [1, "够是够，就是看到飞机的时候已经晚了"],
+    [3, "@404号月亮 你怎么每次都怪飞机"],
+    [1, "因为它真的每次都找我"],
+  ],
+  [
+    [0, "刚才有人说基础人物第{level}关很好过，我有点不信"],
+    [1, "谁说的，让他把记录发出来"],
+    [3, "可能是手感好，别一上来就质疑"],
+    [4, "我只信排行榜，不信口头成绩"],
+    [2, "你们好认真，我只想捡那个大金币"],
+    [0, "@小砚 大金币路线更难好吧"],
+  ],
+  [
+    [2, "今天金币路线是不是换了，我老是跳空"],
+    [3, "每关本来就不一样，你昨天记错了吧"],
+    [2, "@枝枝 我记性没那么差"],
+    [1, "你上次还说第8关是第6关"],
+    [2, "……那次不算"],
+    [4, "判定：小砚记错，散会"],
+  ],
+  [
+    [3, "谁刚才说强哥闭眼都能过"],
+    [4, "不是我，我说的是撞石头不用睁眼"],
+    [0, "这两句话差很多吗"],
+    [1, "差一个掉悬崖"],
+    [4, "@404号月亮 你今天话很多啊"],
+    [1, "因为我刚过了一关，允许我膨胀两分钟"],
+  ],
+  [
+    [1, "刚上线，今天你们谁先掉血"],
+    [0, "你这样问很不吉利"],
+    [3, "我已经被炸弹拿走半滴了，你满意了吧"],
+    [1, "@枝枝 那我收回刚才那句"],
+    [2, "来不及了，飞机听见了"],
+  ],
+  [
+    [4, "第{level}关后半段节奏比前面快不少"],
+    [0, "你又开始故作神秘了"],
+    [4, "@风停在十七楼 我只是提醒，等下别说我没讲"],
+    [3, "他说得对，后面两个悬崖别连着乱按"],
+    [1, "收到，我选择先看你们掉一次"],
+    [0, "这人怎么这样😂"],
+  ],
+  [
+    [0, "我差一分到100，然后被树枝送回来了"],
+    [2, "差一分最难受，我懂"],
+    [1, "先问一下，你是不是又忘记蹲"],
+    [0, "@404号月亮 我蹲了，慢了半拍而已"],
+    [3, "慢半拍就是没蹲到哈哈"],
+    [4, "别笑，明天轮到你"],
+  ],
+  [
+    [3, "你们觉得灵敏高一定更好用吗"],
+    [1, "不一定，太快我会提前起跳"],
+    [4, "主要还是路线，人物只能救一次手误"],
+    [2, "我不同意，三连跳能救很多次"],
+    [0, "@小砚 前提是你别把三跳全按在原地"],
+    [2, "今天怎么都在针对我"],
+  ],
+];
+
+const RIVAL_REPLY_LIBRARY = {
+  greeting: [
+    "@{name} 刚来？我也才玩一会儿",
+    "嗨 @{name}，今天手感怎么样",
+    "@{name} 你来得正好，刚才这里还在聊第{level}关",
+    "晚上好 @{name}，先说好，今天不许笑我掉洞",
+    "@{name} 来了，聊天室终于有人说话了",
+    "我刚结束一局，@{name} 你准备玩哪关",
+  ],
+  cliff: [
+    "@{name} 悬崖别急着连按，掉下去后留一次空中跳反而能救",
+    "我试过，三连跳人物掉下去还有机会往边上抢救，@{name} 可以试试",
+    "@{name} 那个长洞我会晚一点起跳，不然第三跳到边缘就没力了",
+    "先看人物脚下再补跳，@{name}，连续狂按最容易直接掉到底",
+    "@{name} 我刚才也掉了，第二跳留到画面停住以后比较稳",
+    "长悬崖别贪上面的金币，@{name}，先落地比较重要",
+    "这次我站 @{name}，那个悬崖边缘确实有点刁钻",
+    "@{name} 你用的是三连跳人物吗？不是的话那条路线别硬走",
+  ],
+  cave: [
+    "@{name} 洞穴里我会把最后一次跳留着，飞机来了才用",
+    "手电筒够亮，但别只盯人物，@{name} 要看前面的地面缺口",
+    "@{name} 进洞先别乱跳，眼睛适应一下再走",
+    "我也觉得洞里突然事件多，@{name}，不过前几秒通常比较安全",
+    "@{name} 如果人物有太阳技能，今天没用过的话进洞会舒服很多",
+    "洞里没有金币，@{name} 别为了找金币跑偏了，我吃过这个亏",
+  ],
+  jump: [
+    "@{name} 第三跳本来就矮一点，最好拿来修正落点",
+    "我会在第二跳快到最高点时再按，@{name} 你可以试试",
+    "@{name} 别把三次跳连成一声，留一点间隔会稳很多",
+    "人物没落地前跳数不会重置，@{name}，所以最后一下要省着用",
+    "@{name} 我觉得你不是跳低了，是起跳时间早了半拍",
+    "刚才我也卡了一下，@{name}，等蓄力提示消失再补第三跳",
+  ],
+  character: [
+    "@{name} 角色还是看手感，我灵敏太高反而会提前跳",
+    "先用同一个人物跑两局再判断，@{name}，第一局不太准",
+    "@{name} 你常掉悬崖的话，三连跳比吸金币实用",
+    "我会看关卡换人物，@{name}，不一定越贵就每条路线都顺手",
+    "@{name} 先试试体力够不够，后半段灵敏度会有差别",
+    "强哥撞石头很舒服，但悬崖还是得自己跳，@{name}",
+  ],
+  coins: [
+    "@{name} 大金币那条线更危险，我一般血多才去拿",
+    "金币少一点正常，我今天也没捡多少，@{name}",
+    "@{name} 先过关再捡币，不然最后一分翻车更亏",
+    "我刚才为了一个大金币掉半颗血，@{name} 你自己权衡😂",
+    "@{name} 金币路线每天看起来都差不多，但每关高度不一样",
+    "别问，@{name}，我刚把一整排金币跳过去了，一个没吃到",
+  ],
+  challenge: [
+    "@{name} 先把记录打出来我再信你😂",
+    "你这句话我记住了，@{name}，等下别偷偷换人物",
+    "@{name} 说得这么稳，下一局直播给我们看",
+    "我暂时保留质疑，@{name} 先过这一关再说",
+    "@{name} 你是不是把失败的那几局自动忘了",
+    "行，@{name}，今天就看你能不能把这句话兑现",
+  ],
+  problem: [
+    "@{name} 我刚也遇到类似情况，再试一次看看是不是落点太边了",
+    "先别急，@{name}，你说的是哪一关、什么人物",
+    "@{name} 如果连续两次都这样，那可能真不是手滑",
+    "我这边刚才正常，@{name} 你是不是在悬崖边刚好被撞了",
+    "@{name} 这个我不敢乱说，你把发生前那一下描述清楚点",
+    "听起来有点怪，@{name}，我等下到那关也留意一下",
+  ],
+  question: [
+    "@{name} 我觉得可以先试一局，光看说明不太准",
+    "你问到我了，@{name}，我也想听听他们怎么说",
+    "@{name} 我目前的感觉是后一点起跳会更稳",
+    "不一定，@{name}，还要看你正在用的人物",
+    "@{name} 这个我试过一次，可以，但别连续乱按",
+    "我和你想的不太一样，@{name}，我觉得问题在落点",
+  ],
+  general: [
+    "@{name} 我刚才也差不多，最后一下别急就行",
+    "这话有点道理，@{name}，但我还是想再试一局",
+    "@{name} 你这么一说，我等下也去试试",
+    "我先不下结论，@{name}，刚才那局我自己也跳乱了",
+    "@{name} 你们聊，我再开一局验证一下",
+    "确实有这种感觉，@{name}，尤其是后半段速度起来以后",
+    "@{name} 我不同意一半，前面是这样，后面不一定",
+    "哈哈 @{name} 你这句把潜水的人都叫出来了",
+  ],
+};
+
+const RIVAL_CHAT_VOICES = {
+  "风停在十七楼": {
+    openers: ["我刚好也在试，", "先等等，", "我不太敢说死，", "按我刚才那局看，", ""],
+    endings: ["你先跑一局看看", "别急着连续按", "我等下也再试一次", "这局先求稳", ""],
+  },
+  "404号月亮": {
+    openers: ["我先说结论：", "这不一定，", "我刚验证过，", "等一下，", ""],
+    endings: ["不服可以来一局PK", "记得别临时换人物😂", "我保留一点质疑", "结果出来再说", ""],
+  },
+  "小砚": {
+    openers: ["啊这个我遇到过，", "我可能操作慢一点，", "说真的，", "我刚才就是这样，", ""],
+    endings: ["反正我又掉过一次", "你成功了回来告诉我", "我先学一下你们的路线", "别笑我就行", ""],
+  },
+  "枝枝": {
+    openers: ["我觉得可以这样，", "先别慌，", "我刚刚试了一下，", "认真说，", ""],
+    endings: ["稳住比抢那一枚金币重要", "要不要一起试一局", "这次我站你这边", "慢半拍反而好", ""],
+  },
+  "雾中第七码头": {
+    openers: ["看落点，", "先留一次补救，", "我会这么处理：", "这段别靠运气，", ""],
+    endings: ["路线对了就不用硬扛", "你报关卡我可以说细一点", "要比就开困难模式", "别把三跳一次用完", ""],
+  },
+};
+
+const RIVAL_REPLY_PARTS = {
+  greeting: [
+    "刚上线，今天打算从{anchor}开始",
+    "我也才来，聊天室刚好缺个人说话",
+    "在，刚结束一局，手感还没热起来",
+    "来得正好，刚才有人还在问谁愿意PK",
+  ],
+  cliff: [
+    "{anchor}的崖边要把最后一次空中跳留到画面停住以后",
+    "掉下去先别乱按，人物朝前以后再补最后一跳会稳不少",
+    "我会放掉前面的高金币，贴着右边崖沿落地",
+    "三连跳能救，但第二、第三跳要分开，不能按成一下",
+    "如果已经掉到地面线下面，先补跳再往前抢，不要往回拉",
+  ],
+  cave: [
+    "{anchor}进去先看脚下，不用追根本不存在的金币",
+    "刚变暗的几秒别连跳，等手电光扫到前面再决定",
+    "飞机声出来以后再交最后一次跳，比提前乱躲好",
+    "太阳技能没用过就留给洞穴，普通手电也够看清地面",
+  ],
+  jump: [
+    "第三跳本来就矮，适合修正落点，不适合当第一下那样冲",
+    "第二跳到最高点附近再补，三下之间留一点节奏",
+    "没落地前跳数不会重置，所以最后一下要当成保险",
+    "你说的迟一下不是坏事，正好能避开连续乱按",
+  ],
+  character: [
+    "{anchor}要先跑完整一局才看得出后半段体力差别",
+    "角色贵不等于每个落点都自动变简单，路线还是得自己控",
+    "经常掉悬崖就优先三连跳，经常漏币再考虑吸附",
+    "灵敏高的人物起跳也更容易提前，先适应两局",
+  ],
+  coins: [
+    "大金币那条线风险高，血量不够就先保通关",
+    "为了一个大金币掉半颗血不一定划算，我刚吃过亏",
+    "金币高度每关都在变，不能照搬上一关的按法",
+    "先把{anchor}的落点走顺，再考虑全收",
+  ],
+  challenge: [
+    "这句话先记下，开个房间跑一局就知道",
+    "可以质疑，但别只报成功那一把的成绩",
+    "要比就选同一难度，人物随便，结果最清楚",
+    "我接受这个说法一半，另一半等你跑完再判",
+  ],
+  problem: [
+    "先报关卡、人物和出问题前最后一下操作，不然容易猜错",
+    "如果连续两局都在同一个位置发生，那就不太像手滑",
+    "我这边会特别看一下碰撞位置，可能是脚刚好压在边缘",
+    "先重新进一局试一次，还是这样就把发生顺序说清楚",
+  ],
+  question: [
+    "这个要看{anchor}和正在用的人物，不能只看说明",
+    "可以，但时机比按得快更重要",
+    "我试过一种走法，不过想先听听你刚才是怎么按的",
+    "不一定，你说的前半段和后半段情况可能相反",
+  ],
+  general: [
+    "这感觉我也有，不过我刚才那局自己先按乱了",
+    "你这句有道理，我下一局会专门留意",
+    "先不下结论，跑完{anchor}再回来对一下",
+    "我和你想的不完全一样，但这次确实值得再试",
+    "说到这里我有点想开一局验证了",
+  ],
+};
+
+const RIVAL_AMBIENT_PARTS = [
+  ["第{level}关刚才那条低路线反而顺一点", "有人想开一局标准难度吗", "我先跑一把，回来报结果"],
+  ["刚才第三跳留晚了，居然真的救回来了", "别问前两次去哪了😂", "下一局我不抢最上面的金币"],
+  ["今天只玩十分钟，结果已经重开三次", "飞机是不是会挑人在空中时出现", "我准备换个人物再试"],
+  ["谁在线，来个困难模式PK", "输的人别怪人物", "先说好，大招只准用一次"],
+  ["刚看完榜，差距没我想的那么大", "一局能追回来一点", "有人接受邀请我就开"],
+  ["洞里那段现在亮多了", "但我还是把最后一跳留给飞机", "别为了不存在的金币绕路"],
+  ["我刚才在崖边停住半秒，画面也跟着停了", "三连跳人物确实有机会回来", "基础人物就别贪上面那排币"],
+  ["今天手感一般，先不吹", "等我过了第{level}关再说", "你们可以先质疑着"],
+];
+
+function pickRivalPart(list, seed, shift = 0) {
+  const values = Array.isArray(list) && list.length ? list : [""];
+  return values[competitorActivityValue(seed + shift * 97, values.length + shift) % values.length] || "";
+}
+
+function rivalReplyAnchor(text, snapshot) {
+  const value = String(text || "");
+  const level = value.match(/第?\s*(\d{1,2})\s*关/);
+  if (level) return `第${Math.max(1, Math.min(20, Number(level[1]) || snapshot.level))}关`;
+  const character = value.match(/(志炫|蟹老板|元元|强哥|果果|梅西|姆巴佩|哈兰德|海绵宝宝|派大星|云青|启航|基础人物)/);
+  if (character) return character[1];
+  return `第${snapshot.level}关`;
+}
+
+function composeCompetitorReply(profile, category, sourceText, accountName, snapshot, seed) {
+  const voice = RIVAL_CHAT_VOICES[profile.name] || RIVAL_CHAT_VOICES["风停在十七楼"];
+  const mention = `@${cleanName(accountName) || "玩家"}`;
+  const anchor = rivalReplyAnchor(sourceText, snapshot);
+  const opener = pickRivalPart(voice.openers, seed, 1);
+  const bodyTemplate = pickRivalPart(RIVAL_REPLY_PARTS[category] || RIVAL_REPLY_PARTS.general, seed, 2);
+  const body = String(bodyTemplate).replaceAll("{anchor}", anchor).replaceAll("{level}", String(snapshot.level));
+  const ending = pickRivalPart(voice.endings, seed, 3);
+  const shortReply = seed % 13 === 0;
+  if (shortReply) {
+    const shortLines = {
+      cliff: [`${mention} 先留住第三跳`, `${mention} 往前面的崖沿抢，不要退`, `${mention} 等画面停一下再补跳`],
+      challenge: [`可以，${mention} 开房间`, `${mention} 来一局就知道`, `我接，${mention} 选难度`],
+      greeting: [`在，${mention}`, `${mention} 我刚上线`, `来了，${mention}`],
+      general: [`这次我同意，${mention}`, `${mention} 我先试一局`, `等下，我去验证`],
+    };
+    return pickRivalPart(shortLines[category] || shortLines.general, seed, 9);
+  }
+  const tail = ending && (seed >>> 5) % 100 < 68 ? `，${ending}` : "";
+  const layout = (seed >>> 10) % 5;
+  if (layout === 0) return `${mention}，${opener}${body}${tail}`;
+  if (layout === 1) return `${opener}${body}。${mention}${tail}`;
+  if (layout === 2) return `${mention} ${body}${tail}`;
+  if (layout === 3) return `${anchor}这段，${opener}${body}，${mention}${tail}`;
+  return `${opener}${body}${tail}，${mention}`;
+}
+
 async function loadRivalRestartAt(binding, now = Date.now()) {
   if (Number.isFinite(rivalRestartMemoryAt) && rivalRestartMemoryAt > 0) return rivalRestartMemoryAt;
   try {
@@ -317,6 +978,12 @@ function simulateCompetitor(profile, now = Date.now(), restartAt = RIVAL_RESTART
   const battleWins = Math.min(battleMatches, Math.floor(battleMatches * profile.battleWinRate + ((battleRoll >>> 8) % 2)));
   const battleDraws = Math.min(battleMatches - battleWins, battleMatches >= 4 && battleRoll % 7 === 0 ? 1 : 0);
   const battlePoints = battleWins * (58 + profile.seed % 11) + (battleMatches - battleWins) * (22 + profile.seed % 8);
+  const todayIndex = Math.max(0, Math.floor((now - restartAt) / RIVAL_DAY_MS));
+  const todaySessionStart = competitorSessionStart(profile, todayIndex, restartAt);
+  const currentlyPlaying = now >= todaySessionStart && now <= todaySessionStart + RIVAL_SESSION_MS;
+  const lastActiveAt = currentlyPlaying
+    ? Math.max(lastActivityAt, now - (competitorActivityValue(profile.seed + 1889, todayIndex) % 45) * 1000)
+    : lastActivityAt;
   return {
     name: profile.name,
     playerId: profile.playerId,
@@ -335,6 +1002,9 @@ function simulateCompetitor(profile, now = Date.now(), restartAt = RIVAL_RESTART
     battlePoints,
     battleBestScore: battleMatches ? Math.min(99, 48 + successfulAttempts + profile.seed % 17) : 0,
     battleCoinsEarned: battleMatches ? Math.floor(battleMatches * (1.2 + profile.battleWinRate)) : 0,
+    systemRival: true,
+    showOnlineStatus: true,
+    lastActiveAt,
     updatedAt: lastActivityAt,
   };
 }
@@ -343,41 +1013,141 @@ function dailyCompetitorEntries(_state, now = Date.now(), restartAt = RIVAL_REST
   return DAILY_COMPETITORS.map((profile) => simulateCompetitor(profile, now, restartAt));
 }
 
+function competitorChatTextSeed(value) {
+  const text = String(value || "");
+  let seed = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    seed ^= text.charCodeAt(index);
+    seed = Math.imul(seed, 16777619);
+  }
+  return seed >>> 0;
+}
+
+function competitorChatMessage(profile, text, createdAt, restartAt, idSuffix = "note") {
+  const snapshot = simulateCompetitor(profile, createdAt, restartAt);
+  const cleanText = cleanChatText(String(text || "")
+    .replaceAll("{level}", String(snapshot.level))
+    .replaceAll("{self}", profile.name));
+  return {
+    id: `chat-rv46-${profile.seed.toString(36)}-${Math.round(createdAt).toString(36)}-${String(idSuffix).replace(/[^a-z0-9_-]/gi, "").slice(0, 18) || "note"}`,
+    accountId: profile.accountId,
+    playerId: profile.playerId,
+    name: profile.name,
+    avatar: profile.avatar,
+    text: cleanText || "刚才那局有点可惜",
+    createdAt,
+    recalled: false,
+    recalledAt: 0,
+    mediaToken: "",
+    imageMime: "",
+    selectedCharacter: snapshot.selectedCharacter,
+    unlockedCharacters: snapshot.unlockedCharacters,
+    selectedSkin: snapshot.selectedSkin,
+    coins: snapshot.coins,
+    showCoins: snapshot.showCoins,
+  };
+}
+
 function dailyCompetitorChatMessages(now = Date.now(), restartAt = RIVAL_RESTART_AT) {
   if (now < restartAt) return [];
   const oldestAllowed = now - CHAT_RETENTION_MS;
   const firstDay = Math.max(0, Math.floor((oldestAllowed - restartAt) / RIVAL_DAY_MS) - 1);
   const lastDay = Math.min(120, Math.floor((now - restartAt) / RIVAL_DAY_MS) + 1);
   const messages = [];
-  for (const profile of DAILY_COMPETITORS) {
-    for (let dayIndex = firstDay; dayIndex <= lastDay; dayIndex += 1) {
-      if ((dayIndex + profile.chatOffset) % profile.chatEveryDays !== 0) continue;
-      const createdAt = competitorSessionStart(profile, dayIndex, restartAt) + profile.chatMinute * RIVAL_MINUTE_MS;
+
+  for (let dayIndex = firstDay; dayIndex <= lastDay; dayIndex += 1) {
+    const threadIndex = competitorActivityValue(1459, dayIndex) % RIVAL_CHAT_THREADS.length;
+    const thread = RIVAL_CHAT_THREADS[threadIndex] || RIVAL_CHAT_THREADS[0];
+    const dayJitter = (competitorActivityValue(1777, dayIndex) % 19) - 9;
+    const threadStart = restartAt + dayIndex * RIVAL_DAY_MS + (4 + dayJitter) * RIVAL_MINUTE_MS;
+    let offsetSeconds = 0;
+
+    for (let index = 0; index < thread.length; index += 1) {
+      const [profileIndex, text] = thread[index];
+      const profile = DAILY_COMPETITORS[Math.max(0, Math.min(DAILY_COMPETITORS.length - 1, Number(profileIndex) || 0))];
+      offsetSeconds += index === 0 ? 0 : 31 + (competitorActivityValue(profile.seed + dayIndex, index) % 48);
+      const createdAt = threadStart + offsetSeconds * 1000;
       if (createdAt > now || createdAt < oldestAllowed) continue;
-      const snapshot = simulateCompetitor(profile, createdAt, restartAt);
-      const lineIndex = competitorActivityValue(profile.seed + 1201, dayIndex) % profile.chatLines.length;
-      const text = String(profile.chatLines[lineIndex] || "今天先玩到这里").replaceAll("{level}", String(snapshot.level));
-      messages.push({
-        id: `chat-rv29-${profile.seed.toString(36)}-${dayIndex.toString(36)}-note`,
-        accountId: profile.accountId,
-        playerId: profile.playerId,
-        name: profile.name,
-        avatar: profile.avatar,
-        text,
-        createdAt,
-        recalled: false,
-        recalledAt: 0,
-        mediaToken: "",
-        imageMime: "",
-        selectedCharacter: snapshot.selectedCharacter,
-        unlockedCharacters: snapshot.unlockedCharacters,
-        selectedSkin: snapshot.selectedSkin,
-        coins: snapshot.coins,
-        showCoins: snapshot.showCoins,
-      });
+      messages.push(competitorChatMessage(profile, text, createdAt, restartAt, `d${dayIndex.toString(36)}-${index}`));
+    }
+
+    if (dayIndex % 2 === 0) {
+      const profile = DAILY_COMPETITORS[competitorActivityValue(2213, dayIndex) % DAILY_COMPETITORS.length];
+      const createdAt = threadStart + (8.3 + (competitorActivityValue(2243, dayIndex) % 50) / 100) * RIVAL_MINUTE_MS;
+      if (createdAt <= now && createdAt >= oldestAllowed) {
+        const lineIndex = competitorActivityValue(profile.seed + 1201, dayIndex) % profile.chatLines.length;
+        messages.push(competitorChatMessage(profile, profile.chatLines[lineIndex], createdAt, restartAt, `d${dayIndex.toString(36)}-solo`));
+      }
+    }
+
+    const ambientGroup = RIVAL_AMBIENT_PARTS[competitorActivityValue(3181, dayIndex) % RIVAL_AMBIENT_PARTS.length];
+    const ambientCount = 2 + (competitorActivityValue(3253, dayIndex) % 2);
+    for (let index = 0; index < ambientCount; index += 1) {
+      const profile = DAILY_COMPETITORS[competitorActivityValue(3319 + index, dayIndex) % DAILY_COMPETITORS.length];
+      const createdAt = threadStart + (2.1 + index * 2.35 + (competitorActivityValue(profile.seed, dayIndex + index) % 47) / 100) * RIVAL_MINUTE_MS;
+      if (createdAt > now || createdAt < oldestAllowed) continue;
+      const line = ambientGroup[(index + competitorActivityValue(profile.seed + 47, dayIndex)) % ambientGroup.length];
+      messages.push(competitorChatMessage(profile, line, createdAt, restartAt, `d${dayIndex.toString(36)}-ambient-${index}`));
     }
   }
-  return messages.sort((a, b) => a.createdAt - b.createdAt);
+  return messages.sort((a, b) => a.createdAt - b.createdAt).slice(-CHAT_MAX_MESSAGES);
+}
+
+function competitorReplyCategory(text) {
+  const value = String(text || "").toLocaleLowerCase();
+  if (/悬崖|洞口|掉下|掉进|深坑|长洞|边缘/.test(value)) return "cliff";
+  if (/洞穴|黑暗|手电|太阳|看不见/.test(value)) return "cave";
+  if (/三连跳|二连跳|第三跳|跳跃|起跳|落地/.test(value)) return "jump";
+  if (/人物|角色|商店|灵敏|体力|强哥|贝贝|梅西|姆巴佩|哈兰德|蟹老板|志炫/.test(value)) return "character";
+  if (/金币|大金币|兑换|余额/.test(value)) return "coins";
+  if (/卡|bug|失败|死了|判定|不对|有问题|异常/.test(value)) return "problem";
+  if (/吹|不信|假的|质疑|挑战|来比|厉害|第一/.test(value)) return "challenge";
+  if (/你好|早上好|晚上好|嗨|hello|hi|有人吗|在吗/.test(value)) return "greeting";
+  if (/[?？]|怎么|为什么|多少|哪个|能不能|是不是/.test(value)) return "question";
+  return "general";
+}
+
+function triggeredCompetitorChatReplies(text, accountName, now = Date.now(), restartAt = RIVAL_RESTART_AT) {
+  const cleanText = cleanChatText(text);
+  const cleanAccountName = cleanName(accountName) || "玩家";
+  if (!cleanText) return [];
+  const lowerText = cleanText.toLocaleLowerCase();
+  const directProfile = DAILY_COMPETITORS.find((profile) =>
+    lowerText.includes(`@${profile.name.toLocaleLowerCase()}`) ||
+    lowerText.includes(profile.name.toLocaleLowerCase()));
+  const seed = competitorChatTextSeed(`${cleanText}|${cleanAccountName}|${Math.floor(now / 45000)}`);
+  const isQuestion = /[?？]|怎么|为什么|能不能|是不是/.test(cleanText);
+  const shouldReply = Boolean(directProfile || isQuestion || cleanText.includes("@") || seed % 100 < 68);
+  if (!shouldReply) return [];
+
+  const profile = directProfile || DAILY_COMPETITORS[seed % DAILY_COMPETITORS.length];
+  const category = competitorReplyCategory(cleanText);
+  const snapshot = simulateCompetitor(profile, now, restartAt);
+  const primaryText = composeCompetitorReply(profile, category, cleanText, cleanAccountName, snapshot, seed);
+  const firstDelay = 7000 + (seed % 17000);
+  const replies = [
+    competitorChatMessage(profile, primaryText, now + firstDelay, restartAt, `r${(seed % 1679616).toString(36)}-0`),
+  ];
+
+  const debateWanted = /不信|假的|质疑|吹|厉害|第一|不对|肯定|一定/.test(cleanText) || (seed >>> 8) % 100 < 24;
+  if (debateWanted) {
+    const otherProfiles = DAILY_COMPETITORS.filter((item) => item.playerId !== profile.playerId);
+    const other = otherProfiles[(seed >>> 12) % otherProfiles.length];
+    const secondLines = [
+      `@${profile.name} 先别说满，我觉得 @${cleanAccountName} 这次描述得挺具体`,
+      `等 @${cleanAccountName} 跑完这一把再判，@${profile.name} 你上次也改过口`,
+      `我先站 @${cleanAccountName} 一半，另一半开房间跑一局验证`,
+      `@${profile.name} 你说的是前半段，@${cleanAccountName} 问的明显是后面吧`,
+      `你们继续争，我开同一难度试一次，回来只报结果`,
+      `@${cleanAccountName} 把人物也说一下，不然 @${profile.name} 又要默认你用三连跳`,
+      `这题口头说不清，@${cleanAccountName} 要不要直接和 @${profile.name} PK一局`,
+      `我觉得两边都漏了一个条件：体力掉下来以后手感会变`,
+      `先停一下，刚才那句“肯定”是谁说的，我准备截图了`,
+    ];
+    const secondText = secondLines[(seed >>> 17) % secondLines.length];
+    replies.push(competitorChatMessage(other, secondText, now + firstDelay + 11000 + ((seed >>> 5) % 16000), restartAt, `r${(seed % 1679616).toString(36)}-1`));
+  }
+  return replies;
 }
 
 function normalizeResets(resets) {
@@ -469,9 +1239,10 @@ function rollSeason(state, now) {
 }
 
 function publicPayload(state, playerId, rivalRestartAt = RIVAL_RESTART_AT) {
+  const now = Date.now();
   let competitors = [];
   try {
-    competitors = dailyCompetitorEntries(state, Date.now(), rivalRestartAt);
+    competitors = dailyCompetitorEntries(state, now, rivalRestartAt);
   } catch {
     competitors = [];
   }
@@ -481,11 +1252,20 @@ function publicPayload(state, playerId, rivalRestartAt = RIVAL_RESTART_AT) {
   const gifts = playerId ? state.gifts.filter((item) => item.playerId === playerId) : [];
   return {
     shared: true,
-    entries: ranked.map(({ playerId: rawPlayerId, ...entry }) => ({
-      ...entry,
-      inviteId: rawPlayerId.startsWith("rival-") ? "" : rawPlayerId,
-      coins: entry.showCoins ? entry.coins : null,
-    })),
+    entries: ranked.map((rankedEntry) => {
+      const {
+        playerId: rawPlayerId,
+        lastActiveAt,
+        showOnlineStatus,
+        ...entry
+      } = rankedEntry;
+      return {
+        ...entry,
+        inviteId: rawPlayerId,
+        coins: entry.showCoins ? entry.coins : null,
+        presence: showOnlineStatus ? presenceState(lastActiveAt, now) : "",
+      };
+    }),
     season: { number: state.seasonNumber, startAt: state.startAt, endAt: state.endAt },
     latestWinner: latestWinner ? {
       name: latestWinner.name,
@@ -495,7 +1275,7 @@ function publicPayload(state, playerId, rivalRestartAt = RIVAL_RESTART_AT) {
       awardedAt: latestWinner.awardedAt,
     } : null,
     rewardCharacter: "doraemon",
-    rewardUnlocked: Boolean(playerId && state.winners.some((winner) => winner.playerId === playerId)),
+    rewardEligible: Boolean(playerId && state.winners.some((winner) => winner.playerId === playerId)),
     resetRequest: reset ? { token: reset.token, requestedAt: reset.requestedAt } : null,
     gifts: gifts.map(({ playerId: _privateId, ...gift }) => gift),
   };
@@ -563,7 +1343,7 @@ async function postLeaderboard(request, env) {
       coins: Math.max(0, Math.min(1000000000, Math.round(Number(body?.coins) || 0))),
       showCoins: body?.showCoins === true,
       avatar: cleanAvatar(body?.avatar),
-      selectedCharacter: ACCOUNT_CHARACTERS.has(String(body?.selectedCharacter)) ? String(body.selectedCharacter) : "cloud",
+      selectedCharacter: isAccountCharacterId(body?.selectedCharacter) ? String(body.selectedCharacter) : "cloud",
       unlockedCharacters: cleanPublicCharacters(body?.unlockedCharacters),
       selectedSkin: ACCOUNT_SKINS.has(String(body?.selectedSkin)) ? String(body.selectedSkin) : "light",
       battleMatches: 0,
@@ -572,6 +1352,8 @@ async function postLeaderboard(request, env) {
       battlePoints: 0,
       battleBestScore: 0,
       battleCoinsEarned: 0,
+      showOnlineStatus: false,
+      lastActiveAt: 0,
       updatedAt: now,
     };
     const linkedAccount = await loadLinkedAccount(env.LEADERBOARD, playerId);
@@ -591,6 +1373,8 @@ async function postLeaderboard(request, env) {
         battlePoints: linkedGameData.battlePoints,
         battleBestScore: linkedGameData.battleBestScore,
         battleCoinsEarned: linkedGameData.battleCoinsEarned,
+        showOnlineStatus: linkedAccount.showOnlineStatus === true,
+        lastActiveAt: Math.max(0, Number(linkedAccount.lastActiveAt) || 0),
       });
     }
     const index = loaded.state.entries.findIndex((entry) => entry.playerId === playerId);
@@ -606,6 +1390,8 @@ async function postLeaderboard(request, env) {
         selectedCharacter: candidate.selectedCharacter,
         unlockedCharacters: candidate.unlockedCharacters,
         selectedSkin: candidate.selectedSkin,
+        showOnlineStatus: candidate.showOnlineStatus,
+        lastActiveAt: candidate.lastActiveAt,
       };
     } else {
       loaded.state.entries.push(candidate);
@@ -743,23 +1529,59 @@ function sanitizeAdminGiftCredits(value) {
   return result.slice(-300);
 }
 
+function singaporeDateKey(now = Date.now()) {
+  return new Date(Number(now) + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function dailyCheckinReward(totalDays = 0) {
+  const index = Math.max(0, Math.round(Number(totalDays) || 0)) % DAILY_CHECKIN_REWARDS.length;
+  return { day: index + 1, ...DAILY_CHECKIN_REWARDS[index] };
+}
+
+function dailyCheckinPayload(value, now = Date.now()) {
+  const gameData = sanitizeGameData(value);
+  const today = singaporeDateKey(now);
+  const claimedToday = gameData.dailyCheckinLastDate === today;
+  const totalDays = gameData.dailyCheckinTotal;
+  const completedInCycle = totalDays % DAILY_CHECKIN_REWARDS.length || (claimedToday && totalDays > 0 ? DAILY_CHECKIN_REWARDS.length : 0);
+  return {
+    today,
+    claimedToday,
+    totalDays,
+    completedInCycle,
+    cycleLength: DAILY_CHECKIN_REWARDS.length,
+    nextReward: dailyCheckinReward(totalDays),
+  };
+}
+
 function sanitizeGameData(value) {
   const data = value && typeof value === "object" ? value : {};
-  const heartUpgradeLevel = Math.max(0, Math.min(2, Math.round(Number(data.heartUpgradeLevel) || (data.accountUpgraded === true ? 1 : 0))));
+  const storedHeartResetVersion = Math.max(0, Math.round(Number(data.heartResetVersion) || 0));
+  const requestedHeartUpgradeLevel = Math.max(0, Math.min(2, Math.round(Number(data.heartUpgradeLevel) || (data.accountUpgraded === true ? 1 : 0))));
+  const heartUpgradeLevel = storedHeartResetVersion >= HEART_RESET_VERSION ? requestedHeartUpgradeLevel : 0;
   const unlocked = [...new Set((Array.isArray(data.unlockedCharacters) ? data.unlockedCharacters : ["cloud"])
     .map(String)
-    .filter((id) => ACCOUNT_CHARACTERS.has(id)))];
+    .filter((id) => isAccountCharacterId(id)))];
   if (!unlocked.includes("cloud")) unlocked.unshift("cloud");
   const selected = unlocked.includes(String(data.selectedCharacter)) ? String(data.selectedCharacter) : "cloud";
+  const redeemedCodes = [...new Set((Array.isArray(data.redeemedCodes) ? data.redeemedCodes : [])
+    .map(cleanRedeemCode)
+    .filter(Boolean))].slice(-300);
+  if (data.redeemedLeosince === true && !redeemedCodes.includes("leosince")) redeemedCodes.push("leosince");
   const completed = [...new Set((Array.isArray(data.completedLevels) ? data.completedLevels : [])
     .map((level) => Math.max(1, Math.min(20, Math.round(Number(level) || 1)))))]
     .sort((a, b) => a - b);
   return {
     walletCoins: Math.max(0, Math.min(1000000000, Math.round(Number(data.walletCoins) || 0))),
+    walletRevision: Math.max(0, Math.min(1000000000, Math.round(Number(data.walletRevision) || 0))),
     coinLedger: sanitizeCoinLedger(data.coinLedger),
     chatLastReadAt: Math.max(0, Math.min(Date.now() + 86400000, Math.round(Number(data.chatLastReadAt) || 0))),
     accountUpgraded: heartUpgradeLevel >= 1,
     heartUpgradeLevel,
+    heartResetVersion: HEART_RESET_VERSION,
+    dailyCheckinLastDate: /^\d{4}-\d{2}-\d{2}$/.test(String(data.dailyCheckinLastDate || "")) ? String(data.dailyCheckinLastDate) : "",
+    dailyCheckinTotal: Math.max(0, Math.min(1000000, Math.round(Number(data.dailyCheckinTotal) || 0))),
+    crabRunsPlayed: Math.max(0, Math.min(1000000, Math.round(Number(data.crabRunsPlayed) || 0))),
     battleMatches: Math.max(0, Math.min(1000000, Math.round(Number(data.battleMatches) || 0))),
     battleWins: Math.max(0, Math.min(1000000, Math.round(Number(data.battleWins) || 0))),
     battleDraws: Math.max(0, Math.min(1000000, Math.round(Number(data.battleDraws) || 0))),
@@ -782,7 +1604,8 @@ function sanitizeGameData(value) {
     yunqingReserved: data.yunqingReserved === true,
     yunqingDeposit: data.yunqingReserved === true ? YUNQING_RESERVATION_PRICE : 0,
     dailySunUsedDate: /^\d{4}-\d{2}-\d{2}$/.test(String(data.dailySunUsedDate || "")) ? String(data.dailySunUsedDate) : "",
-    redeemedLeosince: data.redeemedLeosince === true,
+    redeemedLeosince: data.redeemedLeosince === true || redeemedCodes.includes("leosince"),
+    redeemedCodes,
     claimedAdminGifts: [...new Set((Array.isArray(data.claimedAdminGifts) ? data.claimedAdminGifts : [])
       .map((id) => String(id).replace(/[^a-z0-9-]/gi, "").slice(0, 90))
       .filter(Boolean))].slice(-300),
@@ -797,10 +1620,30 @@ function sanitizeGameData(value) {
 function mergeAccountGameData(currentValue, incomingValue) {
   const current = sanitizeGameData(currentValue);
   const incoming = sanitizeGameData(incomingValue);
+  for (const protectedCharacter of ["doraemon", "yuanyuan"]) {
+    const alreadyOwned = current.unlockedCharacters.includes(protectedCharacter);
+    if (alreadyOwned) {
+      if (!incoming.unlockedCharacters.includes(protectedCharacter)) incoming.unlockedCharacters.push(protectedCharacter);
+    } else {
+      incoming.unlockedCharacters = incoming.unlockedCharacters.filter((id) => id !== protectedCharacter);
+      if (incoming.selectedCharacter === protectedCharacter) incoming.selectedCharacter = "cloud";
+    }
+  }
+  if (incoming.walletRevision !== current.walletRevision) {
+    // A stale or forged browser snapshot must never replace the latest cloud balance.
+    incoming.walletCoins = current.walletCoins;
+    incoming.walletRevision = current.walletRevision;
+  } else if (incoming.walletCoins !== current.walletCoins) {
+    incoming.walletRevision = Math.min(1000000000, current.walletRevision + 1);
+  }
   incoming.coinLedger = sanitizeCoinLedger([...incoming.coinLedger, ...current.coinLedger]);
   incoming.chatLastReadAt = Math.max(current.chatLastReadAt, incoming.chatLastReadAt);
+  incoming.heartResetVersion = HEART_RESET_VERSION;
   incoming.heartUpgradeLevel = Math.max(current.heartUpgradeLevel, incoming.heartUpgradeLevel);
   incoming.accountUpgraded = incoming.heartUpgradeLevel >= 1;
+  incoming.dailyCheckinLastDate = current.dailyCheckinLastDate;
+  incoming.dailyCheckinTotal = current.dailyCheckinTotal;
+  incoming.crabRunsPlayed = Math.max(current.crabRunsPlayed, incoming.crabRunsPlayed);
   incoming.battleMatches = current.battleMatches;
   incoming.battleWins = current.battleWins;
   incoming.battleDraws = current.battleDraws;
@@ -816,7 +1659,8 @@ function mergeAccountGameData(currentValue, incomingValue) {
   incoming.adminGiftCredits = [...incoming.adminGiftCredits, ...current.adminGiftCredits];
   incoming.claimedAdminGifts = [...new Set([...current.claimedAdminGifts, ...incoming.claimedAdminGifts])].slice(-300);
   incoming.seenAnnouncements = [...new Set([...current.seenAnnouncements, ...incoming.seenAnnouncements])].slice(-100);
-  incoming.redeemedLeosince = current.redeemedLeosince || incoming.redeemedLeosince;
+  incoming.redeemedCodes = [...new Set([...current.redeemedCodes, ...incoming.redeemedCodes])].slice(-300);
+  incoming.redeemedLeosince = current.redeemedLeosince || incoming.redeemedLeosince || incoming.redeemedCodes.includes("leosince");
   if (current.yunqingReserved) {
     incoming.yunqingReserved = true;
     incoming.yunqingDeposit = YUNQING_RESERVATION_PRICE;
@@ -888,7 +1732,7 @@ function normalizeChatMessage(value, now) {
     recalledAt: recalled ? Math.max(createdAt, Number(value.recalledAt) || createdAt) : 0,
     mediaToken: imageMime ? mediaToken : "",
     imageMime,
-    selectedCharacter: ACCOUNT_CHARACTERS.has(String(value.selectedCharacter)) ? String(value.selectedCharacter) : "cloud",
+    selectedCharacter: isAccountCharacterId(value.selectedCharacter) ? String(value.selectedCharacter) : "cloud",
     unlockedCharacters: cleanPublicCharacters(value.unlockedCharacters),
     selectedSkin: ACCOUNT_SKINS.has(String(value.selectedSkin)) ? String(value.selectedSkin) : "light",
     coins: Math.max(0, Math.min(1000000000, Math.round(Number(value.coins) || 0))),
@@ -896,18 +1740,22 @@ function normalizeChatMessage(value, now) {
   };
 }
 
-async function loadChatMessages(binding, now = Date.now()) {
+async function loadChatMessages(binding, now = Date.now(), includeFuture = false) {
   const stored = await binding.get(CHAT_INDEX_KEY, { type: "json" });
   const source = Array.isArray(stored) ? stored : (Array.isArray(stored?.messages) ? stored.messages : []);
   return source
     .map((message) => normalizeChatMessage(message, now))
-    .filter(Boolean)
+    .filter((message) => Boolean(message) && (includeFuture || message.createdAt <= now))
     .sort((a, b) => a.createdAt - b.createdAt)
     .slice(-CHAT_MAX_MESSAGES);
 }
 
 async function saveChatMessages(binding, messages) {
-  await binding.put(CHAT_INDEX_KEY, JSON.stringify({ version: 1, messages: messages.slice(-CHAT_MAX_MESSAGES) }));
+  const ordered = (Array.isArray(messages) ? messages : [])
+    .filter(Boolean)
+    .sort((a, b) => Number(a.createdAt) - Number(b.createdAt))
+    .slice(-CHAT_MAX_MESSAGES);
+  await binding.put(CHAT_INDEX_KEY, JSON.stringify({ version: 2, messages: ordered }));
 }
 
 function publicChatMessage(message, accountId, now) {
@@ -921,7 +1769,10 @@ function publicChatMessage(message, accountId, now) {
     createdAt: message.createdAt,
     recalled: message.recalled === true,
     mine,
-    inviteId: publicPlayerId.startsWith("rival-") ? "" : publicPlayerId,
+    systemRival: publicPlayerId.startsWith("rival-"),
+    // System competitors use the same invitation entry point as other profiles.
+    // The realtime room still decides whether the target is a human or a rival.
+    inviteId: publicPlayerId,
     canRecall: mine && !message.recalled && now - message.createdAt <= CHAT_RECALL_MS,
     imageUrl: !message.recalled && message.imageMime && message.mediaToken
       ? `/api/chat-image?id=${encodeURIComponent(message.id)}&key=${encodeURIComponent(message.mediaToken)}`
@@ -980,7 +1831,7 @@ async function handleChat(request, env) {
     return json({ error: "invalid_json" }, 400);
   }
   const action = String(body?.action || "");
-  const messages = await loadChatMessages(env.LEADERBOARD, now);
+  const messages = await loadChatMessages(env.LEADERBOARD, now, true);
 
   if (action === "send") {
     const text = cleanChatText(body?.text);
@@ -1027,6 +1878,12 @@ async function handleChat(request, env) {
       showCoins: account.showCoins === true,
     };
     messages.push(message);
+    try {
+      const rivalRestartAt = await loadRivalRestartAt(env.LEADERBOARD, now);
+      messages.push(...triggeredCompetitorChatReplies(text, account.name, now, rivalRestartAt));
+    } catch {
+      // A player message must still be delivered if the optional in-game chatter fails.
+    }
     await saveChatMessages(env.LEADERBOARD, messages);
     return json({ ok: true, message: publicChatMessage(message, account.id, now) }, 201);
   }
@@ -1085,11 +1942,13 @@ function accountPayload(account, token = "") {
   return {
     ok: true,
     token: token || undefined,
+    dailyCheckin: dailyCheckinPayload(account.gameData),
     account: {
       id: account.id,
       name: account.name,
       playerId: account.playerId,
       showCoins: account.showCoins === true,
+      showOnlineStatus: account.showOnlineStatus === true,
       avatar: cleanAvatar(account.avatar),
       gameData: sanitizeGameData(account.gameData),
       createdAt: Number(account.createdAt) || 0,
@@ -1109,6 +1968,8 @@ async function syncAccountRanking(binding, account) {
       name: account.name,
       coins: gameData.walletCoins,
       showCoins: account.showCoins === true,
+      showOnlineStatus: account.showOnlineStatus === true,
+      lastActiveAt: Math.max(0, Number(account.lastActiveAt) || 0),
       avatar: cleanAvatar(account.avatar),
       selectedCharacter: gameData.selectedCharacter,
       unlockedCharacters: gameData.unlockedCharacters,
@@ -1130,6 +1991,8 @@ async function syncAccountRanking(binding, account) {
       time: 0,
       coins: gameData.walletCoins,
       showCoins: account.showCoins === true,
+      showOnlineStatus: account.showOnlineStatus === true,
+      lastActiveAt: Math.max(0, Number(account.lastActiveAt) || 0),
       avatar: cleanAvatar(account.avatar),
       selectedCharacter: gameData.selectedCharacter,
       unlockedCharacters: gameData.unlockedCharacters,
@@ -1179,6 +2042,65 @@ function yunqingStorePayload(reservations, account, now = Date.now()) {
   };
 }
 
+async function loadYuanyuanSales(binding) {
+  const stored = await binding.get(YUANYUAN_SALES_KEY, { type: "json" });
+  const source = Array.isArray(stored) ? stored : (Array.isArray(stored?.sales) ? stored.sales : []);
+  const unique = new Map();
+  for (const item of source) {
+    const accountId = String(item?.accountId || "").trim().slice(0, 80);
+    if (!accountId || unique.has(accountId)) continue;
+    unique.set(accountId, {
+      accountId,
+      playerId: cleanPlayerId(item?.playerId),
+      name: cleanName(item?.name),
+      purchasedAt: Math.max(0, Math.round(Number(item?.purchasedAt) || 0)),
+      price: Math.max(0, Math.round(Number(item?.price) || YUANYUAN_PRICE)),
+    });
+  }
+  return [...unique.values()]
+    .sort((a, b) => a.purchasedAt - b.purchasedAt || a.accountId.localeCompare(b.accountId))
+    .slice(0, YUANYUAN_LIMIT);
+}
+
+async function saveYuanyuanSales(binding, sales) {
+  const normalized = (Array.isArray(sales) ? sales : [])
+    .filter((item, index, list) =>
+      item?.accountId && list.findIndex((candidate) => String(candidate?.accountId) === String(item.accountId)) === index)
+    .sort((a, b) => Number(a.purchasedAt) - Number(b.purchasedAt) || String(a.accountId).localeCompare(String(b.accountId)))
+    .slice(0, YUANYUAN_LIMIT);
+  await binding.put(YUANYUAN_SALES_KEY, JSON.stringify({
+    version: 1,
+    releaseAt: YUANYUAN_RELEASE_AT,
+    limit: YUANYUAN_LIMIT,
+    price: YUANYUAN_PRICE,
+    sales: normalized,
+    updatedAt: Date.now(),
+  }));
+  return normalized;
+}
+
+function yuanyuanStorePayload(sales, account = null, now = Date.now(), includeBuyers = false) {
+  const list = Array.isArray(sales) ? sales.slice(0, YUANYUAN_LIMIT) : [];
+  const accountId = String(account?.id || "");
+  const payload = {
+    releaseAt: YUANYUAN_RELEASE_AT,
+    released: now >= YUANYUAN_RELEASE_AT,
+    price: YUANYUAN_PRICE,
+    limit: YUANYUAN_LIMIT,
+    sold: list.length,
+    remaining: Math.max(0, YUANYUAN_LIMIT - list.length),
+    soldOut: list.length >= YUANYUAN_LIMIT,
+    purchased: Boolean(accountId && list.some((item) => String(item.accountId) === accountId)),
+  };
+  if (includeBuyers) payload.buyers = list.map((item) => ({
+    playerId: item.playerId,
+    name: item.name,
+    purchasedAt: item.purchasedAt,
+    price: item.price,
+  }));
+  return payload;
+}
+
 async function handleAccount(request, env) {
   if (!env.LEADERBOARD) return json({ error: "kv_not_bound" }, 503);
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -1203,6 +2125,13 @@ async function handleAccount(request, env) {
     let playerId = cleanPlayerId(body?.playerId) || `player-${randomSecret(22)}`.slice(0, 80);
     if (await env.LEADERBOARD.get(playerAccountKey(playerId))) playerId = `player-${randomSecret(22)}`.slice(0, 80);
     const salt = randomSecret(18);
+    const initialGameData = sanitizeGameData(body?.gameData);
+    initialGameData.unlockedCharacters = initialGameData.unlockedCharacters
+      .filter((id) => !["doraemon", "yuanyuan"].includes(id));
+    if (["doraemon", "yuanyuan"].includes(initialGameData.selectedCharacter)) initialGameData.selectedCharacter = "cloud";
+    // Daily rewards are created by the server, never imported from a browser snapshot.
+    initialGameData.dailyCheckinLastDate = "";
+    initialGameData.dailyCheckinTotal = 0;
     const account = {
       version: 1,
       revision: 1,
@@ -1213,8 +2142,13 @@ async function handleAccount(request, env) {
       passwordSalt: salt,
       passwordHash: await derivePasswordHash(password, salt),
       showCoins: body?.showCoins === true,
+      showOnlineStatus: body?.showOnlineStatus === true,
+      // Registering is itself a verified activity event. Starting at `now`
+      // prevents a newly-created public profile from flashing a red dot before
+      // its first background heartbeat arrives.
+      lastActiveAt: now,
       avatar: cleanAvatar(body?.avatar),
-      gameData: sanitizeGameData(body?.gameData),
+      gameData: initialGameData,
       createdAt: now,
       updatedAt: now,
     };
@@ -1236,10 +2170,7 @@ async function handleAccount(request, env) {
     if (!account) return json({ error: "invalid_credentials" }, 401);
     const candidateHash = await derivePasswordHash(password, account.passwordSalt);
     if (!securePasswordMatch(candidateHash, account.passwordHash)) return json({ error: "invalid_credentials" }, 401);
-    account.updatedAt = Date.now();
-    await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
     const token = await createAccountSession(env.LEADERBOARD, account.id, account.revision);
-    await syncAccountRanking(env.LEADERBOARD, account);
     return json(accountPayload(account, token));
   }
 
@@ -1247,9 +2178,210 @@ async function handleAccount(request, env) {
   if (!authenticated) return json({ error: "account_unauthorized" }, 401);
   const account = authenticated.account;
 
+  if (action === "presence") {
+    const now = Date.now();
+    const previous = Math.max(0, Number(account.lastActiveAt) || 0);
+    if (now - previous >= PRESENCE_WRITE_THROTTLE_MS) {
+      account.lastActiveAt = now;
+      await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
+      const loaded = await loadState(env.LEADERBOARD, now);
+      const entry = loaded.state.entries.find((item) => item.playerId === account.playerId);
+      if (entry) {
+        entry.lastActiveAt = now;
+        entry.showOnlineStatus = account.showOnlineStatus === true;
+        await env.LEADERBOARD.put(SEASON_KEY, JSON.stringify(loaded.state));
+      }
+    }
+    return json({
+      ok: true,
+      lastActiveAt: Math.max(previous, Number(account.lastActiveAt) || 0),
+      showOnlineStatus: account.showOnlineStatus === true,
+    });
+  }
+
+  if (action === "purchaseSeasonReward") {
+    const now = Date.now();
+    const loaded = await loadState(env.LEADERBOARD, now);
+    const rolled = rollSeason(loaded.state, now);
+    if (loaded.dirty || rolled) await env.LEADERBOARD.put(SEASON_KEY, JSON.stringify(loaded.state));
+    const winningRecord = [...loaded.state.winners]
+      .reverse()
+      .find((winner) => winner.playerId === account.playerId);
+    if (!winningRecord) return json({ error: "season_reward_not_eligible" }, 403);
+    const managedCatalog = resolvedCharacterCatalog(await loadCharacterStore(env.LEADERBOARD));
+    const managedDoraemon = managedCatalog.find((character) => character.id === "doraemon");
+    const saleActive = managedDoraemon?.salePrice !== null &&
+      managedDoraemon?.salePrice !== undefined &&
+      (!Number(managedDoraemon.saleStartAt) || now >= Number(managedDoraemon.saleStartAt)) &&
+      (!Number(managedDoraemon.saleEndAt) || now <= Number(managedDoraemon.saleEndAt));
+    const configuredRewardPrice = Number(saleActive
+      ? managedDoraemon.salePrice
+      : managedDoraemon?.regularCost ?? managedDoraemon?.cost);
+    const rewardPrice = Number.isFinite(configuredRewardPrice)
+      ? Math.max(0, Math.round(configuredRewardPrice))
+      : DORAEMON_CHAMPION_PRICE;
+
+    const gameData = sanitizeGameData(account.gameData);
+    if (gameData.unlockedCharacters.includes("doraemon")) {
+      return json({
+        ...accountPayload(account),
+        seasonRewardPurchased: true,
+        alreadyOwned: true,
+      });
+    }
+    if (gameData.walletCoins < rewardPrice) {
+      return json({ error: "season_reward_insufficient_coins" }, 409);
+    }
+
+    gameData.walletCoins -= rewardPrice;
+    gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
+    gameData.unlockedCharacters.push("doraemon");
+    gameData.selectedCharacter = "doraemon";
+    appendCoinLedger(gameData, {
+      id: `champion-doraemon-${winningRecord.seasonNumber}-${account.id}`.slice(0, 90),
+      amount: -rewardPrice,
+      balanceAfter: gameData.walletCoins,
+      createdAt: now,
+      type: "character_purchase",
+      label: "冠军专属人物：哆啦A梦",
+      detail: `第 ${winningRecord.seasonNumber} 赛季冠军专属购买`,
+    });
+    account.gameData = sanitizeGameData(gameData);
+    account.updatedAt = now;
+    await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
+    await syncAccountRanking(env.LEADERBOARD, account);
+    return json({
+      ...accountPayload(account),
+      seasonRewardPurchased: true,
+      alreadyOwned: false,
+    });
+  }
+
+  if (action === "redeemCode") {
+    const now = Date.now();
+    const requestedCode = cleanRedeemCode(body?.code);
+    if (!requestedCode) return json({ error: "redeem_code_invalid" }, 400);
+    let redeemStore = await loadRedeemCodeStore(env.LEADERBOARD);
+    const codeIndex = redeemStore.codes.findIndex((item) => item.code === requestedCode);
+    if (codeIndex < 0) return json({ error: "redeem_code_invalid" }, 404);
+    const codeRecord = redeemStore.codes[codeIndex];
+    if (codeRecord.active === false) return json({ error: "redeem_code_inactive" }, 409);
+    if (codeRecord.startsAt && now < codeRecord.startsAt) return json({ error: "redeem_code_not_started" }, 409);
+    if (codeRecord.expiresAt && now > codeRecord.expiresAt) return json({ error: "redeem_code_expired" }, 409);
+
+    const gameData = sanitizeGameData(account.gameData);
+    if (gameData.redeemedCodes.includes(requestedCode)) return json({ error: "redeem_code_already_used" }, 409);
+
+    let rewardCharacter = null;
+    if (codeRecord.characterId) {
+      const catalog = resolvedCharacterCatalog(await loadCharacterStore(env.LEADERBOARD));
+      rewardCharacter = catalog.find((character) => character.id === codeRecord.characterId) || null;
+      if (!rewardCharacter) return json({ error: "redeem_reward_unavailable" }, 409);
+    }
+
+    const coins = Math.max(0, Math.round(Number(codeRecord.coins) || 0));
+    const characterAlreadyOwned = Boolean(rewardCharacter && gameData.unlockedCharacters.includes(rewardCharacter.id));
+    if (coins > 0) {
+      gameData.walletCoins = Math.min(1000000000, gameData.walletCoins + coins);
+      gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
+      appendCoinLedger(gameData, {
+        id: `redeem-code-${requestedCode}-${account.id}`.slice(0, 90),
+        amount: coins,
+        balanceAfter: gameData.walletCoins,
+        createdAt: now,
+        type: "redeem_code",
+        label: codeRecord.label,
+        detail: `兑换码 ${requestedCode}`,
+      });
+    }
+    if (rewardCharacter && !characterAlreadyOwned) gameData.unlockedCharacters.push(rewardCharacter.id);
+    gameData.redeemedCodes.push(requestedCode);
+    gameData.redeemedCodes = [...new Set(gameData.redeemedCodes)].slice(-300);
+    if (requestedCode === "leosince") gameData.redeemedLeosince = true;
+
+    codeRecord.uses = Math.min(1000000000, Math.max(0, Number(codeRecord.uses) || 0) + 1);
+    codeRecord.updatedAt = now;
+    redeemStore.codes[codeIndex] = codeRecord;
+    account.gameData = sanitizeGameData(gameData);
+    account.updatedAt = now;
+    redeemStore = await saveRedeemCodeStore(env.LEADERBOARD, redeemStore);
+    await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
+    await syncAccountRanking(env.LEADERBOARD, account);
+    return json({
+      ...accountPayload(account),
+      redeemReward: {
+        code: requestedCode,
+        label: codeRecord.label,
+        coins,
+        characterId: rewardCharacter?.id || "",
+        characterName: rewardCharacter?.name || "",
+        characterAlreadyOwned,
+      },
+    });
+  }
+
+  if (action === "dailyCheckin") {
+    const now = Date.now();
+    const today = singaporeDateKey(now);
+    const gameData = sanitizeGameData(account.gameData);
+    if (gameData.dailyCheckinLastDate === today) {
+      return json({ ...accountPayload(account), alreadyClaimed: true, dailyReward: null });
+    }
+
+    const scheduled = dailyCheckinReward(gameData.dailyCheckinTotal);
+    let dailyReward;
+    if (scheduled.character && !gameData.unlockedCharacters.includes(scheduled.character)) {
+      gameData.unlockedCharacters.push(scheduled.character);
+      dailyReward = {
+        day: scheduled.day,
+        type: "character",
+        character: scheduled.character,
+        characterName: scheduled.characterName,
+        coins: 0,
+      };
+    } else {
+      const amount = Math.max(1, Math.min(500, Math.round(Number(scheduled.coins ?? scheduled.fallbackCoins) || 0)));
+      gameData.walletCoins = Math.min(1000000000, gameData.walletCoins + amount);
+      gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
+      appendCoinLedger(gameData, {
+        id: `daily-checkin-${today}`,
+        amount,
+        balanceAfter: gameData.walletCoins,
+        createdAt: now,
+        type: "daily_checkin",
+        label: `每日签到 · 第 ${scheduled.day} 天`,
+        detail: scheduled.character ? `${scheduled.characterName}已拥有，自动换成金币` : "30 天签到奖励",
+      });
+      dailyReward = {
+        day: scheduled.day,
+        type: "coins",
+        coins: amount,
+        replacedCharacter: scheduled.characterName || "",
+      };
+    }
+
+    gameData.dailyCheckinLastDate = today;
+    gameData.dailyCheckinTotal = Math.min(1000000, gameData.dailyCheckinTotal + 1);
+    account.gameData = sanitizeGameData(gameData);
+    account.updatedAt = now;
+    await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
+    await syncAccountRanking(env.LEADERBOARD, account);
+    return json({ ...accountPayload(account), alreadyClaimed: false, dailyReward });
+  }
+
   if (action === "storeStatus") {
-    const reservations = await loadYunqingReservations(env.LEADERBOARD);
-    return json({ ...accountPayload(account), store: yunqingStorePayload(reservations, account) });
+    const now = Date.now();
+    const [reservations, yuanyuanSales] = await Promise.all([
+      loadYunqingReservations(env.LEADERBOARD),
+      loadYuanyuanSales(env.LEADERBOARD),
+    ]);
+    return json({
+      ...accountPayload(account),
+      store: {
+        ...yunqingStorePayload(reservations, account, now),
+        yuanyuan: yuanyuanStorePayload(yuanyuanSales, account, now),
+      },
+    });
   }
   if (action === "reserveYunqing") {
     const now = Date.now();
@@ -1288,6 +2420,7 @@ async function handleAccount(request, env) {
     const gameData = sanitizeGameData(account.gameData);
     if (gameData.walletCoins < YUNQING_RESERVATION_PRICE) return json({ error: "insufficient_coins" }, 409);
     gameData.walletCoins -= YUNQING_RESERVATION_PRICE;
+    gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
     gameData.yunqingReserved = true;
     gameData.yunqingDeposit = YUNQING_RESERVATION_PRICE;
     appendCoinLedger(gameData, {
@@ -1306,6 +2439,108 @@ async function handleAccount(request, env) {
     await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
     await syncAccountRanking(env.LEADERBOARD, account);
     return json({ ...accountPayload(account), store: yunqingStorePayload(reservations, account, now) });
+  }
+
+  if (action === "purchaseYuanyuan") {
+    const now = Date.now();
+    const gameData = sanitizeGameData(account.gameData);
+    let sales = await loadYuanyuanSales(env.LEADERBOARD);
+    const existingSale = sales.find((item) => String(item.accountId) === String(account.id));
+
+    if (gameData.unlockedCharacters.includes("yuanyuan")) {
+      return json({
+        ...accountPayload(account),
+        alreadyOwned: true,
+        store: { yuanyuan: yuanyuanStorePayload(sales, account, now) },
+      });
+    }
+
+    // A stored sale is the durable proof of purchase. If the account write was
+    // interrupted after its slot was secured, a retry completes the charge and
+    // unlock exactly once.
+    if (existingSale) {
+      const ledgerId = `limited-yuanyuan-${account.id}`.slice(0, 90);
+      const alreadyCharged = gameData.coinLedger.some((item) => item.id === ledgerId);
+      if (!alreadyCharged && gameData.walletCoins < YUANYUAN_PRICE) {
+        sales = await saveYuanyuanSales(
+          env.LEADERBOARD,
+          sales.filter((item) => String(item.accountId) !== String(account.id)),
+        );
+        return json({ error: "insufficient_coins" }, 409);
+      }
+      if (!alreadyCharged) {
+        gameData.walletCoins -= YUANYUAN_PRICE;
+        gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
+        appendCoinLedger(gameData, {
+          id: ledgerId,
+          amount: -YUANYUAN_PRICE,
+          balanceAfter: gameData.walletCoins,
+          createdAt: Number(existingSale.purchasedAt) || now,
+          type: "character_purchase",
+          label: "限量人物：元元",
+          detail: `限量 ${YUANYUAN_LIMIT} 份抢购`,
+        });
+      }
+      gameData.unlockedCharacters.push("yuanyuan");
+      gameData.selectedCharacter = "yuanyuan";
+      account.gameData = sanitizeGameData(gameData);
+      account.updatedAt = now;
+      await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
+      await syncAccountRanking(env.LEADERBOARD, account);
+      return json({
+        ...accountPayload(account),
+        alreadyOwned: false,
+        repairedPurchase: true,
+        store: { yuanyuan: yuanyuanStorePayload(sales, account, now) },
+      });
+    }
+
+    if (now < YUANYUAN_RELEASE_AT) return json({
+      error: "yuanyuan_not_released",
+      releaseAt: YUANYUAN_RELEASE_AT,
+    }, 409);
+    if (sales.length >= YUANYUAN_LIMIT) return json({ error: "yuanyuan_sold_out" }, 409);
+    if (gameData.walletCoins < YUANYUAN_PRICE) return json({ error: "insufficient_coins" }, 409);
+
+    const sale = {
+      accountId: account.id,
+      playerId: account.playerId,
+      name: account.name,
+      purchasedAt: now,
+      price: YUANYUAN_PRICE,
+    };
+    sales = await saveYuanyuanSales(env.LEADERBOARD, [...sales, sale]);
+    if (!sales.some((item) => String(item.accountId) === String(account.id))) {
+      return json({ error: "yuanyuan_sold_out" }, 409);
+    }
+
+    gameData.walletCoins -= YUANYUAN_PRICE;
+    gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
+    gameData.unlockedCharacters.push("yuanyuan");
+    gameData.selectedCharacter = "yuanyuan";
+    appendCoinLedger(gameData, {
+      id: `limited-yuanyuan-${account.id}`.slice(0, 90),
+      amount: -YUANYUAN_PRICE,
+      balanceAfter: gameData.walletCoins,
+      createdAt: now,
+      type: "character_purchase",
+      label: "限量人物：元元",
+      detail: `限量 ${YUANYUAN_LIMIT} 份抢购`,
+    });
+    account.gameData = sanitizeGameData(gameData);
+    account.updatedAt = now;
+    await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
+    await syncAccountRanking(env.LEADERBOARD, account);
+    return json({
+      ...accountPayload(account),
+      alreadyOwned: false,
+      limitedPurchase: {
+        characterId: "yuanyuan",
+        characterName: "元元",
+        price: YUANYUAN_PRICE,
+      },
+      store: { yuanyuan: yuanyuanStorePayload(sales, account, now) },
+    });
   }
 
   if (action === "recordBattleResult") {
@@ -1327,6 +2562,7 @@ async function handleAccount(request, env) {
     const battleReward = Math.floor(coinUnits / 4);
     const battlePointsAwarded = score + (won ? 60 : tied ? 25 : 10) + Math.min(25, bestCombo);
     gameData.walletCoins = Math.min(1000000000, gameData.walletCoins + battleReward);
+    if (battleReward > 0) gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
     gameData.battleMatches += 1;
     if (won) gameData.battleWins += 1;
     if (tied) gameData.battleDraws += 1;
@@ -1376,6 +2612,7 @@ async function handleAccount(request, env) {
     account.avatar = cleanAvatar(body?.avatar);
     account.gameData = mergeAccountGameData(account.gameData, body?.gameData ?? account.gameData);
     account.showCoins = body?.showCoins === true;
+    account.showOnlineStatus = body?.showOnlineStatus === true;
     account.updatedAt = Date.now();
     await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
     await syncAccountRanking(env.LEADERBOARD, account);
@@ -1384,12 +2621,16 @@ async function handleAccount(request, env) {
   if (action === "save") {
     const state = await loadState(env.LEADERBOARD, Date.now());
     if (state.state.resets.some((item) => item.playerId === account.playerId)) return json({ error: "account_reset_pending" }, 409);
+    const currentWalletRevision = sanitizeGameData(account.gameData).walletRevision;
+    const incomingWalletRevision = sanitizeGameData(body?.gameData).walletRevision;
+    const walletStale = incomingWalletRevision !== currentWalletRevision;
     account.gameData = mergeAccountGameData(account.gameData, body?.gameData);
     account.showCoins = body?.showCoins === true;
+    account.showOnlineStatus = body?.showOnlineStatus === true;
     account.updatedAt = Date.now();
     await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
     await syncAccountRanking(env.LEADERBOARD, account);
-    return json(accountPayload(account));
+    return json({ ...accountPayload(account), walletStale });
   }
   if (action === "logout") {
     if (typeof env.LEADERBOARD.delete === "function") await env.LEADERBOARD.delete(accountSessionKey(authenticated.tokenHash));
@@ -1406,12 +2647,19 @@ async function resetLinkedAccount(binding, playerId) {
   if (!account) return false;
   account.gameData = emptyGameData();
   account.showCoins = false;
+  account.showOnlineStatus = false;
+  account.lastActiveAt = 0;
   account.revision = Math.max(1, Number(account.revision) || 1) + 1;
   account.updatedAt = Date.now();
   await binding.put(accountRecordKey(account.id), JSON.stringify(account));
   const reservations = await loadYunqingReservations(binding);
   const remainingReservations = reservations.filter((item) => String(item.accountId) !== String(account.id));
   if (remainingReservations.length !== reservations.length) await saveYunqingReservations(binding, remainingReservations);
+  const yuanyuanSales = await loadYuanyuanSales(binding);
+  const remainingYuanyuanSales = yuanyuanSales.filter((item) => String(item.accountId) !== String(account.id));
+  if (remainingYuanyuanSales.length !== yuanyuanSales.length) {
+    await saveYuanyuanSales(binding, remainingYuanyuanSales);
+  }
   return true;
 }
 
@@ -1428,6 +2676,8 @@ function updateRankingEntryFromAccount(entry, account, now = Date.now()) {
     name: cleanName(account.name) || entry.name,
     coins: gameData.walletCoins,
     showCoins: account.showCoins === true,
+    showOnlineStatus: account.showOnlineStatus === true,
+    lastActiveAt: Math.max(0, Number(account.lastActiveAt) || 0),
     avatar: cleanAvatar(account.avatar),
     selectedCharacter: gameData.selectedCharacter,
     unlockedCharacters: gameData.unlockedCharacters,
@@ -1443,20 +2693,45 @@ function updateRankingEntryFromAccount(entry, account, now = Date.now()) {
   return entry;
 }
 
+function patchRawWalletBalance(rawValue, amount) {
+  const text = String(rawValue || "");
+  const target = Math.max(0, Math.min(1000000000, Math.round(Number(amount) || 0)));
+  const walletPattern = /("walletCoins"\s*:\s*)(-?\d+(?:\.\d+)?)/;
+  const walletMatch = walletPattern.exec(text);
+  if (!walletMatch) return null;
+  const previousBalance = Math.max(0, Math.min(1000000000, Math.round(Number(walletMatch[2]) || 0)));
+  let updated = text.replace(walletPattern, (_match, prefix) => `${prefix}${target}`);
+  const revisionPattern = /("walletRevision"\s*:\s*)(\d+)/;
+  const revisionMatch = revisionPattern.exec(updated);
+  let walletRevision = 1;
+  if (revisionMatch) {
+    walletRevision = Math.min(1000000000, Math.max(0, Math.round(Number(revisionMatch[2]) || 0)) + 1);
+    updated = updated.replace(revisionPattern, (_match, prefix) => `${prefix}${walletRevision}`);
+  } else {
+    const updatedWalletMatch = walletPattern.exec(updated);
+    if (!updatedWalletMatch) return null;
+    const insertionAt = updatedWalletMatch.index + updatedWalletMatch[0].length;
+    updated = `${updated.slice(0, insertionAt)},"walletRevision":${walletRevision}${updated.slice(insertionAt)}`;
+  }
+  return { updated, previousBalance, balanceAfter: target, walletRevision };
+}
+
 async function setLinkedAccountCoins(binding, playerId, amount, now, options = {}) {
   const accountId = await binding.get(playerAccountKey(playerId));
   if (!accountId) return null;
   const recordKey = accountRecordKey(String(accountId));
   const rawAccount = await binding.get(recordKey);
   if (!rawAccount) return null;
-  const target = Math.max(0, Math.min(1000000000, Math.round(Number(amount) || 0)));
-  const walletPattern = /(\"walletCoins\"\s*:\s*)(-?\d+(?:\.\d+)?)/;
-  const walletMatch = walletPattern.exec(String(rawAccount));
-  if (!walletMatch) return null;
-  const previousBalance = Math.max(0, Math.min(1000000000, Math.round(Number(walletMatch[2]) || 0)));
-  const updatedAccount = String(rawAccount).replace(walletPattern, (_match, prefix) => `${prefix}${target}`);
-  await binding.put(recordKey, updatedAccount);
-  return { previousBalance, balanceAfter: target, adjustedAt: now, label: cleanCoinLedgerText(options.label, 42) };
+  const patched = patchRawWalletBalance(rawAccount, amount);
+  if (!patched) return null;
+  await binding.put(recordKey, patched.updated);
+  return {
+    previousBalance: patched.previousBalance,
+    balanceAfter: patched.balanceAfter,
+    walletRevision: patched.walletRevision,
+    adjustedAt: now,
+    label: cleanCoinLedgerText(options.label, 42),
+  };
 }
 
 async function creditLinkedAccount(binding, playerId, giftId, amount, now) {
@@ -1465,6 +2740,7 @@ async function creditLinkedAccount(binding, playerId, giftId, amount, now) {
   const gameData = sanitizeGameData(account.gameData);
   if (!gameData.adminGiftCredits.some((credit) => credit.id === giftId)) {
     gameData.walletCoins = Math.min(1000000000, gameData.walletCoins + amount);
+    gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
     gameData.adminGiftCredits.push({ id: giftId, amount });
   }
   const ledgerId = `admin-gift-${giftId}`.slice(0, 90);
@@ -1503,6 +2779,7 @@ function isAdminRequest(request, env) {
 
 function adminPayload(state, message = "") {
   const entries = rank(state.entries);
+  const now = Date.now();
   return {
     ok: true,
     message,
@@ -1512,6 +2789,7 @@ function adminPayload(state, message = "") {
       passedPlayers: entries.filter((entry) => entry.score >= 100).length,
       pendingResets: state.resets.length,
       issuedGifts: state.gifts.length,
+      onlinePlayers: entries.filter((entry) => presenceState(entry.lastActiveAt, now) === "online").length,
     },
     season: {
       number: state.seasonNumber,
@@ -1520,6 +2798,223 @@ function adminPayload(state, message = "") {
     },
     entries,
   };
+}
+
+function characterCatalogPayload(storeValue, message = "") {
+  const store = normalizeCharacterStore(storeValue);
+  return {
+    ok: true,
+    message,
+    version: store.version,
+    updatedAt: store.updatedAt,
+    serverTime: Date.now(),
+    characters: resolvedCharacterCatalog(store),
+  };
+}
+
+async function handlePublicCharacters(request, env) {
+  if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+  const store = await loadCharacterStore(env.LEADERBOARD);
+  return json(characterCatalogPayload(store));
+}
+
+async function handleAdminCharacters(request, env) {
+  if (!env.LEADERBOARD) return json({ error: "kv_not_bound" }, 503);
+  if (!isAdminRequest(request, env)) return json({ error: "unauthorized" }, 401);
+  let store = await loadCharacterStore(env.LEADERBOARD);
+  if (request.method === "GET") return json(characterCatalogPayload(store));
+  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+
+  const action = String(body?.action || "");
+  const rawCharacter = body?.character && typeof body.character === "object" ? body.character : {};
+  const id = cleanCharacterId(body?.id || rawCharacter.id);
+  const builtInBase = BUILTIN_CHARACTER_CATALOG.find((character) => character.id === id);
+  let message = "";
+
+  if (action === "upsertCharacter") {
+    if (!id) return json({ error: "invalid_character_id" }, 400);
+    const existingCustom = store.custom.find((character) => character.id === id);
+    if (!builtInBase && !id.startsWith("custom-")) return json({ error: "custom_id_required" }, 400);
+    const fallback = builtInBase || existingCustom || {};
+    const character = sanitizeCharacterRecord({ ...rawCharacter, id, updatedAt: Date.now() }, fallback, {
+      id,
+      builtIn: Boolean(builtInBase),
+    });
+    if (character.availableFrom && character.availableUntil && character.availableUntil <= character.availableFrom) {
+      return json({ error: "invalid_availability_window" }, 400);
+    }
+    if (character.saleStartAt && character.saleEndAt && character.saleEndAt <= character.saleStartAt) {
+      return json({ error: "invalid_sale_window" }, 400);
+    }
+    if (builtInBase) {
+      store.overrides[id] = character;
+      message = `${character.name} 已更新；玩家重新打开网站后生效。`;
+    } else {
+      store.custom = store.custom.filter((item) => item.id !== id);
+      store.custom.push(character);
+      message = existingCustom
+        ? `${character.name} 已更新；玩家重新打开网站后生效。`
+        : `${character.name} 已添加到人物商店。`;
+    }
+    store = await saveCharacterStore(env.LEADERBOARD, store);
+  } else if (action === "deleteCharacter") {
+    if (!id) return json({ error: "invalid_character_id" }, 400);
+    if (builtInBase) return json({ error: "builtin_character_protected" }, 409);
+    const existing = store.custom.find((character) => character.id === id);
+    if (!existing) return json({ error: "character_not_found" }, 404);
+    store.custom = store.custom.filter((character) => character.id !== id);
+    store = await saveCharacterStore(env.LEADERBOARD, store);
+    message = `${existing.name} 已删除；已拥有该人物的账号会自动改回基础人物。`;
+  } else if (action === "resetCharacter") {
+    if (!id || !builtInBase) return json({ error: "builtin_character_required" }, 400);
+    delete store.overrides[id];
+    store = await saveCharacterStore(env.LEADERBOARD, store);
+    message = `${builtInBase.name} 已恢复默认属性。`;
+  } else {
+    return json({ error: "unknown_action" }, 400);
+  }
+
+  return json(characterCatalogPayload(store, message));
+}
+
+function redeemCodeAdminPayload(storeValue, message = "") {
+  const store = normalizeRedeemCodeStore(storeValue);
+  return {
+    ok: true,
+    message,
+    version: store.version,
+    updatedAt: store.updatedAt,
+    serverTime: Date.now(),
+    codes: store.codes,
+  };
+}
+
+async function handleAdminRedeemCodes(request, env) {
+  if (!env.LEADERBOARD) return json({ error: "kv_not_bound" }, 503);
+  if (!isAdminRequest(request, env)) return json({ error: "unauthorized" }, 401);
+  let store = await loadRedeemCodeStore(env.LEADERBOARD);
+  if (request.method === "GET") return json(redeemCodeAdminPayload(store));
+  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+  const action = String(body?.action || "");
+  const requested = body?.code && typeof body.code === "object" ? body.code : {};
+  const code = cleanRedeemCode(body?.codeValue || requested.code);
+  let message = "";
+
+  if (action === "upsertRedeemCode") {
+    if (!code) return json({ error: "invalid_redeem_code" }, 400);
+    const existing = store.codes.find((item) => item.code === code);
+    const record = sanitizeRedeemCodeRecord({
+      ...requested,
+      code,
+      uses: existing?.uses || 0,
+      createdAt: existing?.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    }, existing || { code });
+    if (!record.coins && !record.characterId) return json({ error: "empty_redeem_reward" }, 400);
+    if (record.startsAt && record.expiresAt && record.expiresAt <= record.startsAt) {
+      return json({ error: "invalid_redeem_window" }, 400);
+    }
+    if (record.characterId) {
+      const catalog = resolvedCharacterCatalog(await loadCharacterStore(env.LEADERBOARD));
+      if (!catalog.some((character) => character.id === record.characterId)) {
+        return json({ error: "redeem_character_not_found" }, 404);
+      }
+    }
+    store.codes = store.codes.filter((item) => item.code !== code);
+    store.codes.push(record);
+    store = await saveRedeemCodeStore(env.LEADERBOARD, store);
+    message = existing ? `兑换码 ${code} 已更新。` : `兑换码 ${code} 已创建。`;
+  } else if (action === "deleteRedeemCode") {
+    if (!code) return json({ error: "invalid_redeem_code" }, 400);
+    const existing = store.codes.find((item) => item.code === code);
+    if (!existing) return json({ error: "redeem_code_not_found" }, 404);
+    store.codes = store.codes.filter((item) => item.code !== code);
+    store = await saveRedeemCodeStore(env.LEADERBOARD, store);
+    message = `兑换码 ${code} 已删除，之后不能再兑换。`;
+  } else {
+    return json({ error: "unknown_action" }, 400);
+  }
+
+  return json(redeemCodeAdminPayload(store, message));
+}
+
+async function siteControlPayload(binding, message = "") {
+  const now = Date.now();
+  const [lock, sales] = await Promise.all([
+    loadSiteLock(binding),
+    loadYuanyuanSales(binding),
+  ]);
+  return {
+    ...siteLockPayload(lock, now, message),
+    yuanyuan: yuanyuanStorePayload(sales, null, now, true),
+  };
+}
+
+async function handleAdminSiteControl(request, env) {
+  if (!env.LEADERBOARD) return json({ error: "kv_not_bound" }, 503);
+  if (!isAdminRequest(request, env)) return json({ error: "unauthorized" }, 401);
+  if (request.method === "GET") return json(await siteControlPayload(env.LEADERBOARD));
+  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+
+  const action = String(body?.action || "");
+  const now = Date.now();
+  let message = "";
+
+  if (action === "setSiteLock") {
+    const startsAt = cleanCharacterTimestamp(body?.startsAt) || now;
+    const endsAt = cleanCharacterTimestamp(body?.endsAt);
+    const maximumDuration = 30 * 24 * 60 * 60 * 1000;
+    if (!endsAt || endsAt <= Math.max(now, startsAt) || endsAt - startsAt > maximumDuration) {
+      return json({ error: "invalid_site_lock_window" }, 400);
+    }
+    const lock = await saveSiteLock(env.LEADERBOARD, {
+      enabled: true,
+      startsAt,
+      endsAt,
+      message: body?.message,
+    });
+    message = startsAt > now + 5000
+      ? `已预约封锁：${new Date(startsAt).toISOString()} 开始。`
+      : "网站封锁已开启，玩家页面会立即显示维护膜。";
+    return json({
+      ...(await siteControlPayload(env.LEADERBOARD, message)),
+      lock: siteLockPayload(lock, now).lock,
+    });
+  }
+
+  if (action === "unlockSite") {
+    const current = await loadSiteLock(env.LEADERBOARD);
+    await saveSiteLock(env.LEADERBOARD, {
+      ...current,
+      enabled: false,
+      endsAt: now,
+    });
+    message = "网站封锁已解除，玩家刷新或等待自动检查后即可继续。";
+    return json(await siteControlPayload(env.LEADERBOARD, message));
+  }
+
+  return json({ error: "unknown_action" }, 400);
 }
 
 function commandToken(prefix) {
@@ -1548,20 +3043,17 @@ async function handleAdminCoinRepair(request, env) {
     const key = accountRecordKey(String(accountId));
     const raw = await env.LEADERBOARD.get(key);
     if (!raw) return json({ error: "account_not_found" }, 404);
-    const text = String(raw);
-    const property = '"walletCoins"';
-    const propertyAt = text.indexOf(property);
-    if (propertyAt < 0) return json({ error: "wallet_not_found" }, 409);
-    const colonAt = text.indexOf(":", propertyAt + property.length);
-    if (colonAt < 0) return json({ error: "wallet_not_found" }, 409);
-    let valueStart = colonAt + 1;
-    while (/\s/.test(text[valueStart] || "")) valueStart += 1;
-    let valueEnd = valueStart;
-    while (/[0-9.+-]/.test(text[valueEnd] || "")) valueEnd += 1;
-    const previousBalance = Math.max(0, Math.min(1000000000, Math.round(Number(text.slice(valueStart, valueEnd)) || 0)));
-    const updated = `${text.slice(0, valueStart)}${amount}${text.slice(valueEnd)}`;
-    await env.LEADERBOARD.put(key, updated);
-    return json({ ok: true, phase, playerId, previousBalance, balanceAfter: amount });
+    const patched = patchRawWalletBalance(raw, amount);
+    if (!patched) return json({ error: "wallet_not_found" }, 409);
+    await env.LEADERBOARD.put(key, patched.updated);
+    return json({
+      ok: true,
+      phase,
+      playerId,
+      previousBalance: patched.previousBalance,
+      balanceAfter: patched.balanceAfter,
+      walletRevision: patched.walletRevision,
+    });
   }
 
   if (phase === "ranking") {
@@ -1700,14 +3192,38 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
+      const siteLockExempt = url.pathname === "/api/site-status" ||
+        url.pathname === "/api/health" ||
+        url.pathname.startsWith("/api/admin");
+      if (
+        request.method !== "OPTIONS" &&
+        url.pathname.startsWith("/api/") &&
+        !siteLockExempt &&
+        env.LEADERBOARD
+      ) {
+        const status = siteLockPayload(await loadSiteLock(env.LEADERBOARD), Date.now());
+        if (status.lock.active) {
+          return json({
+            error: "site_locked",
+            serverTime: status.serverTime,
+            lock: status.lock,
+          }, 423);
+        }
+      }
+      if (url.pathname === "/api/site-status") {
+        if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
+        return handlePublicSiteStatus(request, env);
+      }
       if (url.pathname === "/api/health") {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
         if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
+        const lockStatus = siteLockPayload(await loadSiteLock(env.LEADERBOARD), Date.now()).lock;
         return json({
           ok: true,
-          version: "v36",
+          version: "v49",
           kvBound: Boolean(env.LEADERBOARD),
           battleBound: Boolean(env.BATTLE_ROOMS),
+          siteLocked: lockStatus.active,
           serverTime: Date.now(),
         });
       }
@@ -1717,9 +3233,25 @@ export default {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
         return json({ error: "method_not_allowed" }, 405);
       }
+      if (url.pathname === "/api/characters") {
+        if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
+        return handlePublicCharacters(request, env);
+      }
       if (url.pathname === "/api/admin") {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
         return handleAdmin(request, env);
+      }
+      if (url.pathname === "/api/admin-site-control") {
+        if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
+        return handleAdminSiteControl(request, env);
+      }
+      if (url.pathname === "/api/admin-characters") {
+        if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
+        return handleAdminCharacters(request, env);
+      }
+      if (url.pathname === "/api/admin-redeem-codes") {
+        if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
+        return handleAdminRedeemCodes(request, env);
       }
       if (url.pathname === "/api/admin-coin-repair") {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
@@ -1740,15 +3272,13 @@ export default {
       if (url.pathname === "/api/battle") {
         return handleBattleSocket(request, env);
       }
-      if (url.pathname === "/admin/" && (request.method === "GET" || request.method === "HEAD")) {
+      if (url.pathname === "/admin" && (request.method === "GET" || request.method === "HEAD")) {
         const canonicalAdminUrl = new URL(request.url);
-        canonicalAdminUrl.pathname = "/admin";
+        canonicalAdminUrl.pathname = "/admin/";
         return Response.redirect(canonicalAdminUrl.toString(), 302);
       }
-      if (url.pathname === "/admin" && (request.method === "GET" || request.method === "HEAD")) {
-        const adminUrl = new URL(request.url);
-        adminUrl.pathname = "/admin.html";
-        return env.ASSETS.fetch(new Request(adminUrl.toString(), request));
+      if (url.pathname === "/admin/" && (request.method === "GET" || request.method === "HEAD")) {
+        return env.ASSETS.fetch(request);
       }
       return env.ASSETS.fetch(request);
     } catch (error) {

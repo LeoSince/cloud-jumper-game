@@ -7,8 +7,8 @@
     <meta name="description" content="支持跨设备账号、金币隐私、共享排名、黑暗洞穴、随机二连跳悬崖和二十个主题关卡的原创手机横版闯关游戏。" />
     <title>云朵小勇士｜20关渐进挑战</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./globals.css?v=36" />
-    <script src="./game.js?v=36" defer></script>
+    <link rel="stylesheet" href="./globals.css?v=49" />
+    <script src="./game.js?v=49" defer></script>
   </head>
   <body>
     <main class="game-shell" id="gameShell">
@@ -44,9 +44,12 @@
           </div>
         </div>
 
-        <button class="sound-button" id="soundButton" type="button" aria-label="关闭声音">
-          <span aria-hidden="true" id="soundIcon">♪</span>
-        </button>
+        <div class="hud-actions">
+          <button class="compact-hud-button is-hidden" id="compactHudButton" type="button" aria-label="打开简洁模式" aria-pressed="false">简</button>
+          <button class="sound-button" id="soundButton" type="button" aria-label="关闭声音">
+            <span aria-hidden="true" id="soundIcon">♪</span>
+          </button>
+        </div>
       </header>
 
       <div class="mission-hud is-hidden" id="missionHud" aria-live="polite">
@@ -79,6 +82,25 @@
         <span><b>↑ / 空格</b> 跳跃</span>
       </div>
 
+      <section class="site-lock-overlay is-hidden" id="siteLockOverlay" role="dialog" aria-modal="true" aria-labelledby="siteLockTitle" aria-hidden="true">
+        <div class="site-lock-membrane" aria-hidden="true">
+          <i></i><i></i><i></i>
+        </div>
+        <article class="site-lock-card">
+          <div class="site-lock-mark" aria-hidden="true"><span>☁</span><i></i></div>
+          <div class="site-lock-status"><span></span>临时封锁中</div>
+          <h2 id="siteLockTitle">云端通道暂时关闭</h2>
+          <p id="siteLockMessage">云端正在进行临时维护，请稍后回来。</p>
+          <div class="site-lock-timer" aria-live="polite">
+            <small>距离恢复预计还有</small>
+            <strong id="siteLockCountdown">--:--</strong>
+            <span id="siteLockWindow">正在读取恢复时间</span>
+          </div>
+          <button id="siteLockRefreshButton" type="button"><span aria-hidden="true">↻</span> 重新检查</button>
+          <small class="site-lock-note">正在进行的闯关已暂停，不会继续扣血或前进。</small>
+        </article>
+      </section>
+
       <section class="account-gate" id="accountGate" aria-modal="true" role="dialog" aria-labelledby="accountGateTitle">
         <div class="account-gate-card">
           <div class="account-cloud" aria-hidden="true">☁</div>
@@ -95,6 +117,7 @@
             <label>设置密码<input id="registerPasswordInput" type="password" minlength="4" maxlength="64" autocomplete="new-password" placeholder="至少 4 个字符" required /></label>
             <label>确认密码<input id="registerConfirmInput" type="password" minlength="4" maxlength="64" autocomplete="new-password" placeholder="再次输入密码" required /></label>
             <label class="coin-privacy-option"><input id="registerShowCoins" type="checkbox" /><span><b>允许别人看到我的金币</b><small>不勾选时排行榜只显示成绩</small></span></label>
+            <label class="coin-privacy-option"><input id="registerShowOnlineStatus" type="checkbox" checked /><span><b>显示我的在线状态</b><small>排行榜头像圆点只显示在线范围，不公开具体时间</small></span></label>
             <button class="account-submit" id="registerAccountButton" type="submit">注册并保存当前记录</button>
           </form>
 
@@ -136,31 +159,29 @@
               </button>
             </header>
 
-            <p class="overlay-copy home-intro" id="overlayCopy">选择一个功能，马上开始。</p>
-
             <div class="home-stats" aria-label="玩家概况">
               <div><span class="stat-icon coin-stat" aria-hidden="true">●</span><small>金币</small><strong id="homeWallet">0</strong></div>
               <div><span class="stat-icon" aria-hidden="true">🏁</span><small>已解锁</small><strong><b id="homeUnlockedLevel">1</b>/20</strong></div>
-              <div><span class="stat-icon heart-stat" aria-hidden="true">♥</span><small>生命</small><strong id="homeHeartCount">3</strong></div>
+              <button class="home-heart-shortcut" id="homeHeartShortcut" type="button" aria-label="查看生命升级商品"><span class="stat-icon heart-stat" aria-hidden="true">♥</span><small>生命</small><strong><b id="homeHeartCount">3</b> 滴</strong><em id="homeHeartAction">升级 ›</em></button>
             </div>
 
             <nav class="home-tabs" aria-label="主界面功能" role="tablist">
               <button class="is-active" id="homeTabPlay" type="button" data-home-tab="play" role="tab" aria-selected="true" aria-controls="homePanelPlay"><span aria-hidden="true">▶</span>挑战</button>
-              <button id="homeTabShop" type="button" data-home-tab="shop" role="tab" aria-selected="false" aria-controls="homePanelShop" tabindex="-1"><span aria-hidden="true">★</span>角色</button>
+              <button id="homeTabShop" type="button" data-home-tab="shop" role="tab" aria-selected="false" aria-controls="homePanelShop" tabindex="-1"><span aria-hidden="true">◆</span>商店</button>
               <button id="homeTabRank" type="button" data-home-tab="rank" role="tab" aria-selected="false" aria-controls="homePanelRank" tabindex="-1"><span aria-hidden="true">♛</span>排行</button>
               <button id="homeTabChat" type="button" data-home-tab="chat" role="tab" aria-selected="false" aria-controls="homePanelChat" aria-label="聊天" tabindex="-1"><span class="home-tab-chat-icon" aria-hidden="true">💬<b class="chat-unread-badge is-hidden" id="chatUnreadBadge">0</b></span>聊天</button>
             </nav>
 
             <div class="home-tab-panel" id="homePanelPlay" data-home-panel="play" role="tabpanel" aria-labelledby="homeTabPlay">
-              <div class="play-mission-card">
-                <div class="mission-art" aria-hidden="true"><span>🏃</span><i>☁</i></div>
-                <div><small>当前挑战</small><strong>冲过 100 分终点</strong><p>隐藏洞穴、突然落物与二连跳悬崖随机出现</p></div>
-              </div>
-
-              <button class="start-button play-start-button" id="primaryButton" type="button">
-                <span aria-hidden="true">🏁</span>选择关卡
-                <span aria-hidden="true">→</span>
-              </button>
+              <section class="campaign-launch-card" aria-label="单人闯关">
+                <div class="play-mission-card">
+                  <div class="mission-art" aria-hidden="true"><span>🏃</span><i>☁</i></div>
+                  <div><small>单人闯关</small><strong>冲过 100 分终点</strong><p>20 个主题关卡 · 隐藏路线与随机事件</p></div>
+                </div>
+                <button class="start-button play-start-button" id="primaryButton" type="button">
+                  <span aria-hidden="true">🏁</span><b>选择关卡</b><span aria-hidden="true">→</span>
+                </button>
+              </section>
 
               <button class="battle-entry-button" id="battleEntryButton" type="button">
                 <span class="battle-entry-icon" aria-hidden="true">⚔</span>
@@ -168,59 +189,99 @@
                 <b aria-hidden="true">→</b>
               </button>
 
+              <section class="daily-checkin-card" id="dailyCheckinCard" aria-labelledby="dailyCheckinTitle">
+                <div class="daily-checkin-main">
+                  <span class="daily-checkin-icon" aria-hidden="true">🎁</span>
+                  <div><small>30 天循环奖励</small><strong id="dailyCheckinTitle">每日签到</strong><em id="dailyCheckinSummary">今天可领取金币</em></div>
+                  <button id="dailyCheckinButton" type="button">领取</button>
+                </div>
+                <details class="daily-checkin-details">
+                  <summary>查看全部 30 天奖励 <span id="dailyCheckinProgress">0 / 30</span></summary>
+                  <div class="daily-checkin-grid" id="dailyCheckinGrid" aria-label="30 天签到奖励"></div>
+                </details>
+                <p class="daily-checkin-message" id="dailyCheckinMessage" role="status"></p>
+              </section>
+
               <div class="result-line is-hidden" id="resultLine">
                 <span>挑战进度</span>
                 <strong id="finalScore">0</strong>
                 <span class="best-score" id="bestScore">最高 0</span>
               </div>
 
-              <div class="control-preview" id="controlPreview">
-                <div>
-                  <span class="tap-symbol" aria-hidden="true">●</span>
-                  <strong>自动前进</strong>
-                  <small>速度会逐渐加快，按 ← 可减速或后退</small>
-                </div>
-                <div>
-                  <span class="swipe-symbol" aria-hidden="true">↓</span>
-                  <strong>下滑按住</strong>
-                  <small>松手后人物立即站起</small>
-                </div>
-              </div>
-
-              <details class="home-tools">
-                <summary><span>🎁 账号升级与兑换码</span><small>展开</small></summary>
-                <div class="account-upgrade-card">
+              <details class="control-guide">
+                <summary><span><i aria-hidden="true">⌁</i> 操作说明</span><small>轻点查看</small></summary>
+                <div class="control-preview" id="controlPreview">
                   <div>
-                    <strong>♥ 账号生命升级</strong>
-                    <small id="accountUpgradeStatus">先用 1000 金币升到 5 滴血，再用 9999 金币升到 7 滴血</small>
+                    <span class="tap-symbol" aria-hidden="true">●</span>
+                    <strong>轻点跳跃</strong>
+                    <small>自动前进；部分人物支持二连跳或三连跳</small>
                   </div>
-                  <button id="accountUpgradeButton" type="button">1000 金币升级</button>
-                </div>
-                <div class="redeem-card redeem-card-inline">
-                  <strong>礼物兑换码</strong>
-                  <div class="redeem-row">
-                    <input id="redeemCodeInput" type="text" maxlength="24" autocomplete="off" placeholder="输入兑换码" aria-label="礼物兑换码" />
-                    <button id="redeemCodeButton" type="button">兑换</button>
+                  <div>
+                    <span class="swipe-symbol" aria-hidden="true">↓</span>
+                    <strong>下滑按住</strong>
+                    <small>持续蹲下躲避低矮障碍，松手立即站起</small>
                   </div>
-                  <p id="redeemMessage">正确兑换码可获得礼物</p>
                 </div>
+                <p class="keyboard-tip play-keyboard-tip" id="keyboardTip">电脑：← 减速/后退 · ↑/空格跳跃 · 按住 ↓ 蹲下</p>
               </details>
-              <p class="keyboard-tip play-keyboard-tip" id="keyboardTip">自动前进并逐渐加速 · ← 减速/后退 · ↑/空格跳跃 · 按住 ↓ 蹲下</p>
             </div>
 
             <div class="home-tab-panel is-hidden" id="homePanelShop" data-home-panel="shop" role="tabpanel" aria-labelledby="homeTabShop" hidden>
-              <div class="character-shop" id="characterShop">
-                <div class="shop-heading">
-                  <div><small>选择最适合你的能力</small><strong>角色商店</strong></div>
-                  <span>● <b id="walletBalance">0</b> · 限时 399 起</span>
+              <section class="store-shell character-shop" id="characterShop" aria-labelledby="storeTitle">
+                <header class="store-header">
+                  <div><small>金币可购买永久内容</small><strong id="storeTitle">冒险商店</strong></div>
+                  <span class="store-wallet"><i aria-hidden="true">●</i><b id="walletBalance">0</b></span>
+                </header>
+
+                <nav class="store-category-tabs" role="tablist" aria-label="商店分类">
+                  <button class="is-active" id="storeTabCharacters" type="button" data-store-category="characters" role="tab" aria-selected="true" aria-controls="storePanelCharacters"><span aria-hidden="true">★</span>人物</button>
+                  <button id="storeTabOther" type="button" data-store-category="other" role="tab" aria-selected="false" aria-controls="storePanelOther" tabindex="-1"><span aria-hidden="true">♥</span>其他</button>
+                </nav>
+
+                <div class="store-category-panel" id="storePanelCharacters" data-store-panel="characters" role="tabpanel" aria-labelledby="storeTabCharacters">
+                  <div class="store-section-heading">
+                    <span><strong>人物</strong><small>购买后永久解锁，可随时切换</small></span>
+                    <em>付费人物 499 起</em>
+                  </div>
+                  <div class="limited-offer-strip yuanyuan-offer" id="yuanyuanOffer">
+                    <span><b>限量抢购 · 元元</b><small id="yuanyuanStock">胖胖清障专家 · 满星耐力 · 全球限量 3 份</small></span>
+                    <strong id="yuanyuanCountdown">7 月 27 日 10:00 开抢</strong>
+                  </div>
+                  <div class="character-grid" id="characterGrid" aria-label="人物商店"></div>
+                  <p class="shop-message" id="shopMessage">点击人物查看、购买或切换使用</p>
                 </div>
-                <div class="limited-offer-strip" id="beibeiOffer">
-                  <span><b>限时人物 · 贝贝</b><small>满星体力 · 三连跳 · 落地快速回血</small></span>
-                  <strong id="beibeiCountdown">优惠倒计时</strong>
+
+                <div class="store-category-panel is-hidden" id="storePanelOther" data-store-panel="other" role="tabpanel" aria-labelledby="storeTabOther" hidden>
+                  <div class="store-section-heading">
+                    <span><strong>其他商品</strong><small>账号强化与礼物兑换</small></span>
+                  </div>
+                  <div class="store-other-grid">
+                    <article class="store-product-card heart-upgrade-product">
+                      <span class="store-product-icon" aria-hidden="true">♥</span>
+                      <div class="store-product-copy">
+                        <small>账号永久强化</small>
+                        <strong id="accountUpgradeTitle">5 滴血生命升级</strong>
+                        <p id="accountUpgradeStatus">当前 3 滴血，1999 金币永久升级到 5 滴血</p>
+                      </div>
+                      <button id="accountUpgradeButton" type="button">● 1999 · 升级到 5 滴</button>
+                    </article>
+
+                    <article class="store-product-card redeem-product">
+                      <span class="store-product-icon" aria-hidden="true">🎟</span>
+                      <div class="store-product-copy">
+                        <small>一次性礼物</small>
+                        <strong>兑换码</strong>
+                        <p>输入有效兑换码，奖励会记录在账号中。</p>
+                      </div>
+                      <div class="redeem-row">
+                        <input id="redeemCodeInput" type="text" maxlength="24" autocomplete="off" placeholder="输入兑换码" aria-label="礼物兑换码" />
+                        <button id="redeemCodeButton" type="button">兑换</button>
+                      </div>
+                      <p class="store-product-message" id="redeemMessage">每个兑换码只能领取一次</p>
+                    </article>
+                  </div>
                 </div>
-                <div class="character-grid" id="characterGrid" aria-label="角色商店"></div>
-                <p class="shop-message" id="shopMessage">价格越高，跳跃越灵活，花式动作越丰富</p>
-              </div>
+              </section>
             </div>
 
             <div class="home-tab-panel is-hidden" id="homePanelRank" data-home-panel="rank" role="tabpanel" aria-labelledby="homeTabRank" hidden>
@@ -236,12 +297,16 @@
                 </div>
                 <div class="season-strip">
                   <span id="leaderboardSeason">正在读取赛季时间…</span>
-                  <b id="leaderboardReward">冠军奖励：哆啦A梦</b>
+                  <b id="leaderboardReward">冠军专属：哆啦A梦资格</b>
                 </div>
+                <details class="season-rules">
+                  <summary>赛季规则</summary>
+                  <p>每 14 天结算一次。赛季冠军解锁哆啦A梦专属购买资格，可使用 14999 金币永久解锁；购买前会再次确认。</p>
+                </details>
                 <ol class="leaderboard-list" id="leaderboardList">
                   <li class="is-empty"><span>还没有成绩</span><b>—</b></li>
                 </ol>
-                <p class="leaderboard-winner" id="leaderboardWinner">两周后第一名自动获得冠军角色</p>
+                <p class="leaderboard-winner" id="leaderboardWinner">两周赛季冠军可解锁哆啦A梦专属资格</p>
                 <p id="leaderboardStatus">完成关卡后自动更新成绩</p>
               </div>
             </div>
@@ -269,7 +334,7 @@
                   <input id="chatTextInput" type="text" maxlength="240" autocomplete="off" placeholder="输入消息…" aria-label="聊天消息" />
                   <button id="chatSendButton" type="submit">发送</button>
                 </form>
-                <small class="chat-note">点击头像看资料 · 长按头像 @玩家 · 自己的消息 5 分钟内可撤回</small>
+                <small class="chat-note">点击头像看资料 · 长按任意头像可单独 @对方 · 自己的消息 5 分钟内可撤回</small>
               </section>
             </div>
           </section>
@@ -334,7 +399,10 @@
 
             <div class="cloud-account-card">
               <div><strong id="loggedAccountName">云端账号未连接</strong><small id="accountSyncStatus">登录后自动同步游戏记录</small></div>
-              <label class="privacy-switch"><input id="showCoinsToggle" type="checkbox" /><span></span><b>公开金币</b></label>
+              <div class="profile-privacy-controls">
+                <label class="privacy-switch"><input id="showCoinsToggle" type="checkbox" /><span></span><b>公开金币</b></label>
+                <label class="privacy-switch"><input id="showOnlineStatusToggle" type="checkbox" /><span></span><b>显示在线状态</b></label>
+              </div>
             </div>
 
             <button class="profile-save-button" id="profileSaveButton" type="button">保存个人资料</button>

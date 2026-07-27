@@ -8,10 +8,10 @@
   const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) return;
 
+  const gameShell = document.getElementById("gameShell");
   const overlay = document.getElementById("gameOverlay");
   const overlayEyebrow = document.getElementById("overlayEyebrow");
   const overlayTitle = document.getElementById("overlayTitle");
-  const overlayCopy = document.getElementById("overlayCopy");
   const controlPreview = document.getElementById("controlPreview");
   const resultLine = document.getElementById("resultLine");
   const finalScore = document.getElementById("finalScore");
@@ -24,6 +24,7 @@
   const progressBar = document.getElementById("progressBar");
   const soundButton = document.getElementById("soundButton");
   const soundIcon = document.getElementById("soundIcon");
+  const compactHudButton = document.getElementById("compactHudButton");
   const gestureHint = document.getElementById("gestureHint");
   const announcement = document.getElementById("gameAnnouncement");
   const characterShop = document.getElementById("characterShop");
@@ -60,7 +61,14 @@
   const entryNameButton = document.getElementById("entryNameButton");
   const entryNameError = document.getElementById("entryNameError");
   const accountUpgradeButton = document.getElementById("accountUpgradeButton");
+  const accountUpgradeTitle = document.getElementById("accountUpgradeTitle");
   const accountUpgradeStatus = document.getElementById("accountUpgradeStatus");
+  const dailyCheckinCard = document.getElementById("dailyCheckinCard");
+  const dailyCheckinButton = document.getElementById("dailyCheckinButton");
+  const dailyCheckinSummary = document.getElementById("dailyCheckinSummary");
+  const dailyCheckinProgress = document.getElementById("dailyCheckinProgress");
+  const dailyCheckinGrid = document.getElementById("dailyCheckinGrid");
+  const dailyCheckinMessage = document.getElementById("dailyCheckinMessage");
   const redeemCodeInput = document.getElementById("redeemCodeInput");
   const redeemCodeButton = document.getElementById("redeemCodeButton");
   const redeemMessage = document.getElementById("redeemMessage");
@@ -73,6 +81,7 @@
   const registerPasswordInput = document.getElementById("registerPasswordInput");
   const registerConfirmInput = document.getElementById("registerConfirmInput");
   const registerShowCoins = document.getElementById("registerShowCoins");
+  const registerShowOnlineStatus = document.getElementById("registerShowOnlineStatus");
   const registerAccountButton = document.getElementById("registerAccountButton");
   const loginNameInput = document.getElementById("loginNameInput");
   const loginPasswordInput = document.getElementById("loginPasswordInput");
@@ -81,12 +90,19 @@
   const loggedAccountName = document.getElementById("loggedAccountName");
   const accountSyncStatus = document.getElementById("accountSyncStatus");
   const showCoinsToggle = document.getElementById("showCoinsToggle");
+  const showOnlineStatusToggle = document.getElementById("showOnlineStatusToggle");
   const logoutAccountButton = document.getElementById("logoutAccountButton");
   const staminaStars = document.getElementById("staminaStars");
   const staminaValue = document.getElementById("staminaValue");
   const staminaBar = document.getElementById("staminaBar");
-  const beibeiOffer = document.getElementById("beibeiOffer");
-  const beibeiCountdown = document.getElementById("beibeiCountdown");
+  const yuanyuanOffer = document.getElementById("yuanyuanOffer");
+  const yuanyuanCountdown = document.getElementById("yuanyuanCountdown");
+  const yuanyuanStock = document.getElementById("yuanyuanStock");
+  const siteLockOverlay = document.getElementById("siteLockOverlay");
+  const siteLockMessage = document.getElementById("siteLockMessage");
+  const siteLockCountdown = document.getElementById("siteLockCountdown");
+  const siteLockWindow = document.getElementById("siteLockWindow");
+  const siteLockRefreshButton = document.getElementById("siteLockRefreshButton");
   const profileButton = document.getElementById("profileButton");
   const profileButtonAvatar = document.getElementById("profileButtonAvatar");
   const profileButtonStatus = document.getElementById("profileButtonStatus");
@@ -111,9 +127,13 @@
   const coinHistoryList = document.getElementById("coinHistoryList");
   const homeUnlockedLevel = document.getElementById("homeUnlockedLevel");
   const homeHeartCount = document.getElementById("homeHeartCount");
+  const homeHeartShortcut = document.getElementById("homeHeartShortcut");
+  const homeHeartAction = document.getElementById("homeHeartAction");
   const homeTabButtons = [...document.querySelectorAll("[data-home-tab]")];
   const chatTabButton = homeTabButtons.find((button) => button.dataset.homeTab === "chat");
   const homeTabPanels = [...document.querySelectorAll("[data-home-panel]")];
+  const storeCategoryButtons = [...document.querySelectorAll("[data-store-category]")];
+  const storeCategoryPanels = [...document.querySelectorAll("[data-store-panel]")];
   const noticeDialog = document.getElementById("noticeDialog");
   const noticeCard = noticeDialog?.querySelector(".notice-card");
   const noticeIcon = document.getElementById("noticeIcon");
@@ -187,23 +207,37 @@
   const TARGET_SCORE = 100;
   const MIN_LEVEL_SECONDS = 45;
   const COIN_LEDGER_LIMIT = 1000;
-  const BEIBEI_PROMO_END_AT = Date.parse("2026-07-21T15:59:59Z");
+  const DORAEMON_CHAMPION_PRICE = 14999;
+  const YUANYUAN_RELEASE_AT = Date.parse("2026-07-27T10:00:00+08:00");
+  const YUANYUAN_PRICE = 999;
+  const YUANYUAN_LIMIT = 3;
   const YUNQING_UNLOCK_AT = Date.parse("2026-07-16T00:00:00+08:00");
   const YUNQING_RESERVATION_PRICE = 500;
+  const HEART_RESET_VERSION = 2;
+  const DAILY_CHECKIN_REWARDS = [
+    { coins: 30 }, { coins: 40 }, { coins: 50 }, { coins: 60 }, { coins: 80 }, { coins: 100 },
+    { character: "messi", characterName: "梅西", fallbackCoins: 200 },
+    { coins: 50 }, { coins: 70 }, { coins: 100 }, { coins: 60 }, { coins: 80 }, { coins: 100 }, { coins: 150 }, { coins: 200 },
+    { character: "guoguo", characterName: "果果", fallbackCoins: 300 },
+    { coins: 70 }, { coins: 90 }, { coins: 110 }, { coins: 130 }, { coins: 180 }, { coins: 80 }, { coins: 100 }, { coins: 120 }, { coins: 150 }, { coins: 200 }, { coins: 250 }, { coins: 300 }, { coins: 350 },
+    { character: "mbappe", characterName: "姆巴佩", fallbackCoins: 500 },
+  ];
   const CHARACTER_DEFS = [
-    { id: "cloud", name: "云朵小勇士", cost: 0, badge: "云", color: "#58c88b", agility: 0.98, jumpPower: 665, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 0, freeSmash: 0, staminaCapacity: 66, staminaStars: 1, trait: "稳定基础二连跳 · 体力较少 · 第4–5关灵敏度降低" },
-    { id: "beibei", name: "贝贝", cost: 399, regularCost: 1899, badge: "贝", color: "#f5a8cf", agility: 1.2, jumpPower: 765, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 12, freeSmash: 0, staminaCapacity: 148, staminaStars: 5, staminaRecovery: 60, limitedOffer: true, trait: "限时女孩子角色 · 三次连跳 · 满星体力 · 不跳时快速恢复" },
-    { id: "messi", name: "梅西", cost: 499, badge: "10", color: "#8ed6ef", agility: 1.05, jumpPower: 695, airJumps: 1, flipTurns: 1, flipDuration: 0.66, magnetRadius: 0, freeSmash: 0, staminaCapacity: 78, staminaStars: 2, trait: "灵敏转身 · 二次跳 · 单圈后空翻" },
-    { id: "guoguo", name: "果果", cost: 699, badge: "果", color: "#86d7b0", agility: 1.18, jumpPower: 715, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 4, freeSmash: 0, staminaCapacity: 86, staminaStars: 2, trait: "性价比之选 · 眼镜专注 · 特技少但很灵敏" },
-    { id: "mbappe", name: "姆巴佩", cost: 999, badge: "⚡", color: "#5066b8", agility: 1.1, jumpPower: 725, airJumps: 1, flipTurns: 1, flipDuration: 0.58, magnetRadius: 7, freeSmash: 0, speedBoost: 1.36, staminaCapacity: 94, staminaStars: 3, trait: "极速响应 · 二次跳 · 长按/右键冲刺 · 快速后空翻" },
-    { id: "haaland", name: "哈兰德", cost: 1399, badge: "9", color: "#78d7eb", agility: 1.13, jumpPower: 745, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 8, freeSmash: 0, staminaCapacity: 102, staminaStars: 3, trait: "强力高跳 · 三次连跳 · 第三跳需要蓄力" },
-    { id: "qiang", name: "强哥", cost: 1699, badge: "强", color: "#e7904d", agility: 1.15, jumpPower: 760, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 15, freeSmash: 0, stoneImmune: true, speedBoost: 1.15, sunCaveDaily: true, staminaCapacity: 112, staminaStars: 4, trait: "肌肉护体 · 三次连跳 · 头顶碎石免伤 · 每日洞穴太阳" },
-    { id: "sponge", name: "海绵宝宝", cost: 1999, badge: "▦", color: "#f4d84c", agility: 1.17, jumpPower: 760, airJumps: 2, flipTurns: 1, flipDuration: 0.54, magnetRadius: 17, freeSmash: 0, sunCaveDaily: true, staminaCapacity: 118, staminaStars: 4, trait: "三次连跳 · 金币吸附 · 后空翻 · 每日洞穴太阳" },
-    { id: "patrick", name: "派大星", cost: 2999, badge: "★", color: "#f49aa5", agility: 1.21, jumpPower: 775, airJumps: 2, flipTurns: 1, flipDuration: 0.68, magnetRadius: 22, freeSmash: 1, sunCaveDaily: true, staminaCapacity: 134, staminaStars: 4, trait: "三次连跳 · 吸币碎石 · 后空翻 · 每日洞穴太阳" },
-    { id: "qihang", name: "启航", cost: 3999, badge: "航", color: "#486a9c", agility: 1, jumpPower: 675, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 2, freeSmash: 0, staminaCapacity: 70, staminaStars: 1, newCharacter: true, trait: "稳健基础型 · 二次跳 · 普通体力" },
-    { id: "yunqing", name: "云青", cost: 5999, badge: "青", color: "#49a99a", agility: 1.02, jumpPower: 685, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 3, freeSmash: 0, staminaCapacity: 74, staminaStars: 1, newCharacter: true, mysteryUntil: YUNQING_UNLOCK_AT, trait: "均衡基础型 · 二次跳 · 普通体力" },
+    { id: "cloud", name: "云朵小勇士", cost: 0, badge: "云", color: "#58c88b", agility: 0.96, jumpPower: 650, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 0, freeSmash: 0, staminaCapacity: 62, staminaStars: 1, trait: "稳定基础二连跳 · 体力较少 · 第4–5关灵敏度降低" },
+    { id: "beibei", name: "贝贝", cost: 1899, regularCost: 1899, badge: "贝", color: "#f5a8cf", agility: 1.14, jumpPower: 735, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 9, freeSmash: 0, staminaCapacity: 132, staminaStars: 5, staminaRecovery: 38, active: false, trait: "三次连跳 · 满星体力 · 不跳时快速恢复" },
+    { id: "messi", name: "梅西", cost: 499, badge: "10", color: "#8ed6ef", agility: 1.02, jumpPower: 682, airJumps: 1, flipTurns: 1, flipDuration: 0.66, magnetRadius: 0, freeSmash: 0, staminaCapacity: 72, staminaStars: 2, trait: "灵敏转身 · 二次跳 · 单圈后空翻" },
+    { id: "guoguo", name: "果果", cost: 699, badge: "果", color: "#86d7b0", agility: 1.1, jumpPower: 700, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 4, freeSmash: 0, staminaCapacity: 80, staminaStars: 2, trait: "性价比之选 · 眼镜专注 · 特技少但很灵敏" },
+    { id: "mbappe", name: "姆巴佩", cost: 999, badge: "⚡", color: "#5066b8", agility: 1.07, jumpPower: 712, airJumps: 1, flipTurns: 1, flipDuration: 0.58, magnetRadius: 7, freeSmash: 0, speedBoost: 1.3, staminaCapacity: 88, staminaStars: 3, trait: "极速响应 · 二次跳 · 长按/右键冲刺 · 快速后空翻" },
+    { id: "yuanyuan", name: "元元", cost: YUANYUAN_PRICE, regularCost: YUANYUAN_PRICE, badge: "元", color: "#eea45d", agility: 1.08, jumpPower: 720, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 6, freeSmash: 5, staminaCapacity: 140, staminaStars: 5, staminaRecovery: 0, gravityScale: 1.02, availableFrom: YUANYUAN_RELEASE_AT, newCharacter: true, trait: "厚实体型 · 每局撞碎5块石头 · 满星耐力 · 稳定二连跳，清障特别省心" },
+    { id: "haaland", name: "哈兰德", cost: 1399, badge: "9", color: "#78d7eb", agility: 1.09, jumpPower: 730, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 8, freeSmash: 0, staminaCapacity: 96, staminaStars: 3, trait: "强力高跳 · 三次连跳 · 第三跳需要蓄力" },
+    { id: "qiang", name: "强哥", cost: 1699, badge: "强", color: "#e7904d", agility: 1.1, jumpPower: 742, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 12, freeSmash: 0, stoneImmune: true, speedBoost: 1.1, sunCaveDaily: true, staminaCapacity: 104, staminaStars: 4, trait: "肌肉护体 · 三次连跳 · 头顶碎石免伤 · 每日洞穴太阳" },
+    { id: "sponge", name: "海绵宝宝", cost: 1999, badge: "▦", color: "#f4d84c", agility: 1.11, jumpPower: 740, airJumps: 2, flipTurns: 1, flipDuration: 0.54, magnetRadius: 14, freeSmash: 0, sunCaveDaily: true, staminaCapacity: 108, staminaStars: 4, trait: "三次连跳 · 金币吸附 · 后空翻 · 每日洞穴太阳" },
+    { id: "patrick", name: "派大星", cost: 2999, badge: "★", color: "#f49aa5", agility: 1.14, jumpPower: 752, airJumps: 2, flipTurns: 1, flipDuration: 0.68, magnetRadius: 18, freeSmash: 1, sunCaveDaily: true, staminaCapacity: 122, staminaStars: 4, trait: "三次连跳 · 吸币碎石 · 后空翻 · 每日洞穴太阳" },
+    { id: "qihang", name: "启航", cost: 3999, badge: "航", color: "#486a9c", agility: 0.97, jumpPower: 660, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 2, freeSmash: 0, staminaCapacity: 64, staminaStars: 1, newCharacter: true, trait: "稳健基础型 · 二次跳 · 普通体力" },
+    { id: "yunqing", name: "云青", cost: 5999, badge: "青", color: "#49a99a", agility: 0.99, jumpPower: 670, airJumps: 1, flipTurns: 0, flipDuration: 0, magnetRadius: 3, freeSmash: 0, staminaCapacity: 68, staminaStars: 1, newCharacter: true, mysteryUntil: YUNQING_UNLOCK_AT, trait: "均衡基础型 · 二次跳 · 普通体力" },
+    { id: "krabs", name: "蟹老板", cost: 7499, badge: "蟹", color: "#e75448", agility: 1.23, jumpPower: 770, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 12, tripleMagnetRadius: 110, freeSmash: 3, staminaCapacity: 144, staminaStars: 5, staminaRecovery: 14, newCharacter: true, trait: "三局一次金蟹局：强力吸币且金币三倍 · 蟹钳碎石三次 · 落地慢回体力" },
     { id: "zhixuan", name: "志炫", cost: 9999, badge: "炫", color: "#c64f3c", agility: 1.34, jumpPower: 800, airJumps: 2, instantTripleJump: true, flipTurns: 1, flipDuration: 0.5, magnetRadius: 30, freeSmash: 2, speedBoost: 1.24, sunCaveDaily: true, staminaCapacity: 170, staminaStars: 5, flairMoves: ["explosiveStepover", "dragToChop"], newCharacter: true, trait: "最高灵敏 · 无延迟三连跳 · 碎石两次 · 每日洞穴太阳" },
-    { id: "doraemon", name: "哆啦A梦", cost: 0, rewardOnly: true, badge: "铃", color: "#42aee8", agility: 1.26, jumpPower: 795, airJumps: 3, flipTurns: 0, flipDuration: 0, magnetRadius: 40, freeSmash: 0, gravityScale: 0.74, doorCharges: 1, sunCaveDaily: true, staminaCapacity: 150, staminaStars: 5, trait: "两周冠军特级 · 竹蜻蜓 · 任意门 · 每日太阳灯" },
+    { id: "doraemon", name: "哆啦A梦", cost: DORAEMON_CHAMPION_PRICE, regularCost: DORAEMON_CHAMPION_PRICE, rewardOnly: true, badge: "铃", color: "#42aee8", agility: 1.18, jumpPower: 765, airJumps: 2, flipTurns: 0, flipDuration: 0, magnetRadius: 34, freeSmash: 0, gravityScale: 0.78, doorCharges: 1, sunCaveDaily: true, staminaCapacity: 138, staminaStars: 5, trait: "两周冠军专属 · 竹蜻蜓 · 任意门 · 每日太阳灯" },
   ];
   const SKIN_TONES = {
     light: "#f2c49a",
@@ -224,6 +258,18 @@
   ];
   const HOME_ANNOUNCEMENTS = [
     {
+      id: "daily-checkin-krabs-v38-20260722",
+      kind: "offer",
+      icon: "🦀",
+      kicker: "每日奖励与新人物",
+      title: "30 天签到开启，蟹老板登场！",
+      message: "签到大多数时候送金币，部分日期直接送便宜人物；旧生命升级已统一回到 3 滴，5 滴血以 1999 金币重新上架。",
+      detail: "蟹老板每三局有一次三倍吸币局，还能落地恢复体力并且每局撞碎三块石头。",
+      actionLabel: "查看每日签到",
+      actionTab: "play",
+      closeLabel: "稍后再看",
+    },
+    {
       id: "avatar-profile-tip-v21-20260714",
       kind: "message",
       icon: "👤",
@@ -243,22 +289,33 @@
       title: "志炫、启航与云青加入商店",
       message: "志炫拥有最高灵敏和满星体力；启航是稳健基础型；云青将在 7 月 16 日公开能力。",
       detail: "云青开放前可花 500 金币预约，全球仅 3 个预约名额。",
-      actionLabel: "去角色商店",
+      actionLabel: "去商店",
       actionTab: "shop",
       closeLabel: "稍后再看",
     },
     {
-      id: "beibei-launch-20260714",
+      id: "yuanyuan-limited-launch-v47-20260727",
       kind: "offer",
-      icon: "🎀",
-      kicker: "新人物 · 限时优惠",
-      title: "贝贝登场！限时 399 金币",
-      message: "女孩子外观、满星体力、三次连跳；落地不跳时还能快速恢复体力。",
-      detail: "优惠到 7 月 21 日 23:59，之后恢复 1899 金币。",
-      actionLabel: "去商店看看贝贝",
+      icon: "元",
+      kicker: "明日限量抢购",
+      title: "元元 · 仅限 3 份",
+      message: "7 月 27 日上午 10:00 开抢，999 金币永久解锁。元元体型厚实，每局可以撞碎 5 块石头，还有满星耐力。",
+      detail: "稳定二连跳、清障能力出色，是这次活动里非常划算的闯关人物。",
+      actionLabel: "查看元元",
       actionTab: "shop",
       closeLabel: "知道了",
-      expiresAt: BEIBEI_PROMO_END_AT,
+    },
+    {
+      id: "online-status-guide-v48-20260726",
+      kind: "message",
+      icon: "●",
+      kicker: "排行榜状态说明",
+      title: "头像圆点代表最近上线状态",
+      message: "绿色表示正在在线，蓝色表示一天内来过，红色表示超过一天没有上线。只在头像右上角显示，不公开具体时间。",
+      detail: "你可以在右上角头像 → 个人中心里随时关闭“显示在线状态”；关闭后排行榜不会显示圆点。",
+      actionLabel: "查看个人设置",
+      actionProfile: true,
+      closeLabel: "我知道了",
     },
   ];
   const LEVEL_NAMES = ["草原起跑", "浮木小径", "落枝预警", "双层山谷", "极速转折", "裂地冲刺", "高空连跳", "机关走廊", "极限弹跳", "风暴分界", "乌鸦围城", "双洞追击", "坠物走廊", "三层迷阵", "五次磨炼", "黑洞工厂", "极速天梯", "连续崩塌", "终极围攻", "云端王座"];
@@ -525,34 +582,39 @@
       if (branchX + 126 < levelEnd - 220 && branchAllowed) {
         const longPlatform = index % 4 === 2;
         const branchWidth = longPlatform ? 190 + level * 8 : 118 + (index % 3) * 8;
+        const secondLayerY = 380 - Math.min(14, difficulty + (index % 2) * 4);
         hazardBlueprints.push({
           kind: "branch",
           x: Math.round(branchX),
           w: branchWidth,
-          y: 386 - Math.min(16, difficulty * 2 + (index % 2) * 5),
+          y: secondLayerY,
           h: 30 + Math.min(5, difficulty),
           layer: 2,
           crouchObstacle: true,
         });
         if ((index + level) % 2 === 0) {
-          addCoinLine(coinBlueprints, branchX + 9, longPlatform ? 7 : 4, 30, 342 - Math.min(16, difficulty * 2));
+          addCoinLine(coinBlueprints, branchX + 9, longPlatform ? 7 : 4, 30, secondLayerY - 43);
         } else {
-          addCoinWave(coinBlueprints, branchX + 10, longPlatform ? 7 : 4, 30, 326 - Math.min(12, difficulty), 22, index);
+          addCoinWave(coinBlueprints, branchX + 10, longPlatform ? 7 : 4, 30, secondLayerY - 55, 22, index);
         }
 
         if (level >= 6 && index % 5 === 3) {
-          const thirdX = branchX + Math.min(70, branchWidth * 0.28);
-          const thirdWidth = 145 + level * 7;
-          hazardBlueprints.push({
-            kind: "branch",
-            x: Math.round(thirdX),
-            w: thirdWidth,
-            y: 286 - Math.min(18, (level - 4) * 3),
-            h: 27,
-            layer: 3,
-          });
-          addCoinLine(coinBlueprints, thirdX + 12, 5, (thirdWidth - 24) / 4, 241 - Math.min(18, (level - 4) * 3));
-          coinBlueprints.push({ x: thirdX + thirdWidth * 0.5, y: 202 - Math.min(15, difficulty * 2), value: 3, big: true, requiresCombo: true });
+          const thirdX = branchX + Math.min(118, branchWidth * 0.42);
+          const thirdWidth = 170 + level * 8;
+          const thirdLayerY = Math.max(205, secondLayerY - (level >= 15 ? 142 : 132));
+          if (thirdX + thirdWidth < levelEnd - 120) {
+            hazardBlueprints.push({
+              kind: "branch",
+              x: Math.round(thirdX),
+              w: thirdWidth,
+              y: thirdLayerY,
+              h: 27,
+              layer: 3,
+              harmlessUnderside: true,
+            });
+            addCoinLine(coinBlueprints, thirdX + 12, 6, (thirdWidth - 24) / 5, thirdLayerY - 43);
+            coinBlueprints.push({ x: thirdX + thirdWidth * 0.5, y: thirdLayerY - 84, value: 3, big: true, requiresCombo: true });
+          }
         }
       }
 
@@ -607,13 +669,17 @@
         const clearOfHazards = hazardBlueprints.every((hazard) => Math.abs(hazard.x - x) > 235);
         const clearOfEnemies = enemyBlueprints.every((enemy) => x < enemy.minX - 170 || x > enemy.maxX + 170);
         if (x < levelEnd - 260 && hasBlueprintGroundAt(x, gaps) && clearOfHazards && clearOfEnemies) {
+          const holeWidth = level === 10 ? 100 : level <= 10 ? 92 : level <= 14 ? 88 : 84;
+          const holeHeight = Math.round(holeWidth * 0.72);
           hazardBlueprints.push({
             kind: "blackHole",
             x,
-            y: GROUND_Y - 60,
-            w: 60,
-            h: 60,
+            y: GROUND_Y - holeHeight,
+            w: holeWidth,
+            h: holeHeight,
             pull: 1 + difficulty * 0.08,
+            warning: level <= 10,
+            tutorial: level === 10,
           });
         }
       });
@@ -655,7 +721,18 @@
           const clear = hazardBlueprints.every((hazard) => Math.abs(hazard.x - x) > (hazard.kind === "branch" ? 165 : 205)) &&
             enemyBlueprints.every((enemy) => x < enemy.minX - 190 || x > enemy.maxX + 190);
           if (!clear) continue;
-          hazardBlueprints.push({ kind: "blackHole", x: Math.round(x), y: GROUND_Y - 60, w: 60, h: 60, pull: 1 + difficulty * 0.08 });
+          const holeWidth = level === 10 ? 100 : level <= 10 ? 92 : level <= 14 ? 88 : 84;
+          const holeHeight = Math.round(holeWidth * 0.72);
+          hazardBlueprints.push({
+            kind: "blackHole",
+            x: Math.round(x),
+            y: GROUND_Y - holeHeight,
+            w: holeWidth,
+            h: holeHeight,
+            pull: 1 + difficulty * 0.08,
+            warning: level <= 10,
+            tutorial: level === 10,
+          });
           break;
         }
       }
@@ -954,10 +1031,15 @@
   let checkpointX = START_X;
   let elapsed = 0;
   let cameraX = 0;
+  let cliffFallState = null;
+  let cliffRescueGrace = 0;
+  let cliffRescueHintsShown = Math.max(0, Math.min(3, Number(readSetting("cloud-jumper-cliff-rescue-hints", 0)) || 0));
   let shakeTime = 0;
   let jumpBuffer = 0;
   let coyoteTime = 0;
   let lastFrame = performance.now();
+  let renderFrameDelta = 1 / 60;
+  let premiumEffectTimer = 0;
   let cssWidth = 1;
   let cssHeight = 1;
   let scale = 1;
@@ -995,6 +1077,7 @@
   let accountToken = String(readSetting("cloud-jumper-account-token", ""));
   let accountAuthenticated = false;
   let accountShowCoins = readSetting("cloud-jumper-show-coins", false) === true;
+  let accountShowOnlineStatus = readSetting("cloud-jumper-show-online-status", true) !== false;
   let accountName = "";
   let accountAvatar = AVATAR_DEFS.some((item) => item.id === String(readSetting("cloud-jumper-avatar", "cloud")))
     ? String(readSetting("cloud-jumper-avatar", "cloud"))
@@ -1004,6 +1087,8 @@
   let leaderboardSourceSnapshot = [];
   let selectedRankingMode = "overall";
   let accountSyncTimer = 0;
+  let presenceTimer = 0;
+  let presenceBusy = false;
   let accountSyncBusy = false;
   let accountSyncPending = false;
   let accountSyncFailureCount = 0;
@@ -1015,7 +1100,12 @@
   const noticeQueue = [];
   const queuedNoticeIds = new Set();
   const processingGiftIds = new Set();
+  let characterCatalogLoaded = false;
+  let pendingCharacterCatalogNotice = null;
+  let doraemonPurchaseEligible = false;
+  let doraemonPurchaseBusy = false;
   let selectedHomeTab = "play";
+  let selectedStoreCategory = "characters";
   let chatPollTimer = 0;
   let chatUnreadPollTimer = 0;
   let chatLoading = false;
@@ -1029,7 +1119,6 @@
   let chatRenderFingerprint = "";
   let chatFullscreen = false;
   let chatForceScrollToBottom = false;
-  let chatAvatarPressTimer = 0;
   let publicProfileTarget = null;
   let battleSocket = null;
   let battleSocketState = "offline";
@@ -1070,17 +1159,58 @@
   let yunqingReserved = readSetting("cloud-jumper-yunqing-reserved", false) === true;
   let yunqingReservationCount = Math.max(0, Number(readSetting("cloud-jumper-yunqing-reservation-count", 0)) || 0);
   let yunqingStoreLoading = false;
+  let yuanyuanStoreStatus = {
+    releaseAt: YUANYUAN_RELEASE_AT,
+    released: Date.now() >= YUANYUAN_RELEASE_AT,
+    price: YUANYUAN_PRICE,
+    limit: YUANYUAN_LIMIT,
+    sold: 0,
+    remaining: YUANYUAN_LIMIT,
+    soldOut: false,
+    purchased: false,
+  };
+  let yuanyuanPurchaseBusy = false;
+  let siteLockActive = false;
+  let siteLockState = {
+    enabled: false,
+    active: false,
+    scheduled: false,
+    startsAt: 0,
+    endsAt: 0,
+    message: "",
+  };
+  let siteLockServerOffset = 0;
+  let siteLockPollTimer = 0;
+  let siteLockCountdownTimer = 0;
+  let siteStatusChecked = false;
   let dailySunUsedDate = String(readSetting("cloud-jumper-daily-sun-date", ""));
   let soundOn = readSetting("cloud-jumper-sound", true);
   let best = Number(readSetting("cloud-jumper-best-campaign", 0)) || 0;
   let walletCoins = Math.max(0, Number(readSetting("cloud-jumper-wallet", 0)) || 0);
+  let walletRevision = Math.max(0, Math.round(Number(readSetting("cloud-jumper-wallet-revision", 0)) || 0));
   let coinLedger = loadCoinLedger();
   ensureCoinLedgerBaseline();
+  let heartResetVersion = Math.max(0, Math.round(Number(readSetting("cloud-jumper-heart-reset-version", 0)) || 0));
   let accountUpgraded = readSetting("cloud-jumper-account-upgraded", false) === true;
   let heartUpgradeLevel = Math.max(0, Math.min(2, Math.round(Number(readSetting("cloud-jumper-heart-upgrade-level", accountUpgraded ? 1 : 0)) || 0)));
+  if (heartResetVersion < HEART_RESET_VERSION) {
+    heartResetVersion = HEART_RESET_VERSION;
+    accountUpgraded = false;
+    heartUpgradeLevel = 0;
+    writeSetting("cloud-jumper-heart-reset-version", heartResetVersion);
+    writeSetting("cloud-jumper-account-upgraded", false);
+    writeSetting("cloud-jumper-heart-upgrade-level", 0);
+  }
   accountUpgraded = heartUpgradeLevel >= 1;
   maxHearts = heartUpgradeLevel >= 2 ? 7 : accountUpgraded ? 5 : 3;
   hearts = maxHearts;
+  let dailyCheckinLastDate = String(readSetting("cloud-jumper-daily-checkin-last-date", ""));
+  let dailyCheckinTotal = Math.max(0, Math.round(Number(readSetting("cloud-jumper-daily-checkin-total", 0)) || 0));
+  let dailyCheckinBusy = false;
+  let redeemCodeBusy = false;
+  let crabRunsPlayed = Math.max(0, Math.round(Number(readSetting("cloud-jumper-crab-runs", 0)) || 0));
+  let crabTripleActive = false;
+  let simpleHudMode = readSetting("cloud-jumper-simple-hud", false) === true;
   let unlockedCharacters = loadUnlockedCharacters();
   let selectedCharacter = String(readSetting("cloud-jumper-selected", "cloud"));
   if (!unlockedCharacters.has(selectedCharacter)) selectedCharacter = "cloud";
@@ -1106,6 +1236,7 @@
   let lastHudProgress = -1;
   let lastHudStamina = -1;
   let lastOfferSecond = -1;
+  let lastSiteLockSecond = -1;
 
   function readSetting(key, fallback) {
     try {
@@ -1283,7 +1414,11 @@
     queuedNoticeIds.delete(finished.id);
     noticeActive = null;
     noticeDialog?.classList.add("is-hidden");
-    if (useAction && finished.actionTab) setHomeTab(finished.actionTab);
+    if (useAction && finished.actionTab) {
+      setHomeTab(finished.actionTab);
+      if (finished.actionTab === "shop") setStoreCategory(finished.actionStoreCategory || "characters");
+    }
+    if (useAction && finished.actionProfile) window.setTimeout(openOwnProfile, 80);
     window.setTimeout(showNextNotice, 90);
   }
 
@@ -1291,7 +1426,7 @@
     if (!accountAuthenticated || gameState !== "home") return;
     const now = Date.now();
     const seen = new Set(readStoredIdList("cloud-jumper-seen-announcements", 100));
-    const item = HOME_ANNOUNCEMENTS.find((candidate) =>
+    const item = [...HOME_ANNOUNCEMENTS].reverse().find((candidate) =>
       !seen.has(candidate.id) &&
       (!candidate.startsAt || now >= candidate.startsAt) &&
       (!candidate.expiresAt || now <= candidate.expiresAt));
@@ -1299,13 +1434,44 @@
     enqueueNotice({ ...item, persistAnnouncementId: item.id });
   }
 
+  function showPendingCharacterCatalogNotice() {
+    if (!accountAuthenticated || gameState !== "home" || !pendingCharacterCatalogNotice) return;
+    const { character, updatedAt } = pendingCharacterCatalogNotice;
+    pendingCharacterCatalogNotice = null;
+    writeSetting("cloud-jumper-character-catalog-seen-at", updatedAt);
+    const sale = characterSaleActive(character);
+    const price = characterPrice(character);
+    enqueueNotice({
+      id: `managed-character-${character.id}-${updatedAt}`,
+      kind: "offer",
+      icon: character.badge || "★",
+      kicker: sale ? "限时人物优惠" : character.builtIn ? "人物属性更新" : "新人物登场",
+      title: sale ? `${character.name}限时 ${price} 金币` : `${character.name}已加入商店`,
+      message: character.trait,
+      detail: character.id === "doraemon"
+        ? "两周赛季冠军可解锁专属购买资格。"
+        : character.rewardOnly
+          ? "这是奖励专属人物，无法使用金币购买。"
+          : `商店价格：● ${price}`,
+      actionLabel: "去商店看看",
+      actionTab: "shop",
+      actionStoreCategory: "characters",
+      closeLabel: "稍后再看",
+    });
+  }
+
   function collectAccountGameData() {
     return {
       walletCoins,
+      walletRevision,
       coinLedger,
       chatLastReadAt,
       accountUpgraded,
       heartUpgradeLevel,
+      heartResetVersion,
+      dailyCheckinLastDate,
+      dailyCheckinTotal,
+      crabRunsPlayed,
       battleMatches,
       battleWins,
       battleDraws,
@@ -1341,12 +1507,17 @@
   function applyAccountGameData(data) {
     const cloudData = data && typeof data === "object" ? data : {};
     walletCoins = Math.max(0, Number(cloudData.walletCoins) || 0);
+    walletRevision = Math.max(0, Math.round(Number(cloudData.walletRevision) || 0));
     coinLedger = sanitizeCoinLedger(cloudData.coinLedger);
     ensureCoinLedgerBaseline();
     chatLastReadAt = Math.max(chatLastReadAt, Math.max(0, Number(cloudData.chatLastReadAt) || 0));
+    heartResetVersion = Math.max(HEART_RESET_VERSION, Math.round(Number(cloudData.heartResetVersion) || HEART_RESET_VERSION));
     heartUpgradeLevel = Math.max(0, Math.min(2, Math.round(Number(cloudData.heartUpgradeLevel) || (cloudData.accountUpgraded === true ? 1 : 0))));
     accountUpgraded = heartUpgradeLevel >= 1;
     maxHearts = heartUpgradeLevel >= 2 ? 7 : accountUpgraded ? 5 : 3;
+    dailyCheckinLastDate = /^\d{4}-\d{2}-\d{2}$/.test(String(cloudData.dailyCheckinLastDate || "")) ? String(cloudData.dailyCheckinLastDate) : "";
+    dailyCheckinTotal = Math.max(0, Math.round(Number(cloudData.dailyCheckinTotal) || 0));
+    crabRunsPlayed = Math.max(0, Math.round(Number(cloudData.crabRunsPlayed) || 0));
     battleMatches = Math.max(0, Math.round(Number(cloudData.battleMatches) || 0));
     battleWins = Math.max(0, Math.round(Number(cloudData.battleWins) || 0));
     battleDraws = Math.max(0, Math.round(Number(cloudData.battleDraws) || 0));
@@ -1355,7 +1526,8 @@
     battleCoinsEarned = Math.max(0, Math.round(Number(cloudData.battleCoinsEarned) || 0));
     if (gameState !== "playing" && gameState !== "paused") hearts = maxHearts;
     const validIds = new Set(CHARACTER_DEFS.map((character) => character.id));
-    unlockedCharacters = new Set((Array.isArray(cloudData.unlockedCharacters) ? cloudData.unlockedCharacters : ["cloud"]).filter((id) => validIds.has(id)));
+    unlockedCharacters = new Set((Array.isArray(cloudData.unlockedCharacters) ? cloudData.unlockedCharacters : ["cloud"])
+      .filter((id) => validIds.has(id) || (!characterCatalogLoaded && /^custom-[a-z0-9][a-z0-9-]{2,48}$/i.test(String(id)))));
     unlockedCharacters.add("cloud");
     selectedCharacter = unlockedCharacters.has(String(cloudData.selectedCharacter)) ? String(cloudData.selectedCharacter) : "cloud";
     selectedSkin = SKIN_TONES[String(cloudData.selectedSkin)] ? String(cloudData.selectedSkin) : "light";
@@ -1370,10 +1542,15 @@
     soundOn = cloudData.soundOn !== false;
 
     writeSetting("cloud-jumper-wallet", walletCoins);
+    writeSetting("cloud-jumper-wallet-revision", walletRevision);
     persistCoinLedger();
     writeSetting("cloud-jumper-chat-last-read-at", chatLastReadAt);
     writeSetting("cloud-jumper-account-upgraded", accountUpgraded);
     writeSetting("cloud-jumper-heart-upgrade-level", heartUpgradeLevel);
+    writeSetting("cloud-jumper-heart-reset-version", heartResetVersion);
+    writeSetting("cloud-jumper-daily-checkin-last-date", dailyCheckinLastDate);
+    writeSetting("cloud-jumper-daily-checkin-total", dailyCheckinTotal);
+    writeSetting("cloud-jumper-crab-runs", crabRunsPlayed);
     writeSetting("cloud-jumper-unlocked", JSON.stringify([...unlockedCharacters]));
     writeSetting("cloud-jumper-selected", selectedCharacter);
     writeSetting("cloud-jumper-skin", selectedSkin);
@@ -1391,6 +1568,7 @@
     updateWalletUi();
     setupSkinPicker();
     renderCharacterShop();
+    renderDailyCheckin();
     if (coinHistorySection && !coinHistorySection.classList.contains("is-hidden")) renderCoinHistory();
     updateHud(true);
   }
@@ -1401,6 +1579,132 @@
 
   function characterDefinition(id) {
     return CHARACTER_DEFS.find((item) => item.id === String(id)) || CHARACTER_DEFS[0];
+  }
+
+  function cleanCatalogCharacter(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const id = String(raw.id || "").trim().toLowerCase();
+    if (!/^(?:[a-z][a-z0-9-]{1,31}|custom-[a-z0-9][a-z0-9-]{2,48})$/.test(id)) return null;
+    const existing = CHARACTER_DEFS.find((character) => character.id === id) || {};
+    const number = (value, fallback, minimum, maximum) => {
+      const parsed = Number(value);
+      return Math.max(minimum, Math.min(maximum, Number.isFinite(parsed) ? parsed : fallback));
+    };
+    const timestamp = (value) => Math.max(0, Number(value) || 0);
+    const color = /^#[0-9a-f]{6}$/i.test(String(raw.color || "")) ? String(raw.color).toLowerCase() : (existing.color || "#58c88b");
+    const salePrice = raw.salePrice === null || raw.salePrice === undefined
+      ? null
+      : Math.round(number(raw.salePrice, 0, 0, 999999));
+    return {
+      ...existing,
+      id,
+      name: String(raw.name || existing.name || "新人物").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, 16) || "新人物",
+      badge: String(raw.badge || existing.badge || "新").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, 4) || "新",
+      color,
+      cost: Math.round(number(raw.cost, existing.cost || 0, 0, 999999)),
+      regularCost: Math.round(number(raw.regularCost, raw.cost ?? existing.regularCost ?? existing.cost ?? 0, 0, 999999)),
+      salePrice,
+      saleStartAt: timestamp(raw.saleStartAt),
+      saleEndAt: timestamp(raw.saleEndAt),
+      availableFrom: timestamp(raw.availableFrom),
+      availableUntil: timestamp(raw.availableUntil),
+      active: raw.active !== false,
+      rewardOnly: raw.rewardOnly === true,
+      newCharacter: raw.newCharacter === true,
+      agility: number(raw.agility, existing.agility || 1, 0.72, 1.6),
+      jumpPower: Math.round(number(raw.jumpPower, existing.jumpPower || 680, 560, 900)),
+      airJumps: Math.round(number(raw.airJumps, existing.airJumps || 1, 0, 3)),
+      flipTurns: Math.round(number(raw.flipTurns, existing.flipTurns || 0, 0, 3)),
+      flipDuration: number(raw.flipDuration, existing.flipDuration || 0, 0, 1.5),
+      magnetRadius: Math.round(number(raw.magnetRadius, existing.magnetRadius || 0, 0, 180)),
+      tripleMagnetRadius: Math.round(number(raw.tripleMagnetRadius, existing.tripleMagnetRadius || 0, 0, 240)),
+      freeSmash: Math.round(number(raw.freeSmash, existing.freeSmash || 0, 0, 10)),
+      stoneImmune: raw.stoneImmune === true,
+      instantTripleJump: raw.instantTripleJump === true,
+      sunCaveDaily: raw.sunCaveDaily === true,
+      speedBoost: number(raw.speedBoost, existing.speedBoost || 1, 1, 1.6),
+      gravityScale: number(raw.gravityScale, existing.gravityScale || 1, 0.65, 1.2),
+      doorCharges: Math.round(number(raw.doorCharges, existing.doorCharges || 0, 0, 3)),
+      staminaCapacity: Math.round(number(raw.staminaCapacity, existing.staminaCapacity || 72, 50, 220)),
+      staminaStars: Math.round(number(raw.staminaStars, existing.staminaStars || 1, 1, 5)),
+      staminaRecovery: number(raw.staminaRecovery, existing.staminaRecovery || 0, 0, 80),
+      flairMoves: Array.isArray(raw.flairMoves)
+        ? raw.flairMoves.filter((move) => ["explosiveStepover", "dragToChop"].includes(String(move)))
+        : (existing.flairMoves || []),
+      trait: String(raw.trait || existing.trait || "均衡型人物").replace(/[<>\u0000-\u001f]/g, "").trim().slice(0, 140) || "均衡型人物",
+      builtIn: raw.builtIn === true,
+      updatedAt: timestamp(raw.updatedAt),
+    };
+  }
+
+  async function loadCharacterCatalog() {
+    if (typeof window.fetch !== "function") return false;
+    try {
+      const response = await apiFetch("./api/characters", {
+        headers: { Accept: "application/json" },
+      }, 9000);
+      if (!response.ok) throw new Error("catalog_unavailable");
+      const data = await response.json();
+      const records = Array.isArray(data.characters) ? data.characters : [];
+      const incomingIds = new Set(records.map((item) => String(item?.id || "")));
+      for (let index = CHARACTER_DEFS.length - 1; index >= 0; index -= 1) {
+        if (CHARACTER_DEFS[index].id.startsWith("custom-") && !incomingIds.has(CHARACTER_DEFS[index].id)) {
+          CHARACTER_DEFS.splice(index, 1);
+        }
+      }
+      for (const raw of records) {
+        const character = cleanCatalogCharacter(raw);
+        if (!character) continue;
+        const existingIndex = CHARACTER_DEFS.findIndex((item) => item.id === character.id);
+        if (existingIndex >= 0) CHARACTER_DEFS[existingIndex] = character;
+        else CHARACTER_DEFS.push(character);
+      }
+      characterCatalogLoaded = true;
+      const catalogUpdatedAt = Math.max(0, Number(data.updatedAt) || 0);
+      const catalogSeenAt = Math.max(0, Number(readSetting("cloud-jumper-character-catalog-seen-at", 0)) || 0);
+      const newestChanged = CHARACTER_DEFS
+        .filter((character) => Number(character.updatedAt) > catalogSeenAt && characterAvailableNow(character))
+        .sort((a, b) => Number(b.updatedAt) - Number(a.updatedAt))[0];
+      pendingCharacterCatalogNotice = newestChanged && catalogUpdatedAt > catalogSeenAt
+        ? { character: newestChanged, updatedAt: catalogUpdatedAt }
+        : null;
+      if (pendingCharacterCatalogNotice && accountAuthenticated && gameState === "home") {
+        window.setTimeout(showPendingCharacterCatalogNotice, 180);
+      }
+      const validIds = new Set(CHARACTER_DEFS.map((character) => character.id));
+      unlockedCharacters = new Set([...unlockedCharacters].filter((id) => validIds.has(id)));
+      unlockedCharacters.add("cloud");
+      if (!validIds.has(selectedCharacter) || !unlockedCharacters.has(selectedCharacter)) selectedCharacter = "cloud";
+      if (unlockedCharacters.has(selectedCharacter)) resetStaminaForCharacter();
+      renderCharacterShop();
+      updateWalletUi();
+      return true;
+    } catch {
+      characterCatalogLoaded = false;
+      return false;
+    }
+  }
+
+  function setStoreCategory(category) {
+    const selected = ["characters", "other"].includes(category) ? category : "characters";
+    selectedStoreCategory = selected;
+    for (const button of storeCategoryButtons) {
+      const active = button.dataset.storeCategory === selected;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+    }
+    for (const panel of storeCategoryPanels) {
+      const active = panel.dataset.storePanel === selected;
+      panel.classList.toggle("is-hidden", !active);
+      panel.hidden = !active;
+    }
+    if (selected === "characters") {
+      renderCharacterShop();
+      refreshYunqingStoreStatus();
+    } else {
+      updateAccountUpgradeUi();
+    }
   }
 
   function setHomeTab(tab) {
@@ -1418,8 +1722,7 @@
       panel.hidden = !active;
     }
     if (selected === "shop") {
-      renderCharacterShop();
-      refreshYunqingStoreStatus();
+      setStoreCategory(selectedStoreCategory);
     }
     if (selected === "rank") loadLeaderboard();
     if (selected === "chat") {
@@ -1480,6 +1783,7 @@
       account_upgrade: "♥",
       battle_reward: "⚔",
       reservation: "⏳",
+      daily_checkin: "📅",
     })[type] || "●";
   }
 
@@ -1550,7 +1854,7 @@
     const score = Math.max(0, Number(entry.score) || 0);
     if (ownProfileEditor) ownProfileEditor.classList.add("is-hidden");
     coinHistorySection?.classList.add("is-hidden");
-    if (profileDialogKicker) profileDialogKicker.textContent = "全站玩家资料";
+    if (profileDialogKicker) profileDialogKicker.textContent = entry.systemRival === true ? "系统挑战者资料 · 不参与冠军奖励" : "全站玩家资料";
     if (profileDialogTitle) profileDialogTitle.textContent = cleanPlayerName(entry.name) || "玩家";
     if (profileDialogSubtitle) profileDialogSubtitle.textContent = `${SKIN_NAMES[entry.selectedSkin] || SKIN_NAMES.light} · 正在使用 ${characterDefinition(selected).name}`;
     if (profileDialogAvatar) profileDialogAvatar.textContent = avatar.icon;
@@ -1750,6 +2054,10 @@
   }
 
   function openBattleDialog() {
+    if (siteLockActive) {
+      updateSiteLockClock(true);
+      return;
+    }
     if (!accountAuthenticated) return showAccountGate("login", "请先登录账号再邀请朋友");
     closeProfile();
     battleResultDialog?.classList.add("is-hidden");
@@ -1914,6 +2222,7 @@
     if (loggedAccountName) loggedAccountName.textContent = accountAuthenticated ? `云端账号：${accountName}` : "云端账号未连接";
     if (accountSyncStatus) accountSyncStatus.textContent = message || (accountAuthenticated ? "记录会自动同步到 Cloudflare" : "登录后自动同步游戏记录");
     if (showCoinsToggle) showCoinsToggle.checked = accountShowCoins;
+    if (showOnlineStatusToggle) showOnlineStatusToggle.checked = accountShowOnlineStatus;
     if (playerNameInput && document.activeElement !== playerNameInput) playerNameInput.value = playerName;
     if (profileButtonAvatar) profileButtonAvatar.textContent = avatarDefinition(accountAvatar).icon;
     if (profileButtonStatus) profileButtonStatus.textContent = accountAuthenticated ? "已登录" : "未连接";
@@ -1924,6 +2233,7 @@
     canvas.dataset.accountAuthenticated = String(accountAuthenticated);
     canvas.dataset.accountName = accountName;
     canvas.dataset.showCoins = String(accountShowCoins);
+    canvas.dataset.showOnlineStatus = String(accountShowOnlineStatus);
     canvas.dataset.accountAvatar = accountAvatar;
   }
 
@@ -1950,6 +2260,8 @@
 
   function showAccountGate(mode = "register", message = "") {
     accountAuthenticated = false;
+    window.clearTimeout(presenceTimer);
+    presenceTimer = 0;
     disconnectBattleSocket();
     stopChatPolling();
     stopChatUnreadPolling();
@@ -1976,7 +2288,18 @@
       kv_not_bound: "Cloudflare 的 LEADERBOARD KV 尚未绑定",
       reservation_closed: "云青已经正式解锁，不需要预约了",
       reservation_full: "云青的 3 个预约名额已经满了",
-      insufficient_coins: "金币不足，预约云青需要 500 金币",
+      insufficient_coins: "金币不足，无法完成这次购买",
+      yuanyuan_not_released: "元元将在 7 月 27 日上午 10:00 开抢",
+      yuanyuan_sold_out: "元元的 3 个限量名额已经抢完",
+      site_locked: "网站正在临时维护，请等待封锁结束",
+      season_reward_not_eligible: "只有两周赛季冠军可以购买哆啦A梦",
+      season_reward_insufficient_coins: "金币不足，暂时无法解锁哆啦A梦",
+      redeem_code_invalid: "兑换码不正确，请重新输入",
+      redeem_code_inactive: "这个兑换码已暂停使用",
+      redeem_code_not_started: "这个兑换码还未到开放时间",
+      redeem_code_expired: "这个兑换码已经过期",
+      redeem_code_already_used: "这个账号已经领取过该兑换码",
+      redeem_reward_unavailable: "兑换码对应的人物暂时不可用",
       request_timeout: "连接超时，请检查网络后重试",
       network_offline: "当前没有网络，联网后会自动重试",
       network_error: "网络暂时不稳定，请稍后重试",
@@ -2010,6 +2333,139 @@
     }
   }
 
+  function formatSiteLockDuration(milliseconds) {
+    const totalSeconds = Math.max(0, Math.ceil(Number(milliseconds) / 1000));
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (days > 0) return `${days}天 ${String(hours).padStart(2, "0")}时 ${String(minutes).padStart(2, "0")}分`;
+    if (hours > 0) return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  function formatSiteLockTime(timestamp) {
+    const date = new Date(Number(timestamp) || 0);
+    if (!Number.isFinite(date.getTime()) || date.getTime() <= 0) return "等待管理员解除";
+    return new Intl.DateTimeFormat("zh-CN", {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(date);
+  }
+
+  function updateSiteLockClock(force = false) {
+    const now = Date.now() + siteLockServerOffset;
+    if (!siteLockActive) {
+      if (siteLockState.scheduled && now >= Number(siteLockState.startsAt) && Number(siteLockState.endsAt) > now) {
+        applySiteLockStatus({
+          serverTime: now,
+          lock: { ...siteLockState, active: true, scheduled: false },
+        });
+        loadSiteStatus();
+      }
+      return;
+    }
+    const remaining = Math.max(0, Number(siteLockState.endsAt) - now);
+    const second = Math.ceil(remaining / 1000);
+    if (!force && second === lastSiteLockSecond) return;
+    lastSiteLockSecond = second;
+    if (siteLockCountdown) {
+      siteLockCountdown.textContent = remaining > 0
+        ? formatSiteLockDuration(remaining)
+        : "正在恢复…";
+    }
+    if (siteLockWindow) siteLockWindow.textContent = `预计 ${formatSiteLockTime(siteLockState.endsAt)} 恢复`;
+    if (remaining <= 0) loadSiteStatus(true);
+  }
+
+  function applySiteLockStatus(payload) {
+    const lock = payload?.lock && typeof payload.lock === "object" ? payload.lock : {};
+    const wasActive = siteLockActive;
+    const serverTime = Number(payload?.serverTime);
+    if (Number.isFinite(serverTime)) siteLockServerOffset = serverTime - Date.now();
+    siteLockState = {
+      enabled: lock.enabled === true,
+      active: lock.active === true,
+      scheduled: lock.scheduled === true,
+      startsAt: Math.max(0, Number(lock.startsAt) || 0),
+      endsAt: Math.max(0, Number(lock.endsAt) || 0),
+      message: String(lock.message || "云端正在进行临时维护，请稍后回来。").slice(0, 90),
+    };
+    siteLockActive = siteLockState.active;
+    siteStatusChecked = true;
+    gameShell?.classList.toggle("is-site-locked", siteLockActive);
+    siteLockOverlay?.classList.toggle("is-hidden", !siteLockActive);
+    siteLockOverlay?.setAttribute("aria-hidden", String(!siteLockActive));
+    canvas.dataset.siteLocked = String(siteLockActive);
+    if (siteLockMessage) siteLockMessage.textContent = siteLockState.message;
+    if (siteLockActive) {
+      if (gameState === "playing") pauseGame();
+      window.clearTimeout(presenceTimer);
+      presenceTimer = 0;
+      disconnectBattleSocket();
+      stopChatPolling();
+      stopChatUnreadPolling();
+      updateSiteLockClock(true);
+      window.setTimeout(() => siteLockRefreshButton?.focus(), 20);
+      return;
+    }
+    lastSiteLockSecond = -1;
+    if (wasActive) {
+      loadCharacterCatalog();
+      if (accountAuthenticated) {
+        scheduleAccountSync(120);
+        loadLeaderboard(true);
+        refreshYunqingStoreStatus();
+        connectBattleSocket();
+        schedulePresenceHeartbeat(350);
+      } else if (accountToken) {
+        restoreAccountSession();
+      }
+    }
+  }
+
+  function scheduleSiteStatusPoll(delay = siteLockActive ? 8000 : 25000) {
+    if (siteLockPollTimer) window.clearTimeout(siteLockPollTimer);
+    let nextDelay = Math.max(1000, Number(delay) || 25000);
+    if (!siteLockActive && siteLockState.scheduled) {
+      const untilStart = Number(siteLockState.startsAt) - (Date.now() + siteLockServerOffset);
+      if (untilStart > 0) nextDelay = Math.min(nextDelay, Math.max(1000, untilStart + 180));
+    }
+    siteLockPollTimer = window.setTimeout(() => loadSiteStatus(), nextDelay);
+  }
+
+  async function loadSiteStatus(manual = false) {
+    if (manual && siteLockRefreshButton) {
+      siteLockRefreshButton.disabled = true;
+      siteLockRefreshButton.textContent = "检查中…";
+    }
+    try {
+      const response = await apiFetch("./api/site-status", {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      }, 8000);
+      if (!response.ok) throw new Error("site_status_unavailable");
+      applySiteLockStatus(await response.json());
+    } catch {
+      // Once a lock has been observed, a brief network outage must not let the
+      // player bypass it. Before a lock is observed, the game stays usable.
+      siteStatusChecked = true;
+      if (siteLockActive && siteLockMessage) {
+        siteLockMessage.textContent = "暂时无法连接服务器，正在继续等待维护结束。";
+      }
+    } finally {
+      if (manual && siteLockRefreshButton) {
+        siteLockRefreshButton.disabled = false;
+        siteLockRefreshButton.textContent = "重新检查";
+      }
+      scheduleSiteStatusPoll();
+    }
+    return !siteLockActive;
+  }
+
   async function accountRequest(action, data = {}, useToken = false) {
     const headers = { "Content-Type": "application/json", Accept: "application/json" };
     if (useToken && accountToken) headers.Authorization = `Bearer ${accountToken}`;
@@ -2022,11 +2478,37 @@
     try { payload = await response.json(); } catch { payload = {}; }
     if (!response.ok) {
       const code = String(payload.error || (response.status >= 500 ? "server_error" : "request_failed"));
+      if (code === "site_locked" && payload?.lock) {
+        applySiteLockStatus({ lock: payload.lock, serverTime: payload.serverTime });
+      }
       const error = new Error(accountErrorMessage(code));
       error.code = code;
       throw error;
     }
     return payload;
+  }
+
+  function schedulePresenceHeartbeat(delay = 105000) {
+    window.clearTimeout(presenceTimer);
+    presenceTimer = 0;
+    if (!accountAuthenticated || !accountToken || siteLockActive) return;
+    presenceTimer = window.setTimeout(sendPresenceHeartbeat, Math.max(300, Number(delay) || 105000));
+  }
+
+  async function sendPresenceHeartbeat() {
+    if (presenceBusy || !accountAuthenticated || !accountToken || siteLockActive || document.visibilityState === "hidden") {
+      schedulePresenceHeartbeat(45000);
+      return;
+    }
+    presenceBusy = true;
+    try {
+      await accountRequest("presence", {}, true);
+      schedulePresenceHeartbeat(105000);
+    } catch {
+      schedulePresenceHeartbeat(45000);
+    } finally {
+      presenceBusy = false;
+    }
   }
 
   function finishAccountAuthentication(payload, fallbackToken = "") {
@@ -2037,13 +2519,17 @@
     accountSyncFailureCount = 0;
     accountName = cleanPlayerName(account.name);
     accountShowCoins = account.showCoins === true;
+    accountShowOnlineStatus = account.showOnlineStatus === true;
     accountAvatar = avatarDefinition(account.avatar).id;
     pendingProfileAvatar = accountAvatar;
     playerName = accountName;
     playerId = String(account.playerId);
-    lastRegisteredIdentity = "";
+    // Registration, login and profile updates are already reflected in the server ranking.
+    // Mark this identity as registered so opening the home screen does not spend another KV write.
+    lastRegisteredIdentity = `${playerId}:${playerName.toLocaleLowerCase()}`;
     writeSetting("cloud-jumper-account-token", accountToken);
     writeSetting("cloud-jumper-show-coins", accountShowCoins);
+    writeSetting("cloud-jumper-show-online-status", accountShowOnlineStatus);
     writeSetting("cloud-jumper-player-name", playerName);
     writeSetting("cloud-jumper-player-id", playerId);
     writeSetting("cloud-jumper-avatar", accountAvatar);
@@ -2052,11 +2538,11 @@
     nameGate?.classList.add("is-hidden");
     updateCloudAccountUi("云端记录已恢复");
     setChatUnreadCount(0);
+    if (siteLockActive) return;
     scheduleChatUnreadPolling(120);
-    scheduleAccountSync(180);
-    registerCurrentPlayer();
     loadLeaderboard();
     connectBattleSocket();
+    schedulePresenceHeartbeat(450);
     const requestedBattle = cleanRoomCode(new URLSearchParams(window.location.search).get("battle"));
     if (requestedBattle) {
       battleRequestedRoomCode = requestedBattle;
@@ -2068,10 +2554,12 @@
       window.setTimeout(openBattleDialog, 520);
     }
     window.setTimeout(showPendingHomeAnnouncement, 900);
+    window.setTimeout(showPendingCharacterCatalogNotice, 1120);
   }
 
   async function restoreAccountSession() {
     if (accountRestoreBusy) return;
+    if (siteLockActive) return;
     if (!accountToken) {
       showAccountGate("register");
       return;
@@ -2095,7 +2583,7 @@
   }
 
   function scheduleAccountSync(delay = 650) {
-    if (!accountAuthenticated || !accountToken) return;
+    if (!accountAuthenticated || !accountToken || siteLockActive) return;
     accountSyncPending = true;
     window.clearTimeout(accountSyncTimer);
     accountSyncTimer = window.setTimeout(syncAccountNow, delay);
@@ -2111,7 +2599,35 @@
     accountSyncPending = false;
     updateCloudAccountUi("正在同步云端记录…");
     try {
-      await accountRequest("save", { gameData: collectAccountGameData(), showCoins: accountShowCoins }, true);
+      const snapshot = collectAccountGameData();
+      const submittedWalletCoins = snapshot.walletCoins;
+      const payload = await accountRequest("save", {
+        gameData: snapshot,
+        showCoins: accountShowCoins,
+        showOnlineStatus: accountShowOnlineStatus,
+      }, true);
+      const serverGameData = payload?.account?.gameData;
+      if (serverGameData) {
+        if (payload.walletStale === true && walletCoins !== submittedWalletCoins) {
+          // The tab started from an obsolete server balance, but a real local transaction happened
+          // during this request. Rebase only that delta onto the corrected server balance.
+          const pendingDelta = walletCoins - submittedWalletCoins;
+          walletCoins = Math.max(0, Math.min(1000000000, Math.round(Number(serverGameData.walletCoins) || 0) + pendingDelta));
+          walletRevision = Math.max(0, Math.round(Number(serverGameData.walletRevision) || 0));
+          writeSetting("cloud-jumper-wallet", walletCoins);
+          writeSetting("cloud-jumper-wallet-revision", walletRevision);
+          updateWalletUi();
+          accountSyncPending = true;
+        } else if (walletCoins === submittedWalletCoins || payload.walletStale === true) {
+          // The server is authoritative. This replaces any stale balance left by an old tab or device.
+          applyAccountGameData(serverGameData);
+        } else {
+          // A local reward or purchase happened while the request was in flight. Keep that change,
+          // adopt the newest revision, then let the already-scheduled follow-up save send it safely.
+          walletRevision = Math.max(0, Math.round(Number(serverGameData.walletRevision) || walletRevision));
+          writeSetting("cloud-jumper-wallet-revision", walletRevision);
+        }
+      }
       accountSyncFailureCount = 0;
       updateCloudAccountUi("云端记录已同步");
     } catch (error) {
@@ -2152,10 +2668,12 @@
     }
     try {
       accountShowCoins = Boolean(showCoinsToggle?.checked);
+      accountShowOnlineStatus = Boolean(showOnlineStatusToggle?.checked);
       const payload = await accountRequest("updateProfile", {
         name,
         avatar: pendingProfileAvatar,
         showCoins: accountShowCoins,
+        showOnlineStatus: accountShowOnlineStatus,
         gameData: collectAccountGameData(),
       }, true);
       finishAccountAuthentication(payload, accountToken);
@@ -2305,6 +2823,9 @@
         const scoreValue = Math.max(0, Number(entry.score) || 0);
         const timeValue = Math.max(0, Number(entry.time) || 0);
         const avatar = avatarDefinition(entry.avatar);
+        const activeCharacter = characterDefinition(entry.selectedCharacter);
+        const presence = ["online", "recent", "away"].includes(String(entry.presence)) ? String(entry.presence) : "";
+        const presenceDot = presence ? `<i class="presence-dot is-${presence}" aria-hidden="true"></i>` : "";
         const battleMatchesValue = Math.max(0, Math.round(Number(entry.battleMatches) || 0));
         const battleWinsValue = Math.max(0, Math.round(Number(entry.battleWins) || 0));
         const result = selectedRankingMode === "battle"
@@ -2317,7 +2838,7 @@
               ? "已登记 · 尚未挑战"
               : `第 ${Math.max(1, Number(entry.level) || 1)} 关 · ${scoreValue} 分${timeValue > 0 ? ` · ${timeValue.toFixed(1)} 秒` : ""}`;
         const coinText = entry.showCoins === true && Number.isFinite(Number(entry.coins)) ? ` · ●${Math.max(0, Math.round(Number(entry.coins)))}` : "";
-        return `<li><button class="leader-profile-trigger" type="button" data-profile-index="${index}" aria-label="查看 ${escapeHtml(cleanPlayerName(entry.name))} 的个人资料"><span class="mini-profile-avatar" aria-hidden="true">${avatar.icon}</span><span>${escapeHtml(cleanPlayerName(entry.name))}</span></button><b>${result}${coinText}</b></li>`;
+        return `<li><button class="leader-profile-trigger" type="button" data-profile-index="${index}" aria-label="查看 ${escapeHtml(cleanPlayerName(entry.name))} 的个人资料"><span class="mini-profile-avatar" aria-hidden="true">${avatar.icon}${presenceDot}</span><span class="leader-player-copy"><span class="leader-name-line">${escapeHtml(cleanPlayerName(entry.name))}</span><small class="leader-character-chip"><i aria-hidden="true">${escapeHtml(activeCharacter.badge)}</i>${escapeHtml(activeCharacter.name)}</small></span></button><b>${result}${coinText}</b></li>`;
       }).join("")
       : "<li class=\"is-empty\"><span>还没有成绩</span><b>—</b></li>";
     for (const button of leaderboardList.querySelectorAll("[data-profile-index]")) {
@@ -2339,21 +2860,22 @@
         leaderboardSeason.textContent = "共享赛季未连接";
       }
     }
+    doraemonPurchaseEligible = data?.rewardEligible === true;
     if (leaderboardWinner) {
       leaderboardWinner.textContent = data?.latestWinner?.name
-        ? `上届冠军：${cleanPlayerName(data.latestWinner.name)} · 已获得哆啦A梦`
-        : "两周后第一名自动获得冠军角色";
+        ? `上届冠军：${cleanPlayerName(data.latestWinner.name)} · 已解锁冠军专属资格`
+        : "两周赛季冠军可解锁哆啦A梦专属资格";
     }
     if (leaderboardReward) {
-      leaderboardReward.textContent = data?.rewardUnlocked ? "你的奖励：哆啦A梦已解锁" : "冠军奖励：哆啦A梦";
-      leaderboardReward.classList.toggle("is-unlocked", Boolean(data?.rewardUnlocked));
+      const alreadyOwned = unlockedCharacters.has("doraemon");
+      leaderboardReward.textContent = alreadyOwned
+        ? "冠军人物：哆啦A梦已解锁"
+        : doraemonPurchaseEligible
+          ? "你的冠军专属资格已解锁"
+          : "冠军专属：哆啦A梦资格";
+      leaderboardReward.classList.toggle("is-unlocked", alreadyOwned || doraemonPurchaseEligible);
     }
-    if (data?.rewardUnlocked && !unlockedCharacters.has("doraemon")) {
-      unlockedCharacters.add("doraemon");
-      saveCharacterState();
-      renderCharacterShop("赛季冠军奖励到账：哆啦A梦已永久解锁！");
-      announce("恭喜！你获得了两周赛季冠军角色：哆啦A梦！");
-    }
+    renderCharacterShop();
   }
 
   function applyAdminReset(resetRequest) {
@@ -2454,7 +2976,7 @@
       title: `恭喜获得 ${received} 金币！`,
       message: "金币已经存入你的云端账号，现在可以直接购买新人物。",
       detail: `当前金币余额：● ${walletCoins}`,
-      actionLabel: "去角色商店",
+      actionLabel: "去商店",
       actionTab: "shop",
       closeLabel: "收下礼物",
     });
@@ -2600,6 +3122,7 @@
       score: Math.max(0, Number(profile.score) || 0),
       coins: profile.coins,
       showCoins: profile.showCoins === true,
+      systemRival: message.systemRival === true,
       inviteId: String(message.inviteId || ""),
     });
   }
@@ -2757,6 +3280,10 @@
       : { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
   }
 
+  function formatChatMessageText(value) {
+    return escapeHtml(String(value || "")).replace(/(^|\s)(@[^\s@]{1,12})/g, "$1<mark class=\"chat-mention\">$2</mark>");
+  }
+
   function renderChatMessages(messages, forceBottom = false) {
     if (!chatList) return;
     const list = Array.isArray(messages) ? messages : [];
@@ -2776,7 +3303,9 @@
       const mine = message.mine === true;
       const recalled = message.recalled === true;
       const avatar = avatarDefinition(message.avatar);
-      const text = recalled ? "消息已撤回" : escapeHtml(String(message.text || ""));
+      const rawText = String(message.text || "");
+      const text = recalled ? "消息已撤回" : formatChatMessageText(rawText);
+      const mentionsMe = !mine && !recalled && Boolean(playerName) && rawText.toLocaleLowerCase().includes(`@${playerName.toLocaleLowerCase()}`);
       const imageUrl = !recalled && typeof message.imageUrl === "string" && message.imageUrl.startsWith("/api/chat-image?")
         ? message.imageUrl
         : "";
@@ -2787,7 +3316,8 @@
         ? `<button class="chat-image-open" type="button" data-chat-image="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 发送的图片"><img class="chat-message-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(message.name || "玩家")} 发送的图片" loading="lazy" /></button>`
         : "";
       const bubbleContents = `${text ? `<span>${text}</span>` : ""}${imageMarkup}`;
-      return `<article class="chat-message${mine ? " is-mine" : ""}"><button class="chat-message-avatar" type="button" data-chat-avatar="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 的资料；长按可以@他">${avatar.icon}</button><div class="chat-message-body"><div class="chat-message-meta"><b>${escapeHtml(message.name || "玩家")}</b><span>${chatTimeLabel(message.createdAt)}</span>${recallButton}</div><div class="chat-bubble${recalled ? " is-recalled" : ""}">${bubbleContents}</div></div></article>`;
+      const mentionBadge = mentionsMe ? "<em class=\"chat-mentioned-me\">提到你</em>" : "";
+      return `<article class="chat-message${mine ? " is-mine" : ""}${mentionsMe ? " is-mention" : ""}"><button class="chat-message-avatar" type="button" data-chat-avatar="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 的资料；长按可以单独@他" title="点击看资料，长按@玩家">${avatar.icon}</button><div class="chat-message-body"><div class="chat-message-meta"><b>${escapeHtml(message.name || "玩家")}</b><span>${chatTimeLabel(message.createdAt)}</span>${mentionBadge}${recallButton}</div><div class="chat-bubble${recalled ? " is-recalled" : ""}">${bubbleContents}</div></div></article>`;
     }).join("") : "<div class=\"chat-empty\">还没有消息，来打个招呼吧！</div>";
 
     for (const button of chatList.querySelectorAll("[data-chat-recall]")) {
@@ -2803,28 +3333,42 @@
       let startX = 0;
       let startY = 0;
       let longPressed = false;
+      let pressTimer = 0;
       const clearPress = () => {
-        if (chatAvatarPressTimer) window.clearTimeout(chatAvatarPressTimer);
-        chatAvatarPressTimer = 0;
+        if (pressTimer) window.clearTimeout(pressTimer);
+        pressTimer = 0;
+        button.classList.remove("is-pressing");
       };
       button.addEventListener("pointerdown", (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
         clearPress();
         longPressed = false;
         startX = event.clientX;
         startY = event.clientY;
-        chatAvatarPressTimer = window.setTimeout(() => {
+        button.classList.add("is-pressing");
+        pressTimer = window.setTimeout(() => {
           longPressed = true;
           button.dataset.longPressed = "true";
           const message = chatMessagesSnapshot[Number(button.dataset.chatAvatar)];
           insertChatMention(message?.name);
+          button.classList.remove("is-pressing");
           if (window.navigator?.vibrate) window.navigator.vibrate(28);
-        }, 520);
+        }, 430);
       });
       button.addEventListener("pointermove", (event) => {
         if (Math.hypot(event.clientX - startX, event.clientY - startY) > 12) clearPress();
       });
       button.addEventListener("pointerup", clearPress);
       button.addEventListener("pointercancel", clearPress);
+      button.addEventListener("pointerleave", clearPress);
+      button.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        clearPress();
+        longPressed = true;
+        button.dataset.longPressed = "true";
+        const message = chatMessagesSnapshot[Number(button.dataset.chatAvatar)];
+        insertChatMention(message?.name);
+      });
       button.addEventListener("click", (event) => {
         if (longPressed || button.dataset.longPressed === "true") {
           event.preventDefault();
@@ -3024,7 +3568,9 @@
     try {
       const stored = JSON.parse(String(readSetting("cloud-jumper-unlocked", "[\"cloud\"]")));
       const validIds = new Set(CHARACTER_DEFS.map((character) => character.id));
-      const result = new Set(Array.isArray(stored) ? stored.filter((id) => validIds.has(id)) : []);
+      const result = new Set(Array.isArray(stored)
+        ? stored.filter((id) => validIds.has(id) || /^custom-[a-z0-9][a-z0-9-]{2,48}$/i.test(String(id)))
+        : []);
       result.add("cloud");
       return result;
     } catch {
@@ -3100,24 +3646,118 @@
     updateAccountUpgradeUi();
   }
 
+  function singaporeDateKey(now = Date.now()) {
+    return new Date(Number(now) + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  }
+
+  function dailyRewardAt(index) {
+    return DAILY_CHECKIN_REWARDS[Math.max(0, Number(index) || 0) % DAILY_CHECKIN_REWARDS.length];
+  }
+
+  function dailyRewardLabel(reward) {
+    if (reward?.character) return `人物 · ${reward.characterName}`;
+    return `●${Math.max(0, Number(reward?.coins) || 0)} 金币`;
+  }
+
+  function renderDailyCheckin(message = "") {
+    if (!dailyCheckinCard) return;
+    const claimedToday = dailyCheckinLastDate === singaporeDateKey();
+    const cycleLength = DAILY_CHECKIN_REWARDS.length;
+    const completedInCycle = dailyCheckinTotal % cycleLength || (claimedToday && dailyCheckinTotal > 0 ? cycleLength : 0);
+    const displayDay = claimedToday ? Math.max(1, completedInCycle) : (completedInCycle % cycleLength) + 1;
+    const nextReward = dailyRewardAt(dailyCheckinTotal);
+    if (dailyCheckinProgress) dailyCheckinProgress.textContent = `${completedInCycle} / ${cycleLength}`;
+    if (dailyCheckinSummary) {
+      dailyCheckinSummary.textContent = claimedToday
+        ? `今天已领取 · 明天是第 ${dailyCheckinTotal % cycleLength + 1} 天`
+        : `第 ${displayDay} 天：${dailyRewardLabel(nextReward)}`;
+    }
+    if (dailyCheckinButton) {
+      dailyCheckinButton.disabled = claimedToday || dailyCheckinBusy || !accountAuthenticated;
+      dailyCheckinButton.textContent = dailyCheckinBusy ? "领取中…" : claimedToday ? "已领取" : "领取";
+    }
+    dailyCheckinCard.classList.toggle("is-claimed", claimedToday);
+    if (dailyCheckinMessage) dailyCheckinMessage.textContent = message;
+    if (dailyCheckinGrid) {
+      dailyCheckinGrid.innerHTML = DAILY_CHECKIN_REWARDS.map((reward, index) => {
+        const day = index + 1;
+        const claimed = day <= completedInCycle;
+        const current = day === displayDay;
+        return `<div class="daily-reward${claimed ? " is-claimed" : ""}${current ? " is-current" : ""}"><small>第 ${day} 天</small><strong>${reward.character ? "🎭" : "●"}</strong><span>${escapeHtml(dailyRewardLabel(reward))}</span></div>`;
+      }).join("");
+    }
+  }
+
+  async function claimDailyCheckin() {
+    if (dailyCheckinBusy) return;
+    if (!accountAuthenticated || !accountToken) return showAccountGate("login", "请先登录账号再签到");
+    if (dailyCheckinLastDate === singaporeDateKey()) return renderDailyCheckin("今天已经领取过了，明天再来。");
+    dailyCheckinBusy = true;
+    renderDailyCheckin("正在向云端领取奖励…");
+    try {
+      const payload = await accountRequest("dailyCheckin", {}, true);
+      if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
+      const reward = payload?.dailyReward;
+      if (payload?.alreadyClaimed || !reward) {
+        renderDailyCheckin("今天已经领取过了，换设备也不能重复领取。");
+      } else if (reward.type === "character") {
+        renderDailyCheckin(`签到成功！永久解锁人物：${reward.characterName}`);
+        enqueueNotice({
+          kind: "reward",
+          icon: "🎭",
+          kicker: `第 ${reward.day} 天签到奖励`,
+          title: `已解锁 ${reward.characterName}！`,
+          message: "这个人物已永久加入你的角色商店，可以立即选择使用。",
+          detail: "每日签到由云端记录，同一天无法重复领取。",
+          actionLabel: "去选择人物",
+          actionTab: "shop",
+          closeLabel: "知道了",
+        });
+      } else {
+        const replacement = reward.replacedCharacter ? `（${reward.replacedCharacter}已拥有，已换成金币）` : "";
+        renderDailyCheckin(`签到成功！获得 ${reward.coins} 金币${replacement}`);
+        enqueueNotice({
+          kind: "reward",
+          icon: "●",
+          kicker: `第 ${reward.day} 天签到奖励`,
+          title: `获得 ${reward.coins} 金币！`,
+          message: replacement || "金币已经加入账号余额，并记录在金币明细中。",
+          detail: "每日签到由云端记录，同一天无法重复领取。",
+          closeLabel: "收下奖励",
+        });
+      }
+      loadLeaderboard(true);
+      playTone(620, 0.08, "square", 0.035, 0);
+      playTone(880, 0.14, "triangle", 0.03, 0.08);
+    } catch (error) {
+      renderDailyCheckin(error.message || "签到暂时失败，请稍后重试。");
+    } finally {
+      dailyCheckinBusy = false;
+      renderDailyCheckin(dailyCheckinMessage?.textContent || "");
+    }
+  }
+
   function updateAccountUpgradeUi() {
     if (!accountUpgradeButton || !accountUpgradeStatus) return;
     const finished = heartUpgradeLevel >= 2;
-    const cost = heartUpgradeLevel === 0 ? 1000 : 9999;
+    const cost = heartUpgradeLevel === 0 ? 1999 : 9999;
     const fromHearts = heartUpgradeLevel === 0 ? 3 : 5;
     const toHearts = heartUpgradeLevel === 0 ? 5 : 7;
     accountUpgradeButton.disabled = finished;
-    accountUpgradeButton.textContent = finished ? "已升级到 7 滴血" : `${cost} 金币升级`;
+    accountUpgradeButton.textContent = finished ? "已升级到 7 滴血" : `● ${cost} · 升级到 ${toHearts} 滴`;
+    if (accountUpgradeTitle) accountUpgradeTitle.textContent = finished ? "生命已升满" : `${toHearts} 滴血生命升级`;
     accountUpgradeStatus.textContent = finished
       ? "账号生命已升满：每局永久拥有 7 滴血"
-      : `花费 ${cost} 金币，永久从 ${fromHearts} 滴血升级到 ${toHearts} 滴血${walletCoins < cost ? `（还差 ${cost - walletCoins}）` : ""}`;
+      : `当前 ${fromHearts} 滴血，花费 ${cost} 金币永久升级到 ${toHearts} 滴${walletCoins < cost ? `（还差 ${cost - walletCoins} 金币）` : ""}`;
     canvas.dataset.maxHearts = String(maxHearts);
     if (homeHeartCount) homeHeartCount.textContent = String(maxHearts);
+    if (homeHeartAction) homeHeartAction.textContent = finished ? "已满级" : `升到 ${toHearts} 滴 ›`;
+    homeHeartShortcut?.classList.toggle("is-maxed", finished);
   }
 
   function purchaseAccountUpgrade() {
     if (heartUpgradeLevel >= 2) return;
-    const cost = heartUpgradeLevel === 0 ? 1000 : 9999;
+    const cost = heartUpgradeLevel === 0 ? 1999 : 9999;
     const fromHearts = heartUpgradeLevel === 0 ? 3 : 5;
     const toHearts = heartUpgradeLevel === 0 ? 5 : 7;
     if (walletCoins < cost) {
@@ -3127,7 +3767,7 @@
     }
     walletCoins -= cost;
     recordCoinTransaction(-cost, "account_upgrade", "账号生命升级", `永久从 ${fromHearts} 滴血升级到 ${toHearts} 滴血`, {
-      id: `account-upgrade-hearts-${toHearts}`,
+      id: `account-upgrade-v${HEART_RESET_VERSION}-hearts-${toHearts}`,
     });
     heartUpgradeLevel += 1;
     accountUpgraded = heartUpgradeLevel >= 1;
@@ -3135,6 +3775,7 @@
     if (gameState !== "playing" && gameState !== "paused") hearts = maxHearts;
     writeSetting("cloud-jumper-account-upgraded", true);
     writeSetting("cloud-jumper-heart-upgrade-level", heartUpgradeLevel);
+    writeSetting("cloud-jumper-heart-reset-version", HEART_RESET_VERSION);
     saveCharacterState();
     updateWalletUi();
     updateHud(true);
@@ -3143,36 +3784,73 @@
     playTone(780, 0.14, "triangle", 0.03, 0.08);
   }
 
-  function redeemGiftCode() {
+  async function redeemGiftCode() {
+    if (redeemCodeBusy) return;
     const code = String(redeemCodeInput?.value || "").trim().toLowerCase();
     redeemMessage?.classList.remove("is-success", "is-error");
-    if (readSetting("cloud-jumper-redeemed-leosince", false) === true) {
-      if (redeemMessage) redeemMessage.textContent = "这个兑换码已经领取过了。";
+    if (!accountAuthenticated) {
+      if (redeemMessage) redeemMessage.textContent = "请先登录账号再兑换。";
+      redeemMessage?.classList.add("is-error");
+      showAccountGate(accountToken ? "login" : "register", "请先登录账号再使用兑换码");
+      return;
+    }
+    if (!code) {
+      if (redeemMessage) redeemMessage.textContent = "请输入兑换码。";
       redeemMessage?.classList.add("is-error");
       return;
     }
-    if (code !== "leosince") {
-      if (redeemMessage) redeemMessage.textContent = "兑换码不正确，请重新输入。";
+    redeemCodeBusy = true;
+    if (redeemCodeButton) redeemCodeButton.disabled = true;
+    if (redeemMessage) redeemMessage.textContent = "正在验证兑换码…";
+    try {
+      const payload = await accountRequest("redeemCode", { code }, true);
+      if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
+      const reward = payload?.redeemReward || {};
+      const parts = [];
+      if (Number(reward.coins) > 0) parts.push(`${Math.round(Number(reward.coins))} 金币`);
+      if (reward.characterName) {
+        parts.push(reward.characterAlreadyOwned
+          ? `${reward.characterName}（已拥有）`
+          : `人物 ${reward.characterName}`);
+      }
+      if (redeemMessage) redeemMessage.textContent = `兑换成功！获得${parts.length ? `：${parts.join("、")}` : "奖励"}。`;
+      redeemMessage?.classList.add("is-success");
+      if (redeemCodeInput) redeemCodeInput.value = "";
+      playTone(620, 0.08, "square", 0.035, 0);
+      playTone(920, 0.13, "triangle", 0.03, 0.08);
+      loadLeaderboard();
+    } catch (error) {
+      if (redeemMessage) redeemMessage.textContent = error.message || "兑换失败，请稍后再试";
       redeemMessage?.classList.add("is-error");
       playTone(170, 0.08, "square", 0.02, 0);
-      return;
+    } finally {
+      redeemCodeBusy = false;
+      if (redeemCodeButton) redeemCodeButton.disabled = false;
     }
-    walletCoins += 200;
-    recordCoinTransaction(200, "redeem_code", "兑换码奖励", "兑换码 leosince", {
-      id: "redeem-code-leosince",
-    });
-    writeSetting("cloud-jumper-redeemed-leosince", true);
-    saveCharacterState();
-    updateWalletUi();
-    if (redeemMessage) redeemMessage.textContent = "兑换成功！已获得 200 金币。";
-    redeemMessage?.classList.add("is-success");
-    if (redeemCodeInput) redeemCodeInput.value = "";
-    playTone(620, 0.08, "square", 0.035, 0);
-    playTone(920, 0.13, "triangle", 0.03, 0.08);
   }
 
   function currentCharacter() {
     return CHARACTER_DEFS.find((character) => character.id === selectedCharacter) || CHARACTER_DEFS[0];
+  }
+
+  function characterVisualTier(character = currentCharacter()) {
+    const originalPrice = Math.max(
+      0,
+      Number(character?.cost) || 0,
+      Number(character?.regularCost) || 0,
+    );
+    if (character?.id === "doraemon" || originalPrice >= 9000) return 4;
+    if (originalPrice >= 3999) return 3;
+    if (originalPrice >= 1999) return 2;
+    if (originalPrice >= 999) return 1;
+    return 0;
+  }
+
+  function characterVisualPalette(character = currentCharacter()) {
+    if (character.id === "doraemon") return ["#55c8ff", "#ffe46d", "#ffffff"];
+    if (character.id === "zhixuan") return ["#ff6957", "#ffd45f", "#fff8d8"];
+    if (character.id === "krabs") return ["#ff6b5d", "#ffc85b", "#ffffff"];
+    return [character.color || "#67d6ff", "#ffe275", "#ffffff"];
   }
 
   function levelBaseDuration(level) {
@@ -3258,12 +3936,23 @@
     );
   }
 
-  function beibeiPromotionActive() {
-    return Date.now() < BEIBEI_PROMO_END_AT;
+  function characterAvailableNow(character, now = Date.now()) {
+    if (!character || character.active === false) return false;
+    if (Number(character.availableFrom) > 0 && now < Number(character.availableFrom)) return false;
+    if (Number(character.availableUntil) > 0 && now > Number(character.availableUntil)) return false;
+    return true;
+  }
+
+  function characterSaleActive(character, now = Date.now()) {
+    if (!character || character.salePrice === null || character.salePrice === undefined || character.salePrice === "" || !Number.isFinite(Number(character.salePrice))) return false;
+    if (Number(character.saleStartAt) > 0 && now < Number(character.saleStartAt)) return false;
+    if (Number(character.saleEndAt) > 0 && now > Number(character.saleEndAt)) return false;
+    return Number(character.salePrice) >= 0;
   }
 
   function characterPrice(character) {
-    if (character.id === "beibei") return beibeiPromotionActive() ? character.cost : character.regularCost;
+    if (characterSaleActive(character)) return Math.max(0, Math.round(Number(character.salePrice) || 0));
+    if (character.id === "yuanyuan") return YUANYUAN_PRICE;
     if (character.id === "yunqing" && yunqingReserved) return Math.max(0, character.cost - YUNQING_RESERVATION_PRICE);
     return character.cost;
   }
@@ -3278,6 +3967,20 @@
     yunqingReservationCount = Math.max(0, Math.min(3, Number(store.reservationCount) || 0));
     writeSetting("cloud-jumper-yunqing-reserved", yunqingReserved);
     writeSetting("cloud-jumper-yunqing-reservation-count", yunqingReservationCount);
+    if (store.yuanyuan && typeof store.yuanyuan === "object") {
+      const status = store.yuanyuan;
+      yuanyuanStoreStatus = {
+        releaseAt: Math.max(0, Number(status.releaseAt) || YUANYUAN_RELEASE_AT),
+        released: status.released === true,
+        price: Math.max(0, Number(status.price) || YUANYUAN_PRICE),
+        limit: Math.max(1, Number(status.limit) || YUANYUAN_LIMIT),
+        sold: Math.max(0, Number(status.sold) || 0),
+        remaining: Math.max(0, Number(status.remaining) || 0),
+        soldOut: status.soldOut === true,
+        purchased: status.purchased === true,
+      };
+    }
+    updateYuanyuanOffer(true);
   }
 
   async function refreshYunqingStoreStatus() {
@@ -3319,22 +4022,82 @@
     }
   }
 
-  function updateBeibeiOffer() {
-    if (!beibeiOffer || !beibeiCountdown) return;
-    const remaining = Math.max(0, BEIBEI_PROMO_END_AT - Date.now());
+  function updateYuanyuanOffer(force = false) {
+    if (!yuanyuanOffer || !yuanyuanCountdown) return;
+    const now = Date.now();
+    const releaseAt = Math.max(YUANYUAN_RELEASE_AT, Number(yuanyuanStoreStatus.releaseAt) || 0);
+    const remaining = Math.max(0, releaseAt - now);
     const totalSeconds = Math.floor(remaining / 1000);
-    if (totalSeconds === lastOfferSecond) return;
+    if (!force && totalSeconds === lastOfferSecond && remaining > 0) return;
     lastOfferSecond = totalSeconds;
-    if (remaining <= 0) {
-      beibeiOffer.classList.add("is-ended");
-      beibeiCountdown.textContent = "优惠已结束 · 1899";
+    yuanyuanOffer.classList.remove("is-ended", "is-live", "is-owned");
+    if (unlockedCharacters.has("yuanyuan") || yuanyuanStoreStatus.purchased) {
+      yuanyuanOffer.classList.add("is-owned");
+      yuanyuanCountdown.textContent = "已永久拥有";
+    } else if (yuanyuanStoreStatus.soldOut) {
+      yuanyuanOffer.classList.add("is-ended");
+      yuanyuanCountdown.textContent = "限量已抢完";
+    } else if (remaining > 0) {
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      yuanyuanCountdown.textContent = hours > 0
+        ? `${hours}时 ${minutes}分后开抢`
+        : `${minutes}分 ${seconds}秒后开抢`;
+    } else {
+      yuanyuanOffer.classList.add("is-live");
+      yuanyuanCountdown.textContent = `正在抢购 · ●${YUANYUAN_PRICE}`;
+    }
+    if (yuanyuanStock) {
+      const remainingStock = Math.max(0, Number(yuanyuanStoreStatus.remaining));
+      yuanyuanStock.textContent = yuanyuanStoreStatus.soldOut
+        ? "3 份已经抢完"
+        : `全球限量 ${YUANYUAN_LIMIT} 份 · 剩 ${remainingStock} 份`;
+    }
+  }
+
+  async function purchaseYuanyuan() {
+    if (yuanyuanPurchaseBusy) return;
+    if (!accountAuthenticated) return showAccountGate("login", "请先登录账号再参加限量抢购");
+    if (Date.now() < YUANYUAN_RELEASE_AT) {
+      renderCharacterShop("元元将在 7 月 27 日上午 10:00 开抢，请准时回来。");
+      shopMessage?.classList.add("is-error");
       return;
     }
-    beibeiOffer.classList.remove("is-ended");
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    beibeiCountdown.textContent = days > 0 ? `剩 ${days}天 ${hours}时` : `剩 ${hours}时 ${minutes}分`;
+    if (yuanyuanStoreStatus.soldOut) {
+      renderCharacterShop("元元的 3 个限量名额已经抢完。");
+      shopMessage?.classList.add("is-error");
+      return;
+    }
+    if (walletCoins < YUANYUAN_PRICE) {
+      renderCharacterShop(`还差 ${YUANYUAN_PRICE - walletCoins} 金币才能抢购元元。`);
+      shopMessage?.classList.add("is-error");
+      return;
+    }
+    if (!window.confirm(`限量人物抢购\n\n使用 ${YUANYUAN_PRICE} 金币永久解锁元元？\n全球只有 ${YUANYUAN_LIMIT} 份，确认后会立即锁定名额。`)) return;
+    yuanyuanPurchaseBusy = true;
+    if (shopMessage) {
+      shopMessage.textContent = "正在锁定元元名额，请不要重复点击…";
+      shopMessage.classList.remove("is-error");
+    }
+    try {
+      const payload = await accountRequest("purchaseYuanyuan", {}, true);
+      if (payload?.store?.yuanyuan) {
+        applyYunqingStore({ yuanyuan: payload.store.yuanyuan });
+      }
+      if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
+      renderCharacterShop(payload?.alreadyOwned ? "元元已经属于你。" : "抢购成功！元元已永久解锁并设为使用中。");
+      announce(payload?.alreadyOwned ? "元元已经解锁" : "限量人物元元抢购成功！");
+      playTone(523, 0.08, "square", 0.035, 0);
+      playTone(784, 0.14, "square", 0.03, 0.08);
+      loadLeaderboard(true);
+    } catch (error) {
+      renderCharacterShop(error.message || "抢购失败，请稍后再试");
+      shopMessage?.classList.add("is-error");
+      refreshYunqingStoreStatus();
+    } finally {
+      yuanyuanPurchaseBusy = false;
+    }
   }
 
   function resetStaminaForCharacter() {
@@ -3365,8 +4128,9 @@
   }
 
   function updateRunStamina(dt, ability, boosting) {
-    if (selectedCharacter === "beibei" && player.onGround && jumpBuffer <= 0 && !boosting) {
-      stamina = Math.min(staminaMax, stamina + (ability.staminaRecovery || 72) * dt);
+    const restingRecovery = Number(ability.staminaRecovery) > 0 && player.onGround && jumpBuffer <= 0 && !boosting;
+    if (restingRecovery) {
+      stamina = Math.min(staminaMax, stamina + (ability.staminaRecovery || 14) * dt);
     } else {
       const movementDrain = 0.42 + (player.onGround ? 0 : 0.72) + (boosting ? 5.2 : 0);
       stamina = Math.max(0, stamina - movementDrain * dt);
@@ -3392,38 +4156,109 @@
     lastHudStamina = rounded;
   }
 
+  async function purchaseDoraemonChampionCharacter() {
+    if (doraemonPurchaseBusy) return;
+    const character = characterDefinition("doraemon");
+    if (!doraemonPurchaseEligible) {
+      if (shopMessage) {
+        shopMessage.textContent = "哆啦A梦是两周赛季冠军专属人物；获得冠军资格后才能购买。";
+        shopMessage.classList.add("is-error");
+      }
+      playTone(190, 0.1, "triangle", 0.02, 0);
+      return;
+    }
+    const price = characterPrice(character);
+    const confirmed = window.confirm(`冠军专属购买\n\n使用 ${price} 金币永久解锁哆啦A梦？\n\n确认后金币将立即扣除。`);
+    if (!confirmed) return;
+    if (walletCoins < price) {
+      if (shopMessage) {
+        shopMessage.textContent = `金币不足，还差 ${price - walletCoins} 金币。`;
+        shopMessage.classList.add("is-error");
+      }
+      playTone(180, 0.1, "square", 0.02, 0);
+      return;
+    }
+
+    doraemonPurchaseBusy = true;
+    if (shopMessage) {
+      shopMessage.textContent = "正在确认冠军资格…";
+      shopMessage.classList.remove("is-error");
+    }
+    try {
+      const payload = await accountRequest("purchaseSeasonReward", {}, true);
+      if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
+      doraemonPurchaseEligible = true;
+      renderCharacterShop(payload?.alreadyOwned ? "哆啦A梦已经属于你。" : "哆啦A梦已永久解锁并设为使用中！");
+      announce(payload?.alreadyOwned ? "哆啦A梦已经解锁" : "冠军专属人物哆啦A梦已解锁！");
+      playTone(523, 0.08, "square", 0.035, 0);
+      playTone(784, 0.14, "square", 0.03, 0.08);
+      loadLeaderboard();
+    } catch (error) {
+      if (shopMessage) {
+        shopMessage.textContent = error.message || "购买失败，请稍后再试";
+        shopMessage.classList.add("is-error");
+      }
+      playTone(180, 0.1, "square", 0.02, 0);
+    } finally {
+      doraemonPurchaseBusy = false;
+    }
+  }
+
   function renderCharacterShop(message = "") {
     updateWalletUi();
     if (!characterGrid) return;
-    characterGrid.innerHTML = CHARACTER_DEFS.map((character) => {
+    const now = Date.now();
+    characterGrid.innerHTML = CHARACTER_DEFS
+      .filter((character) =>
+        unlockedCharacters.has(character.id) ||
+        character.id === "yuanyuan" ||
+        characterAvailableNow(character, now))
+      .map((character) => {
       const unlocked = unlockedCharacters.has(character.id);
       const selected = character.id === selectedCharacter;
       const price = characterPrice(character);
+      const available = characterAvailableNow(character, now);
       const mystery = character.id === "yunqing" && !unlocked && !yunqingUnlockedForSale();
       const reservationRemaining = Math.max(0, 3 - yunqingReservationCount);
+      const yuanReleaseAt = Math.max(YUANYUAN_RELEASE_AT, Number(yuanyuanStoreStatus.releaseAt) || 0);
+      const yuanStatus = character.id !== "yuanyuan"
+        ? ""
+        : yuanyuanStoreStatus.soldOut
+          ? "限量已抢完"
+          : now < yuanReleaseAt
+            ? "7月27日 10:00 开抢"
+            : `限量 ${YUANYUAN_PRICE} 金币 · 剩 ${Math.max(0, Number(yuanyuanStoreStatus.remaining) || 0)} 份`;
       const status = selected
         ? "使用中"
         : unlocked
-          ? "已解锁"
+          ? available ? "已解锁" : "已拥有 · 已下架"
           : character.rewardOnly
-            ? "赛季冠军专属"
+            ? character.id === "doraemon" && doraemonPurchaseEligible
+              ? "冠军专属资格已解锁"
+              : "赛季冠军专属"
             : mystery
               ? yunqingReserved
                 ? "已预约 · 解锁后补 5499"
                 : yunqingReservationCount >= 3
                   ? "预约已满 · 7月16日解锁"
                   : `预约 500 · 仅剩 ${reservationRemaining} 个`
-              : `${price} 金币`;
+              : character.id === "yuanyuan"
+                ? yuanStatus
+              : characterSaleActive(character, now)
+                ? `限时 ${price} 金币`
+                : `${price} 金币`;
       const stars = Math.min(5, 1 + Math.round((character.agility - 1) * 12));
       const staminaRating = Math.max(1, Math.min(5, Number(character.staminaStars) || 1));
-      const limited = character.id === "beibei" && beibeiPromotionActive() && !unlocked;
-      const classes = `character-card${selected ? " is-selected" : ""}${unlocked ? "" : " is-locked"}${limited ? " is-limited" : ""}${character.newCharacter ? " is-new-character" : ""}${mystery ? " is-mystery" : ""}`;
+      const limited = !unlocked && (characterSaleActive(character, now) || character.id === "yuanyuan");
+      const yuanUpcoming = character.id === "yuanyuan" && !unlocked && now < yuanReleaseAt;
+      const yuanSoldOut = character.id === "yuanyuan" && !unlocked && yuanyuanStoreStatus.soldOut;
+      const classes = `character-card${selected ? " is-selected" : ""}${unlocked ? "" : " is-locked"}${limited ? " is-limited" : ""}${character.id === "yuanyuan" ? " is-limited-drop" : ""}${yuanUpcoming ? " is-upcoming" : ""}${yuanSoldOut ? " is-sold-out" : ""}${character.newCharacter ? " is-new-character" : ""}${mystery ? " is-mystery" : ""}`;
       if (mystery) {
-        return `<button class="${classes}" type="button" data-character="${character.id}" style="--avatar:${character.color}" aria-label="云青，${status}，能力将在解锁后公开"><span class="avatar-disc" aria-hidden="true">${character.badge}</span><strong>${character.name}</strong><small>${status}</small><span class="mystery-rating">能力数值暂不公开</span><em>7 月 16 日正式解锁 · 售价 5999 金币</em></button>`;
+        return `<button class="${classes}" type="button" data-character="${character.id}" style="--avatar:${character.color}" aria-label="云青，${status}，能力将在解锁后公开"><span class="avatar-disc" aria-hidden="true">${escapeHtml(character.badge)}</span><strong>${escapeHtml(character.name)}</strong><small>${escapeHtml(status)}</small><span class="mystery-rating">能力数值暂不公开</span><em>7 月 16 日正式解锁 · 售价 5999 金币</em></button>`;
       }
-      return `<button class="${classes}" type="button" data-character="${character.id}" style="--avatar:${character.color}" aria-label="${character.name}，${status}，体力${staminaRating}星，${character.trait}"><span class="avatar-disc" aria-hidden="true">${character.badge}</span><strong>${character.name}</strong><small>${status} · 灵活 ${"★".repeat(Math.max(1, stars))}</small><span class="stamina-rating">体力 ${"★".repeat(staminaRating)}${"☆".repeat(5 - staminaRating)}</span><em>${character.trait}</em></button>`;
+      return `<button class="${classes}" type="button" data-character="${character.id}" style="--avatar:${character.color}" aria-label="${escapeHtml(character.name)}，${escapeHtml(status)}，体力${staminaRating}星，${escapeHtml(character.trait)}"><span class="avatar-disc" aria-hidden="true">${escapeHtml(character.badge)}</span><strong>${escapeHtml(character.name)}</strong><small>${escapeHtml(status)} · 灵活 ${"★".repeat(Math.max(1, stars))}</small><span class="stamina-rating">体力 ${"★".repeat(staminaRating)}${"☆".repeat(5 - staminaRating)}</span><em>${escapeHtml(character.trait)}</em></button>`;
     }).join("");
-    updateBeibeiOffer();
+    updateYuanyuanOffer();
 
     if (shopMessage) {
       const active = currentCharacter();
@@ -3444,9 +4279,24 @@
           playTone(620, 0.07, "square", 0.025, 0);
           return;
         }
-        if (character.rewardOnly) {
+        if (character.id === "yuanyuan") {
+          await purchaseYuanyuan();
+          return;
+        }
+        if (!characterAvailableNow(character)) {
           if (shopMessage) {
-            shopMessage.textContent = "哆啦A梦不能购买：每个两周赛季的全站第一名会自动永久解锁。";
+            shopMessage.textContent = `${character.name} 当前未上架，暂时不能购买。`;
+            shopMessage.classList.add("is-error");
+          }
+          return;
+        }
+        if (character.rewardOnly) {
+          if (character.id === "doraemon") {
+            await purchaseDoraemonChampionCharacter();
+            return;
+          }
+          if (shopMessage) {
+            shopMessage.textContent = `${character.name}是奖励专属人物，不能用金币购买。`;
             shopMessage.classList.add("is-error");
           }
           playTone(190, 0.1, "triangle", 0.02, 0);
@@ -3545,6 +4395,7 @@
     controllerMoveRightHeld = false;
     boostSparkTimer = 0;
     pauseButton?.classList.add("is-hidden");
+    compactHudButton?.classList.add("is-hidden");
     gameControls?.classList.add("is-hidden");
     battleLiveHud?.classList.add("is-hidden");
     battleUltimateButton?.classList.add("is-hidden");
@@ -3560,6 +4411,7 @@
     showCharacterShop(true);
     setupSkinPicker();
     updateWalletUi();
+    renderDailyCheckin();
     updateCloudAccountUi();
     nameGate?.classList.add("is-hidden");
     if (!accountAuthenticated) {
@@ -3571,6 +4423,7 @@
     registerCurrentPlayer();
     if (battlePendingInvite) window.setTimeout(openBattleDialog, 420);
     window.setTimeout(showPendingHomeAnnouncement, 900);
+    window.setTimeout(showPendingCharacterCatalogNotice, 1120);
   }
 
   function showLevelSelect(message = "", success = true) {
@@ -3588,6 +4441,7 @@
     controllerMoveLeftHeld = false;
     controllerMoveRightHeld = false;
     pauseButton?.classList.add("is-hidden");
+    compactHudButton?.classList.add("is-hidden");
     gameControls?.classList.add("is-hidden");
     battleLiveHud?.classList.add("is-hidden");
     battleUltimateButton?.classList.add("is-hidden");
@@ -3622,6 +4476,7 @@
     if (player) player.vx = 0;
     clearGesture();
     pauseButton?.classList.add("is-hidden");
+    compactHudButton?.classList.add("is-hidden");
     gameControls?.classList.add("is-hidden");
     overlay.classList.remove("is-hidden");
     homePanel.classList.add("is-hidden");
@@ -3639,6 +4494,7 @@
     overlay.classList.add("is-hidden");
     pausePanel?.classList.add("is-hidden");
     pauseButton?.classList.remove("is-hidden");
+    compactHudButton?.classList.remove("is-hidden");
     gameControls?.classList.toggle("is-hidden", !battleModeActive);
     updateMissionHud();
     lastFrame = performance.now();
@@ -3722,12 +4578,23 @@
   }
 
   function startLevel(level = currentLevel, options = {}) {
+    if (siteLockActive) {
+      updateSiteLockClock(true);
+      return;
+    }
     if (!requirePlayerName()) {
       showHome();
       return;
     }
     const startingBattle = options?.battle === true;
     if (!startingBattle) battleModeActive = false;
+    crabTripleActive = false;
+    if (!startingBattle && selectedCharacter === "krabs") {
+      crabRunsPlayed = Math.min(1000000, crabRunsPlayed + 1);
+      crabTripleActive = crabRunsPlayed % 3 === 0;
+      writeSetting("cloud-jumper-crab-runs", crabRunsPlayed);
+      scheduleAccountSync(900);
+    }
     currentLevel = Math.max(1, Math.min(MAX_LEVELS, Number(level) || 1));
     buildLevel(currentLevel, { battle: startingBattle });
     player = createPlayer();
@@ -3797,6 +4664,8 @@
     bgmTimer = 0.12;
     bgmStep = 0;
     cameraX = 0;
+    cliffFallState = null;
+    cliffRescueGrace = 0;
     shakeTime = 0;
     jumpBuffer = 0;
     coyoteTime = 0.11;
@@ -3810,6 +4679,7 @@
     controllerMoveRightHeld = false;
     boostSparkTimer = 0;
     boostWasActive = false;
+    premiumEffectTimer = 0;
     gameState = "playing";
     canvas.dataset.gameState = gameState;
     canvas.dataset.level = String(currentLevel);
@@ -3817,6 +4687,8 @@
     canvas.dataset.lastSpecial = "";
     canvas.dataset.warningKind = "";
     canvas.dataset.warningX = "";
+    canvas.dataset.cliffFallActive = "false";
+    canvas.dataset.cliffRescueAvailable = "false";
     canvas.dataset.playerX = START_X.toFixed(2);
     canvas.dataset.playerY = (GROUND_Y - NORMAL_HEIGHT).toFixed(2);
     canvas.dataset.playerPose = "idle";
@@ -3824,6 +4696,8 @@
     canvas.dataset.surfaceY = GROUND_Y.toFixed(2);
     canvas.dataset.levelScore = "0";
     canvas.dataset.selectedCharacter = selectedCharacter;
+    canvas.dataset.crabRunsPlayed = String(crabRunsPlayed);
+    canvas.dataset.crabTripleActive = String(crabTripleActive);
     canvas.dataset.selectedSkin = selectedSkin;
     canvas.dataset.levelTheme = currentTheme().feature;
     canvas.dataset.levelThemeTitle = LEVEL_NAMES[currentLevel - 1] || "";
@@ -3867,6 +4741,7 @@
     overlay.classList.add("is-hidden");
     pausePanel?.classList.add("is-hidden");
     pauseButton?.classList.remove("is-hidden");
+    compactHudButton?.classList.remove("is-hidden");
     gameControls?.classList.toggle("is-hidden", !startingBattle);
     updateBattleUltimateButton();
     updateBattleHud();
@@ -3882,7 +4757,12 @@
     lastHudProgress = -1;
     lastHudStamina = -1;
     updateHud(true);
-    announce(startingBattle ? "好友对战开始：人物会自动前进并逐渐加速，60 秒内尽量多收集积分。" : `第 ${currentLevel} 关开始：自动前进会逐渐加速，达到 100 分即可过关。`);
+    if (crabTripleActive) {
+      activateSkillBadge("🦀", "金蟹三倍吸币局", 2.2);
+      announce("蟹老板金蟹局触发！本局吸币范围扩大，拾取到账金币变成三倍。");
+    } else {
+      announce(startingBattle ? "好友对战开始：人物会自动前进并逐渐加速，60 秒内尽量多收集积分。" : `第 ${currentLevel} 关开始：自动前进会逐渐加速，达到 100 分即可过关。`);
+    }
     initAudio();
     playTone(392, 0.07, "square", 0.035, 0);
     playTone(523, 0.1, "square", 0.035, 0.08);
@@ -3971,6 +4851,10 @@
     previousScoreX = START_X;
     checkpointX = START_X;
     cameraX = 0;
+    cliffFallState = null;
+    cliffRescueGrace = 0;
+    canvas.dataset.cliffFallActive = "false";
+    canvas.dataset.cliffRescueAvailable = "false";
     coins = coinBlueprints.map((item) => ({ ...item, collected: false }));
     hazards = hazardBlueprints.map((item) => ({ ...item }));
     enemies = enemyBlueprints.map((item, index) => ({
@@ -4097,6 +4981,7 @@
     canvas.dataset.gameState = gameState;
     gameControls?.classList.add("is-hidden");
     pauseButton?.classList.add("is-hidden");
+    compactHudButton?.classList.add("is-hidden");
     updateBattleUltimateButton();
     if (battleTimeLeft) battleTimeLeft.textContent = "结算中";
     sendBattle("finish", {
@@ -4155,6 +5040,7 @@
     gameControls?.classList.add("is-hidden");
     battleLiveHud?.classList.add("is-hidden");
     pauseButton?.classList.add("is-hidden");
+    compactHudButton?.classList.add("is-hidden");
     battleUltimateButton?.classList.add("is-hidden");
     overlay.classList.add("is-hidden");
     closeBattleDialog();
@@ -4184,6 +5070,10 @@
   }
 
   function handlePrimaryAction() {
+    if (siteLockActive) {
+      updateSiteLockClock(true);
+      return;
+    }
     if (!requirePlayerName()) return;
     showLevelSelect();
   }
@@ -4343,6 +5233,17 @@
     soundButton.title = soundOn ? "关闭声音" : "打开声音";
   }
 
+  function applySimpleHudMode() {
+    gameShell?.classList.toggle("is-simple-hud", simpleHudMode);
+    if (compactHudButton) {
+      compactHudButton.textContent = simpleHudMode ? "全" : "简";
+      compactHudButton.setAttribute("aria-pressed", String(simpleHudMode));
+      compactHudButton.setAttribute("aria-label", simpleHudMode ? "恢复完整游戏信息" : "打开简洁模式，只显示生命");
+      compactHudButton.title = simpleHudMode ? "恢复完整模式" : "简洁模式";
+    }
+    canvas.dataset.simpleHud = String(simpleHudMode);
+  }
+
   function requestJump() {
     if (gameState !== "playing") return;
     if ((keyboardCrouchHeld || pointerCrouchHeld) && player.onGround) return;
@@ -4394,10 +5295,11 @@
     const jumpStrength = 0.96 + staminaRatio() * 0.04;
     const heightFactor = isThirdJump ? (ability.instantTripleJump ? 0.78 : 0.62) : 0.9;
     player.vy = -ability.jumpPower * heightFactor * jumpStrength;
+    activateCliffRescue(ability, isThirdJump);
     consumeStamina(isThirdJump ? 24 : 10);
     player.thirdJumpRecovery = isThirdJump ? (ability.instantTripleJump ? 0.06 : 0.3) : 0;
     if (ability.flipTurns > 0) beginPlayerFlip(ability);
-    if (ability.flairMoves && selectedCharacter === "zhixuan") triggerFlairMove(ability);
+    if (Array.isArray(ability.flairMoves) && ability.flairMoves.length > 0) triggerFlairMove(ability);
     else if (selectedCharacter === "doraemon") activateSkillBadge("🚁", "竹蜻蜓缓降", 1.05);
     else activateSkillBadge("✦", isThirdJump ? "低空第三跳" : "二次跳", 0.88);
     spawnCoinBurst(player.x + player.w * 0.5, player.y + player.h * 0.75);
@@ -4446,6 +5348,126 @@
 
   function hasGroundAt(x) {
     return groundSegments.some((segment) => x >= segment.start && x <= segment.end);
+  }
+
+  function groundGapAt(x) {
+    const ordered = [...groundSegments].sort((a, b) => a.start - b.start);
+    for (let index = 0; index < ordered.length - 1; index += 1) {
+      const start = ordered[index].end;
+      const end = ordered[index + 1].start;
+      if (end - start < 10) continue;
+      if (x > start + 1 && x < end - 1) return { start, end, width: end - start };
+    }
+    return null;
+  }
+
+  function clearCliffFallState(rescued = false) {
+    if (!cliffFallState) return;
+    cliffFallState = null;
+    if (rescued) cliffRescueGrace = Math.max(cliffRescueGrace, 0.95);
+    canvas.dataset.cliffFallActive = "false";
+    canvas.dataset.cliffRescueAvailable = "false";
+    canvas.dataset.cliffRescueActive = "false";
+    if (rescued) {
+      canvas.dataset.lastSpecial = "cliffRescue";
+      activateSkillBadge("↥", "悬崖救援", 0.95);
+      announce("成功从悬崖边救回来了，继续前进！");
+    }
+  }
+
+  function activateCliffRescue(ability, isThirdJump = false) {
+    if (!cliffFallState?.active || Number(ability?.airJumps || 0) < 2) return false;
+    cliffFallState.rescueActive = true;
+    cliffFallState.rescueAttempts += 1;
+    const remainingDistance = Math.max(0, cliffFallState.rescueTargetX - player.x);
+    cliffFallState.rescueSpeed = Math.max(
+      330,
+      Math.min(560, runSpeed * (isThirdJump ? 1.34 : 1.16) + remainingDistance * 0.22),
+    );
+    canvas.dataset.cliffRescueActive = "true";
+    canvas.dataset.cliffRescueAttempts = String(cliffFallState.rescueAttempts);
+    return true;
+  }
+
+  function beginCliffFall(gap, ability) {
+    if (!gap || cliffFallState?.active || cliffRescueGrace > 0) return;
+    const minimumX = gap.start + 3;
+    const maximumX = Math.max(minimumX, gap.end - player.w - 3);
+    const lockedX = Math.max(minimumX, Math.min(maximumX, player.x));
+    cliffFallState = {
+      active: true,
+      gapStart: gap.start,
+      gapEnd: gap.end,
+      lockedX,
+      rescueDirection: 1,
+      // Auto-run always continues to the right. Returning to the left lip made
+      // a successful rescue immediately run into the same cliff again.
+      rescueTargetX: gap.end + 14,
+      safeLandingX: gap.end + 22,
+      rescueActive: false,
+      rescueAttempts: 0,
+      rescueSpeed: 0,
+      cameraX,
+    };
+    player.x = lockedX;
+    player.vx = 0;
+    canvas.dataset.cliffFallActive = "true";
+    canvas.dataset.cliffGapStart = gap.start.toFixed(2);
+    canvas.dataset.cliffGapEnd = gap.end.toFixed(2);
+    canvas.dataset.cliffRescueAvailable = String(Number(ability?.airJumps || 0) >= 2 && player.airJumpsUsed < Number(ability?.airJumps || 0));
+    canvas.dataset.cliffRescueActive = "false";
+    if (Number(ability?.airJumps || 0) >= 2 && player.vy < 0 && player.airJumpsUsed > 0) {
+      activateCliffRescue(ability, player.airJumpsUsed >= 2);
+    }
+    const canTripleRescue = Number(ability?.airJumps || 0) >= 2;
+    if (canTripleRescue && cliffRescueHintsShown < 3) {
+      cliffRescueHintsShown += 1;
+      writeSetting("cloud-jumper-cliff-rescue-hints", cliffRescueHintsShown);
+      activateSkillBadge("↗", "连续轻点跳跃可救回", 1.65);
+      announce(`悬崖救援提示 ${cliffRescueHintsShown}/3：画面已停住，连续轻点补完三连跳，人物会向前方崖沿救回。`);
+    } else {
+      announce(canTripleRescue
+        ? "掉进悬崖！画面已停住，三连跳人物还有机会向前补跳回来。"
+        : "掉进悬崖！画面已停住。");
+    }
+  }
+
+  function updateCliffFallState(dt, ability) {
+    cliffRescueGrace = Math.max(0, cliffRescueGrace - dt);
+    canvas.dataset.cliffRescueGrace = cliffRescueGrace.toFixed(3);
+    if (!cliffFallState?.active) {
+      if (cliffRescueGrace > 0) return;
+      const center = player.x + player.w * 0.5;
+      const gap = player.y + player.h > GROUND_Y + 0.5 ? groundGapAt(center) : null;
+      if (gap) beginCliffFall(gap, ability);
+      return;
+    }
+
+    player.vx = 0;
+    canvas.dataset.cliffRescueAvailable = String(Number(ability?.airJumps || 0) >= 2 && player.airJumpsUsed < Number(ability?.airJumps || 0));
+    if (!cliffFallState.rescueActive) {
+      player.x = cliffFallState.lockedX;
+      return;
+    }
+
+    const distance = cliffFallState.rescueTargetX - player.x;
+    const step = Math.max(0, cliffFallState.rescueSpeed) * dt;
+    if (Math.abs(distance) <= step) player.x = cliffFallState.rescueTargetX;
+    else player.x += Math.sign(distance) * step;
+    if (player.x >= cliffFallState.rescueTargetX - 0.5 && player.y + player.h >= GROUND_Y - 9) {
+      player.x = cliffFallState.safeLandingX;
+      player.y = GROUND_Y - player.h;
+      player.vx = 0;
+      player.vy = 0;
+      player.onGround = true;
+      player.surfaceY = GROUND_Y;
+      player.invulnerable = Math.max(player.invulnerable, 0.72);
+      player.airJumpsUsed = 0;
+      player.jumpCycleLocked = false;
+      player.pendingThirdJump = 0;
+      player.thirdJumpRecovery = 0;
+      clearCliffFallState(true);
+    }
   }
 
   function horizontalOverlap(left, right, start, end) {
@@ -5048,13 +6070,13 @@
     const movingRight = keyboardMoveRightHeld || controllerMoveRightHeld;
     const movingLeft = keyboardMoveLeftHeld || controllerMoveLeftHeld;
     const moveAxis = movingLeft && !movingRight ? -1 : 1;
-    const boosting = Boolean(ability.speedBoost > 1 && moveAxis > 0 && player.thirdJumpRecovery <= 0 && (keyboardBoostHeld || pointerBoostHeld));
+    const boosting = Boolean(!cliffFallState?.active && ability.speedBoost > 1 && moveAxis > 0 && player.thirdJumpRecovery <= 0 && (keyboardBoostHeld || pointerBoostHeld));
     updateRunStamina(dt, ability, boosting);
     const effectiveBoost = ability.speedBoost > 1
       ? 1 + (ability.speedBoost - 1) * (0.72 + staminaRatio() * 0.28)
       : 1;
     if (boosting && !boostWasActive) {
-      if (selectedCharacter === "zhixuan") triggerFlairMove(ability, "explosiveStepover");
+      if (Array.isArray(ability.flairMoves) && ability.flairMoves.length > 0) triggerFlairMove(ability, ability.flairMoves[0]);
       else if (selectedCharacter === "qiang") activateSkillBadge("💪", "肌肉爆发", 0.9);
       else activateSkillBadge("⚡", "极速爆发", 0.9);
     }
@@ -5067,7 +6089,9 @@
     const accelerationProgress = Math.max(0, Math.min(1, elapsed / accelerationSpan));
     const accelerationPeak = currentLevel >= 15 ? 1.36 : currentLevel >= 10 ? 1.29 : 1.22;
     const automaticSpeedFactor = 0.88 + (accelerationPeak - 0.88) * accelerationProgress;
-    const targetVelocity = runSpeed * agilitySpeed * automaticSpeedFactor * (moveAxis > 0 ? 1 : -0.58) * (boosting ? effectiveBoost : 1);
+    const targetVelocity = cliffFallState?.active
+      ? 0
+      : runSpeed * agilitySpeed * automaticSpeedFactor * (moveAxis > 0 ? 1 : -0.58) * (boosting ? effectiveBoost : 1);
     const velocityDifference = targetVelocity - (Number(player.vx) || 0);
     const acceleration = (940 + agility * 540) * dt;
     player.vx += Math.max(-acceleration, Math.min(acceleration, velocityDifference));
@@ -5131,6 +6155,7 @@
     const previousBottom = player.y + player.h;
     player.vy += GRAVITY * (ability.gravityScale || 1) * dt;
     player.y += player.vy * dt;
+    updateCliffFallState(dt, ability);
 
     updateSpecialEvents(dt);
     updateFallingBranches(dt);
@@ -5145,6 +6170,7 @@
       player.onGround = false;
     } else if (landingSurface) {
       const wasAirborne = !player.onGround;
+      const rescuedFromCliff = Boolean(cliffFallState?.active);
       player.y = landingSurface.y - player.h;
       player.vy = 0;
       player.onGround = true;
@@ -5160,7 +6186,12 @@
       }
       if (wasAirborne) {
         spawnDust(player.x + player.w * 0.5, landingSurface.y - 2, "#e8cb83", 4);
+        spawnPremiumLandingBurst(player.x + player.w * 0.5, landingSurface.y);
       }
+      if (rescuedFromCliff) clearCliffFallState(true);
+    } else if (player.onGround && cliffRescueGrace > 0 && Math.abs(player.y + player.h - GROUND_Y) <= 1.5) {
+      player.vy = 0;
+      player.surfaceY = GROUND_Y;
     } else {
       player.onGround = false;
     }
@@ -5212,6 +6243,7 @@
 
     updateCrows(dt);
 
+    updatePremiumCharacterEffects(dt, boosting);
     updateParticles(dt);
     collectCoins();
     updateBattleRuntime(dt);
@@ -5245,7 +6277,10 @@
   function collectCoins() {
     const px = player.x + player.w * 0.5;
     const py = player.y + player.h * 0.5;
-    const magnet = currentCharacter().magnetRadius || 0;
+    const ability = currentCharacter();
+    const magnet = crabTripleActive && selectedCharacter === "krabs"
+      ? Math.max(ability.magnetRadius || 0, ability.tripleMagnetRadius || 0)
+      : ability.magnetRadius || 0;
     for (const coin of coins) {
       if (coin.collected) continue;
       if (coin.requiresCombo && player.airJumpsUsed < 1) continue;
@@ -5272,11 +6307,13 @@
         } else {
           const pickupStep = currentLevel >= 15 ? 4 : 2;
           walletReward = coin.big ? 3 : (runCoinPickupCount % pickupStep === 0 ? 1 : 0);
+          if (crabTripleActive && selectedCharacter === "krabs") walletReward *= 3;
           walletCoins += walletReward;
           runCoinsEarned += walletReward;
         }
         canvas.dataset.runCoinsEarned = String(runCoinsEarned);
         canvas.dataset.lastCoinWalletReward = String(walletReward);
+        canvas.dataset.lastCoinTriple = String(Boolean(crabTripleActive && selectedCharacter === "krabs" && walletReward > 0));
         if (walletReward > 0) updateWalletUi();
         if (levelMission && !missionComplete && coinCount >= levelMission.target) {
           missionComplete = true;
@@ -5288,6 +6325,7 @@
         updateMissionHud();
         spawnCoinBurst(coin.x, coin.y);
         if (coin.big) {
+          if (characterVisualTier() >= 2) spawnPremiumLandingBurst(coin.x, coin.y + 18);
           specialCounts.bigCoin += 1;
           canvas.dataset.lastSpecial = "bigCoin";
           spawnCoinBurst(coin.x, coin.y);
@@ -5349,7 +6387,7 @@
           box,
           hazard.x + hazard.w * 0.5,
           hazard.y + hazard.h * 0.5,
-          hazard.w * 0.34,
+          Math.min(hazard.w * 0.31, hazard.h * 0.42),
         ));
       } else if (hazard.kind === "branch") {
         // Low layer-two branches are one-way platforms from above, but their
@@ -5378,6 +6416,18 @@
         if (hazard.kind === "rock" && smashCharges > 0) {
           smashCharges -= 1;
           hazards = hazards.filter((item) => item !== hazard);
+          if (selectedCharacter === "krabs") {
+            triggerCrabSmash(hazard.x + hazard.w * 0.5, GROUND_Y - hazard.h * 0.5, "rock");
+            canvas.dataset.smashCharges = String(smashCharges);
+            updateMissionHud();
+            return false;
+          }
+          if (selectedCharacter === "yuanyuan") {
+            triggerYuanyuanSmash(hazard.x + hazard.w * 0.5, GROUND_Y - hazard.h * 0.5, "rock");
+            canvas.dataset.smashCharges = String(smashCharges);
+            updateMissionHud();
+            return false;
+          }
           shakeTime = 0.22;
           spawnHitBurst(hazard.x + hazard.w * 0.5, GROUND_Y - hazard.h * 0.5);
           playTone(105, 0.12, "sawtooth", 0.045, 0);
@@ -5467,6 +6517,20 @@
         triggerPowerSmash(rock.x, rock.y, "fallingRock");
         return false;
       }
+      if (smashCharges > 0) {
+        smashCharges -= 1;
+        rock.state = "destroyed";
+        if (selectedCharacter === "krabs") triggerCrabSmash(rock.x, rock.y, "fallingRock");
+        else if (selectedCharacter === "yuanyuan") triggerYuanyuanSmash(rock.x, rock.y, "fallingRock");
+        else {
+          shakeTime = 0.22;
+          spawnHitBurst(rock.x, rock.y);
+          activateSkillBadge("✦", "碎石能力", 0.95);
+        }
+        canvas.dataset.smashCharges = String(smashCharges);
+        updateMissionHud();
+        return false;
+      }
       rock.state = "destroyed";
       handleDamage(false, 1, "fallingRock");
       return true;
@@ -5484,6 +6548,32 @@
     const dx = closestX - cx;
     const dy = closestY - cy;
     return dx * dx + dy * dy < radius * radius;
+  }
+
+  function triggerCrabSmash(x, y, source) {
+    shakeTime = 0.24;
+    spawnHitBurst(x, y);
+    player.vy = Math.min(player.vy, -205);
+    player.onGround = false;
+    canvas.dataset.lastSpecial = "crabSmash";
+    canvas.dataset.crabSmashSource = source;
+    activateSkillBadge("🦀", `蟹钳碎石 · 剩余 ${smashCharges}`, 1.15);
+    announce(`蟹老板用蟹钳夹碎石头！本局还可碎石 ${smashCharges} 次。`);
+    playTone(118, 0.1, "sawtooth", 0.045, 0);
+    playTone(390, 0.12, "square", 0.032, 0.07);
+  }
+
+  function triggerYuanyuanSmash(x, y, source) {
+    shakeTime = 0.22;
+    spawnHitBurst(x, y);
+    player.vy = Math.min(player.vy, -175);
+    player.onGround = false;
+    canvas.dataset.lastSpecial = "yuanyuanSmash";
+    canvas.dataset.yuanyuanSmashSource = source;
+    activateSkillBadge("元", `厚实冲撞 · 剩余 ${smashCharges}`, 1.05);
+    announce(`元元稳稳撞碎了石头！本局还可撞碎 ${smashCharges} 块。`);
+    playTone(126, 0.1, "sawtooth", 0.042, 0);
+    playTone(360, 0.1, "square", 0.03, 0.07);
   }
 
   function triggerPowerSmash(x, y, source) {
@@ -5566,6 +6656,7 @@
 
   function handleDamage(fell, amount = 1, source = fell ? "fall" : "obstacle") {
     if (gameState !== "playing") return;
+    if (cliffFallState?.active) clearCliffFallState(false);
     if (caveEntryProtectionActive()) {
       hearts = maxHearts;
       player.x = Math.max(caveStartX + 34, player.x + (fell ? 0 : 14));
@@ -5741,6 +6832,84 @@
     }
   }
 
+  function spawnPremiumLandingBurst(x, y, character = currentCharacter()) {
+    const tier = characterVisualTier(character);
+    if (tier <= 0) return;
+    const palette = characterVisualPalette(character);
+    const compact = cssWidth > 0 && cssWidth <= 620;
+    const sparkleCount = Math.max(4, Math.min(compact ? 8 : 12, 3 + tier * 2));
+    particles.push({
+      x,
+      y: y - 2,
+      vx: 0,
+      vy: 0,
+      gravity: 0,
+      life: 0.38,
+      maxLife: 0.38,
+      size: 18 + tier * 3,
+      growth: 34 + tier * 7,
+      color: palette[0],
+      shape: "ring",
+      glow: tier >= 3 ? 8 : 4,
+    });
+    for (let index = 0; index < sparkleCount; index += 1) {
+      const angle = Math.PI + (Math.PI * index) / Math.max(1, sparkleCount - 1);
+      const speed = 62 + Math.random() * (36 + tier * 13);
+      particles.push({
+        x: x + (Math.random() - 0.5) * 16,
+        y: y - 4,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 18,
+        gravity: 230,
+        drag: 1.7,
+        life: 0.42 + Math.random() * 0.18,
+        maxLife: 0.6,
+        size: 2.5 + Math.random() * (2 + tier * 0.45),
+        rotation: Math.random() * Math.PI,
+        spin: (Math.random() - 0.5) * 9,
+        color: palette[index % palette.length],
+        shape: index % 3 === 0 ? "diamond" : "circle",
+        glow: tier >= 2 ? 5 : 0,
+      });
+    }
+  }
+
+  function updatePremiumCharacterEffects(dt, boosting = false) {
+    const character = currentCharacter();
+    const tier = characterVisualTier(character);
+    canvas.dataset.characterVisualTier = String(tier);
+    premiumEffectTimer = Math.max(0, premiumEffectTimer - dt);
+    if (tier <= 0 || premiumEffectTimer > 0 || gameState !== "playing") return;
+    const moving = Math.abs(Number(player?.vx) || 0) > 55;
+    if (!moving && player?.onGround && !boosting) return;
+
+    const compact = cssWidth > 0 && cssWidth <= 620;
+    const baseInterval = tier >= 4 ? 0.055 : tier === 3 ? 0.075 : tier === 2 ? 0.11 : 0.17;
+    premiumEffectTimer = baseInterval * (compact ? 1.22 : 1);
+    const palette = characterVisualPalette(character);
+    const count = tier >= 4 && !compact ? 2 : 1;
+    for (let index = 0; index < count; index += 1) {
+      const airLift = player.onGround ? 0 : 12 + Math.random() * 14;
+      const color = palette[(Math.floor(elapsed * 8) + index) % palette.length];
+      particles.push({
+        x: player.x + 5 + Math.random() * 11,
+        y: player.y + player.h * (0.35 + Math.random() * 0.5) + airLift,
+        vx: -75 - Math.abs(Number(player.vx) || 0) * (0.16 + tier * 0.018) - Math.random() * 34,
+        vy: (Math.random() - 0.5) * (28 + tier * 4),
+        gravity: player.onGround ? -16 : 12,
+        drag: 1.25,
+        life: 0.3 + tier * 0.045,
+        maxLife: 0.48,
+        size: 2 + tier * 0.7 + Math.random() * 1.7,
+        rotation: Math.random() * Math.PI,
+        spin: (Math.random() - 0.5) * 7,
+        color,
+        shape: tier >= 3 && index % 2 === 0 ? "diamond" : "circle",
+        glow: tier >= 2 ? 5 + tier : 0,
+      });
+    }
+  }
+
   function spawnCoinBurst(x, y) {
     const colors = ["#ffd34f", "#fff2a6", "#ff984f"];
     for (let i = 0; i < 9; i += 1) {
@@ -5818,12 +6987,18 @@
   function updateParticles(dt) {
     for (const particle of particles) {
       particle.life -= dt;
-      particle.vy += particle.gravity * dt;
+      particle.vy += (Number(particle.gravity) || 0) * dt;
+      if (particle.drag) {
+        const damping = Math.exp(-Math.max(0, Number(particle.drag) || 0) * dt);
+        particle.vx *= damping;
+        particle.vy *= damping;
+      }
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
+      particle.rotation = (Number(particle.rotation) || 0) + (Number(particle.spin) || 0) * dt;
     }
     particles = particles.filter((particle) => particle.life > 0);
-    const particleLimit = cssWidth > 0 && cssWidth <= 620 ? 140 : cssWidth > 0 && cssWidth <= 980 ? 180 : 220;
+    const particleLimit = cssWidth > 0 && cssWidth <= 620 ? 112 : cssWidth > 0 && cssWidth <= 980 ? 156 : 220;
     if (particles.length > particleLimit) particles = particles.slice(-particleLimit);
   }
 
@@ -5834,7 +7009,16 @@
     const nextHeight = Math.max(1, rect.height);
     const portrait = nextHeight > nextWidth * 1.15;
     const compactDevice = nextWidth <= 900;
-    renderDpr = Math.min(window.devicePixelRatio || 1, compactDevice ? 1.5 : 1.75);
+    const phoneDevice = nextWidth <= 620;
+    const hardwareThreads = Math.max(1, Number(window.navigator?.hardwareConcurrency) || 4);
+    const deviceMemory = Math.max(0, Number(window.navigator?.deviceMemory) || 0);
+    const constrainedDevice = hardwareThreads <= 4 || (deviceMemory > 0 && deviceMemory <= 4);
+    const maximumDpr = phoneDevice
+      ? constrainedDevice ? 1.22 : 1.36
+      : compactDevice
+        ? constrainedDevice ? 1.36 : 1.55
+        : 1.78;
+    renderDpr = Math.min(window.devicePixelRatio || 1, maximumDpr);
     const pixelWidth = Math.round(nextWidth * renderDpr);
     const pixelHeight = Math.round(nextHeight * renderDpr);
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
@@ -5858,7 +7042,23 @@
     canvas.dataset.viewportYOffset = viewportYOffset.toFixed(1);
     canvas.dataset.renderDpr = renderDpr.toFixed(2);
     ctx.setTransform(renderDpr, 0, 0, renderDpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     canvasSizeDirty = false;
+  }
+
+  function syncAppViewport() {
+    const viewport = window.visualViewport;
+    const width = Math.max(1, Number(viewport?.width) || window.innerWidth || document.documentElement.clientWidth || 1);
+    const height = Math.max(1, Number(viewport?.height) || window.innerHeight || document.documentElement.clientHeight || 1);
+    const offsetLeft = Math.max(0, Number(viewport?.offsetLeft) || 0);
+    const offsetTop = Math.max(0, Number(viewport?.offsetTop) || 0);
+    const root = document.documentElement;
+    root.style.setProperty("--app-width", `${width}px`);
+    root.style.setProperty("--app-height", `${height}px`);
+    root.style.setProperty("--app-left", `${offsetLeft}px`);
+    root.style.setProperty("--app-top", `${offsetTop}px`);
+    canvasSizeDirty = true;
   }
 
   function draw() {
@@ -5870,8 +7070,10 @@
     ctx.scale(scale, scale);
     ctx.translate(0, viewportYOffset);
 
-    const targetCamera = Math.max(0, Math.min(levelEnd - logicalWidth * 0.72, player.x - logicalWidth * 0.3));
-    cameraX += (targetCamera - cameraX) * 0.11;
+    const runningCameraTarget = Math.max(0, Math.min(levelEnd - logicalWidth * 0.72, player.x - logicalWidth * 0.3));
+    const targetCamera = cliffFallState?.active ? cliffFallState.cameraX : runningCameraTarget;
+    const cameraEase = 1 - Math.exp(-7.05 * Math.max(1 / 240, renderFrameDelta));
+    cameraX += (targetCamera - cameraX) * cameraEase;
 
     drawBackground();
 
@@ -5879,7 +7081,10 @@
     ctx.translate(0, worldYOffset);
     if (shakeTime > 0) {
       const magnitude = 7 * (shakeTime / 0.3);
-      ctx.translate((Math.random() - 0.5) * magnitude, (Math.random() - 0.5) * magnitude);
+      ctx.translate(
+        Math.sin(elapsed * 89) * magnitude * 0.44,
+        Math.cos(elapsed * 73) * magnitude * 0.34,
+      );
     }
     drawCaveInterior();
     drawHoles();
@@ -5897,11 +7102,14 @@
     drawAirplaneBombs();
     drawBattleAttack();
     drawParticles();
+    drawPremiumCharacterEffects();
     drawBoostEffect();
     drawFlairEffect();
     drawBattleOpponent();
     drawPlayer();
+    drawCliffRescueGuide();
     drawSkillBadge();
+    drawMotionAtmosphere();
     drawCaveDarkness();
     ctx.restore();
 
@@ -6362,6 +7570,69 @@
       rightWall.addColorStop(1, "rgba(54, 34, 25, 0)");
       ctx.fillStyle = rightWall;
       ctx.fillRect(x + w - 13, GROUND_Y + 8, 13, WORLD_HEIGHT - GROUND_Y - worldYOffset);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, GROUND_Y, w, WORLD_HEIGHT - GROUND_Y - worldYOffset);
+      ctx.clip();
+
+      const ledgeShade = currentTheme().soil?.[1] || "#49362f";
+      ctx.fillStyle = ledgeShade;
+      ctx.beginPath();
+      ctx.moveTo(x, GROUND_Y + 3);
+      ctx.lineTo(x + 12, GROUND_Y + 12);
+      ctx.lineTo(x + 7, GROUND_Y + 25);
+      ctx.lineTo(x + 17, GROUND_Y + 38);
+      ctx.lineTo(x + 9, WORLD_HEIGHT);
+      ctx.lineTo(x, WORLD_HEIGHT);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + w, GROUND_Y + 3);
+      ctx.lineTo(x + w - 12, GROUND_Y + 14);
+      ctx.lineTo(x + w - 7, GROUND_Y + 27);
+      ctx.lineTo(x + w - 18, GROUND_Y + 41);
+      ctx.lineTo(x + w - 9, WORLD_HEIGHT);
+      ctx.lineTo(x + w, WORLD_HEIGHT);
+      ctx.closePath();
+      ctx.fill();
+
+      for (let depthMark = 0; depthMark < 3; depthMark += 1) {
+        const markY = GROUND_Y + 26 + depthMark * 27 + ((i * 11 + depthMark * 7) % 9);
+        ctx.strokeStyle = `rgba(196, 154, 111, ${0.24 - depthMark * 0.045})`;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(x + 4, markY);
+        ctx.lineTo(x + 11 + (depthMark % 2) * 4, markY + 7);
+        ctx.lineTo(x + 7, markY + 14);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + w - 4, markY + 4);
+        ctx.lineTo(x + w - 12 - (depthMark % 2) * 4, markY + 11);
+        ctx.lineTo(x + w - 8, markY + 18);
+        ctx.stroke();
+      }
+
+      const mist = ctx.createLinearGradient(0, WORLD_HEIGHT - 48, 0, WORLD_HEIGHT);
+      mist.addColorStop(0, "rgba(137, 186, 200, 0)");
+      mist.addColorStop(1, "rgba(123, 170, 185, .24)");
+      ctx.fillStyle = mist;
+      ctx.fillRect(x, WORLD_HEIGHT - 52, w, 52);
+      ctx.restore();
+
+      ctx.fillStyle = "rgba(255,255,255,.34)";
+      ctx.beginPath();
+      ctx.moveTo(x - 1, GROUND_Y);
+      ctx.lineTo(x + 9, GROUND_Y + 3);
+      ctx.lineTo(x + 3, GROUND_Y + 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + w + 1, GROUND_Y);
+      ctx.lineTo(x + w - 9, GROUND_Y + 3);
+      ctx.lineTo(x + w - 3, GROUND_Y + 6);
+      ctx.closePath();
+      ctx.fill();
     }
   }
 
@@ -6728,37 +7999,65 @@
   function drawBlackHole(x, hazard) {
     const cx = x + hazard.w * 0.5;
     const cy = hazard.y + hazard.h * 0.5;
+    const radiusX = Math.max(32, hazard.w * 0.44);
+    const radiusY = Math.max(22, hazard.h * 0.38);
     ctx.save();
     ctx.translate(cx, cy);
+    ctx.fillStyle = "rgba(18, 12, 43, .34)";
+    ctx.beginPath();
+    ctx.ellipse(0, radiusY * 0.7, radiusX * 1.08, radiusY * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.rotate(elapsed * 1.8);
     ctx.shadowColor = "rgba(45, 27, 91, 0.5)";
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 18;
     for (let ring = 0; ring < 4; ring += 1) {
       ctx.strokeStyle = ["#bb75ff", "#6b65da", "#35b7d1", "#df8cff"][ring];
       ctx.globalAlpha = 0.78 - ring * 0.12;
-      ctx.lineWidth = 7 - ring;
+      ctx.lineWidth = 8 - ring;
       ctx.beginPath();
-      ctx.ellipse(0, 0, 29 - ring * 4, 18 - ring * 2.3, ring * 0.42, 0, Math.PI * 1.55);
+      ctx.ellipse(
+        0,
+        0,
+        radiusX - ring * radiusX * 0.12,
+        radiusY - ring * radiusY * 0.105,
+        ring * 0.42,
+        0,
+        Math.PI * 1.62,
+      );
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    const core = ctx.createRadialGradient(-5, -5, 1, 0, 0, 20);
+    const coreRadius = Math.max(22, Math.min(radiusX * 0.67, radiusY * 0.94));
+    const core = ctx.createRadialGradient(-5, -5, 1, 0, 0, coreRadius);
     core.addColorStop(0, "#111423");
     core.addColorStop(0.65, "#080914");
     core.addColorStop(1, "#010107");
     ctx.fillStyle = core;
     ctx.beginPath();
-    ctx.arc(0, 0, 19, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, coreRadius, coreRadius * 0.82, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowColor = "transparent";
     ctx.fillStyle = "#fff2a4";
     for (let dot = 0; dot < 3; dot += 1) {
       const angle = elapsed * (2 + dot * 0.3) + dot * 2.1;
       ctx.beginPath();
-      ctx.arc(Math.cos(angle) * (25 + dot * 2), Math.sin(angle) * (14 + dot), 2, 0, Math.PI * 2);
+      ctx.arc(
+        Math.cos(angle) * (radiusX * 0.82 + dot * 2),
+        Math.sin(angle) * (radiusY * 0.72 + dot),
+        2.2,
+        0,
+        Math.PI * 2,
+      );
       ctx.fill();
     }
     ctx.restore();
+    if (hazard.warning) {
+      drawWarningMark(
+        cx,
+        Math.max(76, hazard.y - 27),
+        hazard.tutorial ? "不能碰 · 跳" : "黑洞 · 跳",
+      );
+    }
   }
 
   function drawFallenBranch(x, y, w, h, falling) {
@@ -7155,6 +8454,111 @@
     }
   }
 
+  function drawPremiumCharacterEffects() {
+    if (gameState !== "playing" || !player) return;
+    const character = currentCharacter();
+    const tier = characterVisualTier(character);
+    if (tier <= 0) return;
+    const palette = characterVisualPalette(character);
+    const x = player.x - cameraX + player.w * 0.5;
+    const y = player.y + player.h * 0.53;
+    const speedRatio = Math.max(0, Math.min(1.6, Math.abs(Number(player.vx) || 0) / Math.max(1, runSpeed)));
+    const pulse = 0.5 + Math.sin(elapsed * (3.2 + tier * 0.35)) * 0.5;
+
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    if (tier >= 1 && (speedRatio > 0.25 || !player.onGround)) {
+      ctx.globalAlpha = 0.12 + tier * 0.025;
+      ctx.strokeStyle = palette[0];
+      ctx.lineWidth = 2 + tier * 0.45;
+      ctx.lineCap = "round";
+      const wake = 25 + speedRatio * (30 + tier * 8);
+      ctx.beginPath();
+      ctx.moveTo(x - wake, player.surfaceY - 7);
+      ctx.quadraticCurveTo(x - wake * 0.42, player.surfaceY - 15 - pulse * 4, x - 8, player.surfaceY - 8);
+      ctx.stroke();
+    }
+
+    if (tier >= 2) {
+      const radius = 27 + tier * 6 + pulse * 4;
+      const aura = ctx.createRadialGradient(x, y, 4, x, y, radius);
+      aura.addColorStop(0, "rgba(255,255,255,0.22)");
+      aura.addColorStop(0.46, `${palette[0]}38`);
+      aura.addColorStop(1, `${palette[0]}00`);
+      ctx.globalAlpha = 0.52 + speedRatio * 0.13;
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.ellipse(x, y, radius * (1 + speedRatio * 0.15), radius, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (tier >= 3) {
+      ctx.globalAlpha = 0.32 + pulse * 0.14;
+      ctx.strokeStyle = palette[1];
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([6, 8]);
+      ctx.lineDashOffset = -elapsed * 18;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 30 + tier * 4, 22 + tier * 3, -0.18, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const lights = tier >= 4 ? 4 : 3;
+      for (let index = 0; index < lights; index += 1) {
+        const angle = elapsed * (1.8 + tier * 0.12) + (Math.PI * 2 * index) / lights;
+        const orbitX = x + Math.cos(angle) * (30 + tier * 4);
+        const orbitY = y + Math.sin(angle) * (20 + tier * 3);
+        ctx.globalAlpha = 0.42 + pulse * 0.22;
+        ctx.shadowColor = palette[index % palette.length];
+        ctx.shadowBlur = 7 + tier;
+        ctx.fillStyle = palette[index % palette.length];
+        ctx.beginPath();
+        ctx.arc(orbitX, orbitY, 1.8 + tier * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    if (tier >= 4 && (speedRatio > 0.38 || !player.onGround)) {
+      const direction = Number(player.vx) < 0 ? -1 : 1;
+      for (let echo = 3; echo >= 1; echo -= 1) {
+        const echoX = x - direction * echo * (7 + speedRatio * 7);
+        ctx.globalAlpha = 0.035 + (4 - echo) * 0.018;
+        ctx.fillStyle = palette[(echo - 1) % palette.length];
+        ctx.beginPath();
+        ctx.ellipse(echoX, y, 14, player.h * 0.37, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawMotionAtmosphere() {
+    if (gameState !== "playing" || !player || cliffFallState?.active) return;
+    const speedRatio = Math.abs(Number(player.vx) || 0) / Math.max(1, runSpeed);
+    if (speedRatio < 1.02) return;
+    const intensity = Math.max(0, Math.min(1, (speedRatio - 1.02) / 0.48));
+    const compact = cssWidth > 0 && cssWidth <= 620;
+    const lineCount = compact ? 4 : 7;
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.lineCap = "round";
+    for (let index = 0; index < lineCount; index += 1) {
+      const cycle = (elapsed * (215 + index * 13) + index * 127) % (logicalWidth + 240);
+      const x = logicalWidth + 120 - cycle;
+      const y = 100 + ((index * 83 + currentLevel * 29) % 295);
+      const length = 46 + index * 7 + intensity * 65;
+      const streak = ctx.createLinearGradient(x - length, y, x, y);
+      streak.addColorStop(0, "rgba(255,255,255,0)");
+      streak.addColorStop(1, `rgba(255,255,255,${(0.06 + intensity * 0.12).toFixed(3)})`);
+      ctx.strokeStyle = streak;
+      ctx.lineWidth = index % 3 === 0 ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(x - length, y + length * 0.08);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawBoostEffect() {
     if (gameState !== "playing" || canvas.dataset.boosting !== "true" || !(currentCharacter().speedBoost > 1)) return;
     const x = player.x - cameraX;
@@ -7236,6 +8640,58 @@
     ctx.fillStyle = "rgba(255,218,99,0.9)";
     ctx.font = "850 6px system-ui, sans-serif";
     ctx.fillText(skillBadge.label, x, y + 10);
+    ctx.restore();
+  }
+
+  function drawCliffRescueGuide() {
+    if (!cliffFallState?.active) return;
+    const ability = currentCharacter();
+    const canRescue = Number(ability.airJumps || 0) >= 2 && player.airJumpsUsed < Number(ability.airJumps || 0);
+    const playerScreenX = player.x - cameraX + player.w * 0.5;
+    const targetScreenX = cliffFallState.safeLandingX - cameraX + player.w * 0.5;
+    const y = Math.max(86, Math.min(GROUND_Y - 42, player.y - 24));
+    const label = cliffFallState.rescueActive
+      ? "正在前往右侧安全地面"
+      : canRescue
+        ? "连续轻点补跳 · 向右救回"
+        : "空中跳跃已用完";
+    ctx.save();
+    if (cliffFallState.rescueActive) {
+      const startX = playerScreenX + 16;
+      const endX = Math.max(startX + 28, Math.min(logicalWidth - 22, targetScreenX));
+      const guideY = Math.max(96, Math.min(GROUND_Y - 28, player.y + player.h * 0.52));
+      const pulse = 0.72 + Math.sin(elapsed * 8) * 0.18;
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = "#ffe37a";
+      ctx.fillStyle = "#ffe37a";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([7, 6]);
+      ctx.beginPath();
+      ctx.moveTo(startX, guideY);
+      ctx.quadraticCurveTo((startX + endX) * 0.5, guideY - 34, endX, guideY - 4);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(endX + 7, guideY - 4);
+      ctx.lineTo(endX - 4, guideY - 11);
+      ctx.lineTo(endX - 2, guideY + 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "rgba(255, 227, 122, .2)";
+      ctx.beginPath();
+      ctx.ellipse(endX, GROUND_Y - 4, 25 + Math.sin(elapsed * 7) * 3, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 0.93;
+    ctx.font = "900 10px system-ui, sans-serif";
+    const width = Math.max(116, ctx.measureText(label).width + 24);
+    ctx.fillStyle = "rgba(24, 48, 62, .84)";
+    fillRoundedRect(playerScreenX - width * 0.5, y - 15, width, 27, 10);
+    ctx.fillStyle = canRescue ? "#ffe37a" : "#d9e3e5";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, playerScreenX, y - 1);
     ctx.restore();
   }
 
@@ -7430,7 +8886,9 @@
       else if (selectedCharacter === "patrick") drawPatrickCharacter(crouching, stride);
       else if (selectedCharacter === "qiang") drawStrongCharacter(crouching, stride);
       else if (selectedCharacter === "beibei") drawBeibeiCharacter(crouching, stride);
+      else if (selectedCharacter === "yuanyuan") drawYuanyuanCharacter(crouching, stride);
       else if (selectedCharacter === "guoguo") drawGuoguoCharacter(crouching, stride);
+      else if (selectedCharacter === "krabs") drawCrabCharacter(crouching, stride);
       else if (selectedCharacter === "doraemon") drawDoraemonCharacter(crouching, stride);
       else drawFootballCharacter(selectedCharacter, crouching, stride);
       ctx.restore();
@@ -7591,6 +9049,102 @@
       ctx.rotate(-player.flipAngle);
     }
     ctx.translate(-player.w * 0.5, -player.h * 0.5);
+  }
+
+  function drawCrabCharacter(crouching, stride) {
+    const bodyY = crouching ? 13 : 22;
+    const bodyH = crouching ? 20 : 29;
+    const legY = crouching ? 31 : 50;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#632e2c";
+    ctx.lineWidth = 2.6;
+
+    ctx.strokeStyle = "#8c302f";
+    ctx.lineWidth = 3.4;
+    for (const side of [-1, 1]) {
+      const baseX = side < 0 ? 12 : 32;
+      ctx.beginPath();
+      ctx.moveTo(baseX, legY - 2);
+      ctx.lineTo(baseX + side * (8 + Math.abs(stride) * 0.25), legY + 8);
+      ctx.lineTo(baseX + side * 12, legY + 10);
+      ctx.stroke();
+    }
+
+    const shell = ctx.createRadialGradient(15, bodyY + 4, 2, 22, bodyY + bodyH * 0.55, 27);
+    shell.addColorStop(0, "#ff8370");
+    shell.addColorStop(0.55, "#e95549");
+    shell.addColorStop(1, "#a93235");
+    ctx.fillStyle = shell;
+    ctx.strokeStyle = "#632e2c";
+    ctx.lineWidth = 2.8;
+    pathRoundedRect(5, bodyY, 34, bodyH, 13);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#63c8b7";
+    fillRoundedRect(7, bodyY + bodyH * 0.55, 30, bodyH * 0.38, 5);
+    ctx.fillStyle = "#2a6f70";
+    fillRoundedRect(8, bodyY + bodyH - 5, 28, 4, 2);
+    ctx.fillStyle = "#ffd857";
+    ctx.beginPath();
+    ctx.arc(22, bodyY + bodyH - 3, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#aa3838";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(8, bodyY + 10);
+    ctx.lineTo(-1, bodyY + 4);
+    ctx.moveTo(36, bodyY + 10);
+    ctx.lineTo(45, bodyY + 4);
+    ctx.stroke();
+    for (const side of [-1, 1]) {
+      const cx = side < 0 ? -3 : 47;
+      ctx.fillStyle = "#ef5e51";
+      ctx.strokeStyle = "#632e2c";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.arc(cx, bodyY + 1, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "#fff0d1";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, bodyY - 1);
+      ctx.lineTo(cx + 4, bodyY + 3);
+      ctx.stroke();
+    }
+
+    if (!crouching) {
+      ctx.strokeStyle = "#a93436";
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(15, bodyY + 3);
+      ctx.lineTo(14, 8);
+      ctx.moveTo(29, bodyY + 3);
+      ctx.lineTo(30, 8);
+      ctx.stroke();
+      ctx.fillStyle = "#fff7da";
+      ctx.strokeStyle = "#632e2c";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(14, 7, 6, 0, Math.PI * 2);
+      ctx.arc(30, 7, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#24343b";
+      ctx.beginPath();
+      ctx.arc(15.5, 7.5, 2.2, 0, Math.PI * 2);
+      ctx.arc(28.5, 7.5, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = "#642f31";
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(22, bodyY + 13, 7, 0.15, Math.PI - 0.15);
+    ctx.stroke();
   }
 
   function drawStrongCharacter(crouching, stride) {
@@ -7787,6 +9341,92 @@
     ctx.fill();
   }
 
+  function drawYuanyuanCharacter(crouching, stride) {
+    const skin = SKIN_TONES[selectedSkin];
+    const bodyTop = crouching ? 12 : 24;
+    const bodyHeight = crouching ? 24 : 31;
+    const bodyCenterY = bodyTop + bodyHeight * 0.52;
+    const headY = crouching ? 9 : 15;
+
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#5e3829";
+    ctx.lineWidth = 2.7;
+
+    if (!crouching) {
+      ctx.fillStyle = "#473a38";
+      fillRoundedRect(3 + stride * 0.45, 52, 18, 10, 5);
+      fillRoundedRect(23 - stride * 0.45, 52, 18, 10, 5);
+      ctx.fillStyle = "#f3cf9b";
+      fillRoundedRect(8, 47, 11, 9, 4);
+      fillRoundedRect(25, 47, 11, 9, 4);
+    } else {
+      ctx.fillStyle = "#473a38";
+      fillRoundedRect(1, 29, 20, 8, 4);
+      fillRoundedRect(23, 29, 20, 8, 4);
+    }
+
+    const body = ctx.createRadialGradient(12, bodyTop + 3, 2, 22, bodyCenterY, 28);
+    body.addColorStop(0, "#ffd27b");
+    body.addColorStop(0.5, "#ee9e4f");
+    body.addColorStop(1, "#b85f31");
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(22, bodyCenterY, crouching ? 22 : 23, bodyHeight * 0.54, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(116,57,31,.7)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(15, bodyCenterY - 1, 7, 3.55, 6.05);
+    ctx.arc(29, bodyCenterY - 1, 7, 3.45, 5.95);
+    ctx.stroke();
+    ctx.fillStyle = "#fff0a8";
+    ctx.beginPath();
+    ctx.arc(22, bodyCenterY + 4, crouching ? 5 : 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#8e492b";
+    ctx.font = "1000 8px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("元", 22, bodyCenterY + 4.5);
+
+    ctx.fillStyle = skin;
+    ctx.strokeStyle = "#5b3a2e";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(22, headY, crouching ? 13 : 14, crouching ? 11 : 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    const hair = ctx.createLinearGradient(9, headY - 14, 34, headY + 2);
+    hair.addColorStop(0, "#42302c");
+    hair.addColorStop(1, "#211f20");
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    ctx.arc(22, headY - 2, crouching ? 13.5 : 14.5, Math.PI, Math.PI * 1.98);
+    ctx.quadraticCurveTo(34, headY - 8, 35, headY + 1);
+    ctx.lineTo(30, headY - 4);
+    ctx.lineTo(25, headY);
+    ctx.lineTo(20, headY - 4);
+    ctx.lineTo(14, headY);
+    ctx.lineTo(9, headY - 2);
+    ctx.closePath();
+    ctx.fill();
+
+    drawCharacterEyes(26, headY, "#302828");
+    ctx.strokeStyle = "#a7654c";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(27, headY + 5, 4.5, 0.28, 1.85);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(225,116,92,.22)";
+    ctx.beginPath();
+    ctx.ellipse(31, headY + 4, 3.5, 1.8, -0.15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   function drawGuoguoCharacter(crouching, stride) {
     const skin = SKIN_TONES[selectedSkin];
     ctx.strokeStyle = "#284a48";
@@ -7976,7 +9616,15 @@
       yunqing: { shirt: "#49a99a", stripe: "#dffbf2", shorts: "#286f69", hair: "#263a38", skin: chosenSkin, number: "青" },
       zhixuan: { shirt: "#c64f3c", stripe: "#ffd96b", shorts: "#722d2a", hair: "#27201c", skin: chosenSkin, number: "炫" },
     };
-    const style = styles[id] || styles.messi;
+    const ability = characterDefinition(id);
+    const style = styles[id] || {
+      shirt: ability.color || "#58c88b",
+      stripe: "#f7fbff",
+      shorts: "#284658",
+      hair: "#302820",
+      skin: chosenSkin,
+      number: String(ability.badge || "新").slice(0, 2),
+    };
     ctx.strokeStyle = "#233d4b";
     ctx.lineWidth = 3;
     ctx.lineCap = "round";
@@ -8187,13 +9835,37 @@
       const alpha = Math.max(0, Math.min(1, particle.life / particle.maxLife));
       ctx.save();
       ctx.globalAlpha = alpha;
+      if (particle.glow) {
+        ctx.shadowColor = particle.color;
+        ctx.shadowBlur = Number(particle.glow) || 0;
+      }
       if (particle.shape === "star") {
         drawStar(x, particle.y, particle.size, particle.size * 0.45, 5, particle.color);
       } else if (particle.shape === "square") {
         ctx.fillStyle = particle.color;
         ctx.translate(x, particle.y);
-        ctx.rotate(particle.life * 5);
+        ctx.rotate(Number(particle.rotation) || particle.life * 5);
         ctx.fillRect(-particle.size * 0.5, -particle.size * 0.5, particle.size, particle.size);
+      } else if (particle.shape === "diamond") {
+        ctx.fillStyle = particle.color;
+        ctx.translate(x, particle.y);
+        ctx.rotate((Number(particle.rotation) || 0) + Math.PI / 4);
+        ctx.fillRect(-particle.size * 0.5, -particle.size * 0.5, particle.size, particle.size);
+      } else if (particle.shape === "ring") {
+        const progress = 1 - alpha;
+        ctx.strokeStyle = particle.color;
+        ctx.lineWidth = Math.max(1, 3.2 * alpha);
+        ctx.beginPath();
+        ctx.ellipse(
+          x,
+          particle.y,
+          particle.size + (Number(particle.growth) || 0) * progress,
+          (particle.size + (Number(particle.growth) || 0) * progress) * 0.28,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
       } else {
         ctx.fillStyle = particle.color;
         ctx.beginPath();
@@ -8329,6 +10001,11 @@
   }
 
   function handleKeyDown(event) {
+    if (siteLockActive) {
+      event.preventDefault();
+      siteLockRefreshButton?.focus();
+      return;
+    }
     if (event.code === "Escape") {
       event.preventDefault();
       if (noticeDialog && !noticeDialog.classList.contains("is-hidden")) closeNotice(false);
@@ -8411,6 +10088,7 @@
   }
 
   primaryButton.addEventListener("click", handlePrimaryAction);
+  siteLockRefreshButton?.addEventListener("click", () => loadSiteStatus(true));
   battleEntryButton?.addEventListener("click", openBattleDialog);
   homeButton.addEventListener("click", showHome);
   for (const [index, button] of homeTabButtons.entries()) {
@@ -8428,6 +10106,25 @@
       nextButton?.focus();
     });
   }
+  for (const [index, button] of storeCategoryButtons.entries()) {
+    button.addEventListener("click", () => setStoreCategory(button.dataset.storeCategory));
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.code)) return;
+      event.preventDefault();
+      const nextIndex = event.code === "Home"
+        ? 0
+        : event.code === "End"
+          ? storeCategoryButtons.length - 1
+          : (index + (event.code === "ArrowRight" ? 1 : -1) + storeCategoryButtons.length) % storeCategoryButtons.length;
+      const nextButton = storeCategoryButtons[nextIndex];
+      setStoreCategory(nextButton?.dataset.storeCategory);
+      nextButton?.focus();
+    });
+  }
+  homeHeartShortcut?.addEventListener("click", () => {
+    setHomeTab("shop");
+    setStoreCategory("other");
+  });
   profileButton?.addEventListener("click", openOwnProfile);
   profileCloseButton?.addEventListener("click", closeProfile);
   profileInviteButton?.addEventListener("click", () => invitePlayerToBattle(publicProfileTarget));
@@ -8468,6 +10165,7 @@
         confirmPassword,
         playerId,
         showCoins: Boolean(registerShowCoins?.checked),
+        showOnlineStatus: Boolean(registerShowOnlineStatus?.checked),
         avatar: accountAvatar,
         gameData: collectAccountGameData(),
       });
@@ -8518,6 +10216,13 @@
     updateCloudAccountUi(accountShowCoins ? "你的金币会显示在排行榜" : "你的金币已设为私密");
     scheduleAccountSync(20);
   });
+  showOnlineStatusToggle?.addEventListener("change", () => {
+    accountShowOnlineStatus = Boolean(showOnlineStatusToggle.checked);
+    writeSetting("cloud-jumper-show-online-status", accountShowOnlineStatus);
+    updateCloudAccountUi(accountShowOnlineStatus ? "排行榜会显示你的在线状态圆点" : "排行榜已隐藏你的在线状态");
+    scheduleAccountSync(20);
+    if (accountShowOnlineStatus) schedulePresenceHeartbeat(120);
+  });
   logoutAccountButton?.addEventListener("click", async () => {
     if (!accountAuthenticated || !confirm("退出后，本机记录会清除；重新登录即可从云端恢复。确定退出吗？")) return;
     try {
@@ -8552,6 +10257,7 @@
     entryNameButton?.click();
   });
   accountUpgradeButton?.addEventListener("click", purchaseAccountUpgrade);
+  dailyCheckinButton?.addEventListener("click", claimDailyCheckin);
   redeemCodeButton?.addEventListener("click", redeemGiftCode);
   redeemCodeInput?.addEventListener("keydown", (event) => {
     if (event.code !== "Enter") return;
@@ -8706,6 +10412,14 @@
       playTone(520, 0.08, "square", 0.03, 0);
     }
   });
+  compactHudButton?.addEventListener("pointerdown", (event) => event.stopPropagation());
+  compactHudButton?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    simpleHudMode = !simpleHudMode;
+    writeSetting("cloud-jumper-simple-hud", simpleHudMode);
+    applySimpleHudMode();
+    announce(simpleHudMode ? "已打开简洁模式：只保留生命和必要按钮。" : "已恢复完整游戏信息。");
+  });
 
   canvas.addEventListener("pointerdown", handlePointerDown, { passive: false });
   canvas.addEventListener("pointermove", handlePointerMove, { passive: false });
@@ -8725,18 +10439,27 @@
     releaseControllerControls();
     clearGesture();
     if (document.hidden && gameState === "playing") pauseGame();
+    if (!document.hidden) {
+      loadSiteStatus();
+      schedulePresenceHeartbeat(180);
+    }
     lastFrame = performance.now();
   });
-  window.addEventListener("resize", () => { canvasSizeDirty = true; }, { passive: true });
-  window.addEventListener("orientationchange", () => { canvasSizeDirty = true; }, { passive: true });
-  window.visualViewport?.addEventListener("resize", () => { canvasSizeDirty = true; }, { passive: true });
+  window.addEventListener("resize", syncAppViewport, { passive: true });
+  window.addEventListener("orientationchange", () => window.setTimeout(syncAppViewport, 80), { passive: true });
+  window.visualViewport?.addEventListener("resize", syncAppViewport, { passive: true });
+  window.visualViewport?.addEventListener("scroll", syncAppViewport, { passive: true });
   window.addEventListener("offline", () => {
     if (accountAuthenticated) updateCloudAccountUi("当前离线，进度会在联网后自动同步");
     if (selectedHomeTab === "chat") setChatStatus("当前离线，联网后会自动重连", true);
   });
-  window.addEventListener("online", () => {
+  window.addEventListener("online", async () => {
+    const siteOpen = await loadSiteStatus(true);
+    if (!siteOpen) return;
+    loadCharacterCatalog();
     if (accountToken && !accountAuthenticated) restoreAccountSession();
     if (!accountAuthenticated) return;
+    schedulePresenceHeartbeat(160);
     scheduleAccountSync(120);
     loadLeaderboard(true);
     if (selectedHomeTab === "chat") openChat();
@@ -8748,18 +10471,26 @@
   });
 
   function frame(now) {
-    const dt = Math.min(0.033, Math.max(0, (now - lastFrame) / 1000));
+    const dt = Math.min(0.05, Math.max(0, (now - lastFrame) / 1000));
     lastFrame = now;
-    if (gameState === "playing") update(dt);
+    renderFrameDelta = dt > 0 ? dt : renderFrameDelta;
+    if (gameState === "playing" && !siteLockActive) {
+      const stepCount = Math.max(1, Math.min(3, Math.ceil(dt / (1 / 60))));
+      const stepDelta = dt / stepCount;
+      for (let step = 0; step < stepCount && gameState === "playing" && !siteLockActive; step += 1) {
+        update(stepDelta);
+      }
+    }
     else if (gameState !== "paused") updateParticles(dt);
-    if (gameState === "home") updateBeibeiOffer();
-    if (gameState === "playing" || canvasSizeDirty || now - lastPassiveDrawAt >= 50) {
+    if (gameState === "home") updateYuanyuanOffer();
+    if (gameState === "playing" || canvasSizeDirty || now - lastPassiveDrawAt >= 90) {
       draw();
       lastPassiveDrawAt = now;
     }
     window.requestAnimationFrame(frame);
   }
 
+  syncAppViewport();
   buildLevel(1);
   player = createPlayer();
   coins = coinBlueprints.map((item) => ({ ...item, collected: false }));
@@ -8781,10 +10512,15 @@
     x: null,
   }));
   updateSoundButton();
+  applySimpleHudMode();
   updateHud(true);
   renderCharacterShop();
   setupSkinPicker();
   showHome();
-  restoreAccountSession();
+  siteLockCountdownTimer = window.setInterval(() => updateSiteLockClock(), 1000);
+  loadSiteStatus().then((siteOpen) => {
+    if (!siteOpen) return;
+    loadCharacterCatalog().finally(restoreAccountSession);
+  });
   window.requestAnimationFrame(frame);
 })();
