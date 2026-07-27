@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#17364a" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>云朵小勇士｜管理后台</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../admin.css?v=48" />
+    <script src="../admin.js?v=48" defer></script>
+  </head>
+  <body>
+    <main class="admin-shell">
+      <section class="login-screen" id="loginScreen">
+        <form class="login-card" id="loginForm">
+          <div class="brand-icon" aria-hidden="true">☁</div>
+          <p class="eyebrow">Cloud Jumper Control</p>
+          <h1>游戏管理后台</h1>
+          <p>密码只发送到 Cloudflare 后台验证，不会显示在排行榜页面。</p>
+          <label for="passwordInput">管理员密码</label>
+          <input id="passwordInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="请输入密码" required />
+          <button type="submit" id="loginButton">进入后台</button>
+          <small id="loginError" role="alert"></small>
+          <a href="../">← 返回游戏</a>
+        </form>
+      </section>
+
+      <section class="dashboard is-hidden" id="dashboard">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Cloud Jumper Control</p>
+            <h1>游戏管理后台</h1>
+            <p id="seasonText">正在读取赛季…</p>
+          </div>
+          <div class="top-actions">
+            <a href="../">打开游戏</a>
+            <button type="button" id="logoutButton">退出后台</button>
+          </div>
+        </header>
+
+        <section class="stats-grid" aria-label="玩家统计">
+          <article><span>登记玩家</span><strong id="statTotal">0</strong></article>
+          <article><span>已挑战</span><strong id="statChallenged">0</strong></article>
+          <article><span>有通关记录</span><strong id="statPassed">0</strong></article>
+          <article><span>待执行重置</span><strong id="statResets">0</strong></article>
+          <article><span>已发金币礼物</span><strong id="statGifts">0</strong></article>
+          <article><span>当前在线</span><strong id="statOnline">0</strong></article>
+          <article><span>人物总数</span><strong id="statCharacters">14</strong></article>
+          <article><span>兑换码数量</span><strong id="statRedeemCodes">0</strong></article>
+          <article><span>网站状态</span><strong id="statSiteLock">开放</strong></article>
+        </section>
+
+        <nav class="admin-section-tabs" aria-label="后台功能" role="tablist">
+          <button class="is-active" id="adminTabPlayers" type="button" data-admin-tab="players" role="tab" aria-selected="true" aria-controls="adminPanelPlayers">玩家管理</button>
+          <button id="adminTabCharacters" type="button" data-admin-tab="characters" role="tab" aria-selected="false" aria-controls="adminPanelCharacters" tabindex="-1">人物管理</button>
+          <button id="adminTabRedeemCodes" type="button" data-admin-tab="redeem-codes" role="tab" aria-selected="false" aria-controls="adminPanelRedeemCodes" tabindex="-1">兑换码管理</button>
+          <button id="adminTabSiteControl" type="button" data-admin-tab="site-control" role="tab" aria-selected="false" aria-controls="adminPanelSiteControl" tabindex="-1">运营控制</button>
+        </nav>
+
+        <section class="manager-card" id="adminPanelPlayers" data-admin-panel="players" role="tabpanel" aria-labelledby="adminTabPlayers">
+          <div class="manager-heading">
+            <div>
+              <h2>全部玩家</h2>
+              <p>“删除并重置”会让该玩家下次连接时清除金币、人物和关卡进度。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button type="button" id="refreshButton">刷新</button>
+              <button type="button" id="exportButton">导出 CSV</button>
+              <button class="danger-outline" type="button" id="clearButton">清空排行榜</button>
+            </div>
+          </div>
+
+          <label class="search-box" for="searchInput">
+            <span aria-hidden="true">⌕</span>
+            <input id="searchInput" type="search" autocomplete="off" placeholder="搜索玩家名字或编号" />
+            <b id="visibleCount">0 人</b>
+          </label>
+
+          <div class="status-line" id="adminStatus" role="status">准备就绪</div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>排名</th>
+                  <th>玩家</th>
+                  <th>成绩</th>
+                  <th>上线状态</th>
+                  <th>更新时间</th>
+                  <th>管理操作</th>
+                </tr>
+              </thead>
+              <tbody id="playerRows"></tbody>
+            </table>
+            <div class="empty-state is-hidden" id="emptyState">没有找到玩家</div>
+          </div>
+        </section>
+
+        <section class="manager-card is-hidden" id="adminPanelCharacters" data-admin-panel="characters" role="tabpanel" aria-labelledby="adminTabCharacters" hidden>
+          <div class="manager-heading">
+            <div>
+              <h2>人物管理</h2>
+              <p>可修改所有人物属性；内置人物可下架或恢复默认，自建人物可永久删除。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button type="button" id="refreshCharactersButton">刷新人物</button>
+              <button class="primary-admin-button" type="button" id="addCharacterButton">＋ 添加人物</button>
+            </div>
+          </div>
+
+          <div class="status-line character-status" id="characterStatus" role="status">人物设置保存在 Cloudflare KV</div>
+
+          <form class="character-editor is-hidden" id="characterForm">
+            <div class="character-editor-heading">
+              <div><small id="characterEditorKicker">新增人物</small><h3 id="characterEditorTitle">创建新人物</h3></div>
+              <button type="button" id="cancelCharacterButton" aria-label="关闭人物编辑">×</button>
+            </div>
+            <input id="characterIdInput" type="hidden" />
+            <input id="characterBuiltInInput" type="hidden" value="false" />
+
+            <div class="character-form-grid">
+              <label><span>人物名称</span><input id="characterNameInput" type="text" maxlength="16" required placeholder="例如：新人物" /></label>
+              <label><span>人物标志</span><input id="characterBadgeInput" type="text" maxlength="4" required placeholder="一个字或图标" /></label>
+              <label><span>主颜色</span><input id="characterColorInput" type="color" value="#58c88b" /></label>
+              <label><span>正常售价</span><input id="characterCostInput" type="number" min="0" max="999999" step="1" value="499" required /></label>
+              <label class="is-wide"><span>人物介绍</span><textarea id="characterTraitInput" maxlength="140" required placeholder="介绍人物的体力、跳跃和特殊能力"></textarea></label>
+            </div>
+
+            <details class="character-editor-section" open>
+              <summary>能力属性 <small>跳跃、灵敏、体力和技能</small></summary>
+              <div class="character-form-grid ability-grid">
+                <label><span>灵敏度（0.72–1.60）</span><input id="characterAgilityInput" type="number" min="0.72" max="1.6" step="0.01" value="1" /></label>
+                <label><span>跳跃力量（560–900）</span><input id="characterJumpPowerInput" type="number" min="560" max="900" step="1" value="680" /></label>
+                <label><span>空中追加跳跃（0–3）</span><input id="characterAirJumpsInput" type="number" min="0" max="3" step="1" value="1" /></label>
+                <label><span>后空翻圈数（0–3）</span><input id="characterFlipTurnsInput" type="number" min="0" max="3" step="1" value="0" /></label>
+                <label><span>空翻时长（0–1.5）</span><input id="characterFlipDurationInput" type="number" min="0" max="1.5" step="0.01" value="0" /></label>
+                <label><span>吸金币范围（0–180）</span><input id="characterMagnetInput" type="number" min="0" max="180" step="1" value="0" /></label>
+                <label><span>每局撞石头次数（0–10）</span><input id="characterSmashInput" type="number" min="0" max="10" step="1" value="0" /></label>
+                <label><span>冲刺倍率（1–1.60）</span><input id="characterSpeedBoostInput" type="number" min="1" max="1.6" step="0.01" value="1" /></label>
+                <label><span>体力星级（1–5）</span><input id="characterStaminaStarsInput" type="number" min="1" max="5" step="1" value="1" /></label>
+                <label><span>体力容量（50–220）</span><input id="characterStaminaCapacityInput" type="number" min="50" max="220" step="1" value="72" /></label>
+                <label><span>站立回血速度（0–80）</span><input id="characterStaminaRecoveryInput" type="number" min="0" max="80" step="1" value="0" /></label>
+                <label><span>重力倍率（0.65–1.20）</span><input id="characterGravityInput" type="number" min="0.65" max="1.2" step="0.01" value="1" /></label>
+                <label><span>任意门次数（0–3）</span><input id="characterDoorInput" type="number" min="0" max="3" step="1" value="0" /></label>
+              </div>
+              <div class="character-check-grid">
+                <label><input id="characterStoneImmuneInput" type="checkbox" /><span>石头免伤并撞碎</span></label>
+                <label><input id="characterInstantTripleInput" type="checkbox" /><span>第三跳快速响应</span></label>
+                <label><input id="characterSunInput" type="checkbox" /><span>每日洞穴太阳</span></label>
+                <label><input id="characterFlairStepInput" type="checkbox" /><span>爆发跨步花式</span></label>
+                <label><input id="characterFlairChopInput" type="checkbox" /><span>拉球切步花式</span></label>
+              </div>
+            </details>
+
+            <details class="character-editor-section">
+              <summary>上架与限时优惠 <small>留空代表长期有效</small></summary>
+              <div class="character-form-grid">
+                <label><span>开始上架</span><input id="characterAvailableFromInput" type="datetime-local" /></label>
+                <label><span>结束上架</span><input id="characterAvailableUntilInput" type="datetime-local" /></label>
+                <label><span>限时优惠价</span><input id="characterSalePriceInput" type="number" min="0" max="999999" step="1" placeholder="不优惠就留空" /></label>
+                <label><span>优惠开始</span><input id="characterSaleStartInput" type="datetime-local" /></label>
+                <label><span>优惠结束</span><input id="characterSaleEndInput" type="datetime-local" /></label>
+              </div>
+            </details>
+
+            <div class="character-check-grid character-publish-options">
+              <label><input id="characterActiveInput" type="checkbox" checked /><span>现在上架</span></label>
+              <label><input id="characterNewInput" type="checkbox" checked /><span>显示金色新人物边框</span></label>
+              <label><input id="characterRewardOnlyInput" type="checkbox" /><span>奖励专属，不能购买</span></label>
+            </div>
+
+            <div class="character-editor-actions">
+              <button class="save-character-button" id="saveCharacterButton" type="submit">保存人物设置</button>
+              <button class="danger-outline is-hidden" id="deleteCharacterButton" type="button">永久删除人物</button>
+              <button id="resetCharacterButton" class="is-hidden" type="button">恢复内置默认</button>
+            </div>
+            <p class="character-editor-note">已购买人物不会因为限时结束而消失；下架后，已拥有的玩家仍可继续使用。</p>
+          </form>
+
+          <div class="admin-character-grid" id="adminCharacterGrid" aria-label="全部人物"></div>
+          <div class="empty-state is-hidden" id="characterEmptyState">还没有人物</div>
+        </section>
+
+        <section class="manager-card is-hidden" id="adminPanelRedeemCodes" data-admin-panel="redeem-codes" role="tabpanel" aria-labelledby="adminTabRedeemCodes" hidden>
+          <div class="manager-heading">
+            <div>
+              <h2>兑换码管理</h2>
+              <p>可添加金币或人物奖励，设置开放时间与截止时间；每个账号对同一兑换码只能领取一次。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button type="button" id="refreshRedeemCodesButton">刷新兑换码</button>
+              <button class="primary-admin-button" type="button" id="addRedeemCodeButton">＋ 添加兑换码</button>
+            </div>
+          </div>
+
+          <div class="status-line redeem-code-status" id="redeemCodeAdminStatus" role="status">兑换码设置保存在 Cloudflare KV</div>
+
+          <form class="character-editor redeem-code-editor is-hidden" id="redeemCodeForm">
+            <div class="character-editor-heading">
+              <div><small>兑换码设置</small><h3 id="redeemCodeEditorTitle">创建兑换码</h3></div>
+              <button type="button" id="cancelRedeemCodeButton" aria-label="关闭兑换码编辑">×</button>
+            </div>
+            <input id="redeemCodeOriginalInput" type="hidden" />
+            <div class="character-form-grid">
+              <label><span>兑换码</span><input id="redeemCodeValueInput" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,23}" autocomplete="off" required placeholder="例如 SUMMER2026" /></label>
+              <label><span>奖励名称</span><input id="redeemCodeLabelInput" type="text" maxlength="32" required placeholder="例如 夏日礼物" /></label>
+              <label><span>奖励金币（0–10000）</span><input id="redeemCodeCoinsInput" type="number" min="0" max="10000" step="1" value="200" /></label>
+              <label><span>赠送人物（可留空）</span><input id="redeemCodeCharacterInput" type="text" maxlength="56" list="redeemCharacterOptions" placeholder="选择或填写人物编号" /></label>
+              <label><span>开始时间（可留空）</span><input id="redeemCodeStartsInput" type="datetime-local" /></label>
+              <label><span>截止时间（可留空）</span><input id="redeemCodeExpiresInput" type="datetime-local" /></label>
+            </div>
+            <datalist id="redeemCharacterOptions"></datalist>
+            <div class="character-check-grid character-publish-options">
+              <label><input id="redeemCodeActiveInput" type="checkbox" checked /><span>立即启用</span></label>
+            </div>
+            <div class="character-editor-actions">
+              <button class="save-character-button" id="saveRedeemCodeButton" type="submit">保存兑换码</button>
+              <button class="danger-outline is-hidden" id="deleteRedeemCodeButton" type="button">删除兑换码</button>
+            </div>
+            <p class="character-editor-note">删除后将立即停止兑换；已经领取的奖励不会被收回。修改已有兑换码不会让领取过的账号再次领取。</p>
+          </form>
+
+          <div class="admin-redeem-code-grid" id="adminRedeemCodeGrid" aria-label="全部兑换码"></div>
+          <div class="empty-state is-hidden" id="redeemCodeEmptyState">还没有兑换码</div>
+        </section>
+
+        <section class="manager-card site-control-panel is-hidden" id="adminPanelSiteControl" data-admin-panel="site-control" role="tabpanel" aria-labelledby="adminTabSiteControl" hidden>
+          <div class="manager-heading">
+            <div>
+              <h2>网站封锁与限量活动</h2>
+              <p>可立即或定时关闭玩家端；后台始终可以进入并解除封锁。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button type="button" id="refreshSiteControlButton">刷新状态</button>
+            </div>
+          </div>
+
+          <div class="status-line site-control-status" id="siteControlStatus" role="status">正在读取网站状态…</div>
+
+          <div class="site-control-grid">
+            <article class="site-control-live-card is-open" id="siteControlStatusCard">
+              <div class="site-control-membrane-preview" aria-hidden="true"><i></i><i></i></div>
+              <div class="site-control-live-copy">
+                <span class="site-control-badge" id="siteControlBadge"><i></i>正常开放</span>
+                <h3 id="siteControlTitle">玩家可以正常进入</h3>
+                <p id="siteControlSummary">闯关、商店、排行、聊天和好友对战均可使用。</p>
+                <strong id="siteControlCountdown">无需倒计时</strong>
+                <small id="siteControlWindow">未设置下一次封锁</small>
+              </div>
+            </article>
+
+            <form class="site-lock-form" id="siteLockForm">
+              <div class="site-lock-form-heading">
+                <span class="site-lock-form-icon" aria-hidden="true">◈</span>
+                <div><small>封锁设置</small><h3>临时关闭玩家端</h3></div>
+              </div>
+
+              <label class="is-wide"><span>给玩家看的说明</span><textarea id="siteLockReasonInput" maxlength="90" placeholder="例如：云端正在维护，预计很快恢复。">云端正在进行临时维护，请稍后回来。</textarea></label>
+
+              <div class="site-lock-time-grid">
+                <label><span>开始时间</span><input id="siteLockStartInput" type="datetime-local" /><small>留空代表立即开始</small></label>
+                <label><span>结束时间</span><input id="siteLockEndInput" type="datetime-local" required /><small>最长可设置 30 天</small></label>
+              </div>
+
+              <div class="site-lock-quick-row" aria-label="快速设置封锁时长">
+                <span>快速时长</span>
+                <button type="button" data-lock-duration="15">15 分钟</button>
+                <button type="button" data-lock-duration="30">30 分钟</button>
+                <button type="button" data-lock-duration="60">1 小时</button>
+                <button type="button" data-lock-duration="180">3 小时</button>
+                <button type="button" data-lock-duration="720">12 小时</button>
+              </div>
+
+              <div class="site-lock-actions">
+                <button class="activate-site-lock-button" id="activateSiteLockButton" type="submit">开启或预约封锁</button>
+                <button class="unlock-site-button" id="unlockSiteButton" type="button">立即解除封锁</button>
+              </div>
+              <p>封锁开启后，玩家页面会出现流动透明膜与恢复倒计时；正在进行的闯关会立即暂停。</p>
+            </form>
+          </div>
+
+          <article class="yuanyuan-admin-card">
+            <div class="yuanyuan-admin-avatar" aria-hidden="true">元</div>
+            <div class="yuanyuan-admin-copy">
+              <small>限量人物活动</small>
+              <h3>元元 · 全球限量 3 份</h3>
+              <p>999 金币 · 满星耐力 · 稳定二连跳 · 每局撞碎 5 块石头</p>
+            </div>
+            <div class="yuanyuan-admin-stat">
+              <small id="yuanyuanDropStatus">等待开售</small>
+              <strong id="yuanyuanDropRemaining">剩余 3 / 3</strong>
+              <span id="yuanyuanDropRelease">7 月 27 日 10:00</span>
+            </div>
+            <div class="yuanyuan-buyer-list" id="yuanyuanBuyerList">
+              <span>还没有抢购记录</span>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
