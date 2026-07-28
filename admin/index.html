@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>云朵小勇士｜管理后台</title>
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="../admin.css?v=54" />
-    <script src="../admin.js?v=54" defer></script>
+    <link rel="stylesheet" href="../admin.css?v=55" />
+    <script src="../admin.js?v=55" defer></script>
   </head>
   <body>
     <main class="admin-shell">
@@ -21,6 +21,8 @@
           <label for="passwordInput">管理员密码</label>
           <input id="passwordInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="请输入密码" required />
           <button type="submit" id="loginButton">进入后台</button>
+          <button class="account-admin-login is-hidden" type="button" id="accountAdminLoginButton">使用当前游戏账号进入</button>
+          <small id="accountAdminHint">被授权的管理员账号登录游戏后，可直接进入后台。</small>
           <small id="loginError" role="alert"></small>
           <a href="../">← 返回游戏</a>
         </form>
@@ -34,6 +36,7 @@
             <p id="seasonText">正在读取赛季…</p>
           </div>
           <div class="top-actions">
+            <span class="admin-identity-badge" id="adminIdentityBadge">最高管理员</span>
             <a href="../">打开游戏</a>
             <button type="button" id="logoutButton">退出后台</button>
           </div>
@@ -56,6 +59,8 @@
           <button id="adminTabCharacters" type="button" data-admin-tab="characters" role="tab" aria-selected="false" aria-controls="adminPanelCharacters" tabindex="-1">人物管理</button>
           <button id="adminTabRedeemCodes" type="button" data-admin-tab="redeem-codes" role="tab" aria-selected="false" aria-controls="adminPanelRedeemCodes" tabindex="-1">兑换码管理</button>
           <button id="adminTabSiteControl" type="button" data-admin-tab="site-control" role="tab" aria-selected="false" aria-controls="adminPanelSiteControl" tabindex="-1">运营控制</button>
+          <button id="adminTabRoles" type="button" data-admin-tab="roles" role="tab" aria-selected="false" aria-controls="adminPanelRoles" tabindex="-1">管理员</button>
+          <button id="adminTabAi" type="button" data-admin-tab="ai" role="tab" aria-selected="false" aria-controls="adminPanelAi" tabindex="-1">AI 助手</button>
         </nav>
 
         <section class="manager-card" id="adminPanelPlayers" data-admin-panel="players" role="tabpanel" aria-labelledby="adminTabPlayers">
@@ -297,6 +302,52 @@
               <span>还没有抢购记录</span>
             </div>
           </article>
+        </section>
+
+        <section class="manager-card is-hidden" id="adminPanelRoles" data-admin-panel="roles" role="tabpanel" aria-labelledby="adminTabRoles" hidden>
+          <div class="manager-heading">
+            <div>
+              <h2>账号管理员</h2>
+              <p>授权后，该玩家登录游戏账号再打开后台即可直接进入；管理员聊天消息会显示金色标签。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button type="button" id="refreshAdminRolesButton">刷新账号</button>
+            </div>
+          </div>
+          <div class="admin-role-note">
+            <strong id="adminRoleIdentity">当前：最高管理员</strong>
+            <span>最高管理员密码始终保留；普通管理员不能取消自己的权限。</span>
+          </div>
+          <label class="search-box" for="adminRoleSearchInput">
+            <span aria-hidden="true">⌕</span>
+            <input id="adminRoleSearchInput" type="search" autocomplete="off" placeholder="搜索玩家名称或编号" />
+            <b id="adminRoleCount">0 人</b>
+          </label>
+          <div class="status-line" id="adminRoleStatus" role="status">正在读取管理员名单…</div>
+          <div class="admin-role-list" id="adminRoleList"></div>
+          <div class="empty-state is-hidden" id="adminRoleEmptyState">没有找到账号</div>
+        </section>
+
+        <section class="manager-card admin-ai-panel is-hidden" id="adminPanelAi" data-admin-panel="ai" role="tabpanel" aria-labelledby="adminTabAi" hidden>
+          <div class="manager-heading">
+            <div>
+              <h2>Gemini 管理助手</h2>
+              <p>可咨询游戏运营、关卡、人物、服务器或日常问题；对话只保留在当前页面，不会写入玩家聊天记录。</p>
+            </div>
+            <div class="toolbar-actions">
+              <span class="admin-ai-model" id="adminAiModel">正在检查 Gemini…</span>
+              <button type="button" id="clearAdminAiButton">清空对话</button>
+            </div>
+          </div>
+          <div class="status-line" id="adminAiStatus" role="status">准备就绪</div>
+          <div class="admin-ai-conversation" id="adminAiConversation" aria-live="polite">
+            <article class="is-model"><span>Gemini</span><p>你好，我在这里。你可以问我游戏运营、功能设计或后台使用问题。</p></article>
+          </div>
+          <form class="admin-ai-form" id="adminAiForm">
+            <textarea id="adminAiInput" maxlength="1200" rows="3" placeholder="输入要问 Gemini 的内容…" required></textarea>
+            <button class="primary-admin-button" id="sendAdminAiButton" type="submit">发送</button>
+          </form>
+          <small class="admin-ai-note">AI 不会自动修改金币、玩家或后台设置；需要操作时仍由你点击确认。</small>
         </section>
       </section>
     </main>

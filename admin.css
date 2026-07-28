@@ -1024,3 +1024,199 @@ textarea { font-family: inherit; }
 @media (max-width: 700px) {
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* v55 — account roles and private Gemini console */
+.admin-section-tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.account-admin-login {
+  border: 1px solid rgba(56, 119, 146, .25) !important;
+  background: #edf7fa !important;
+  color: #285e74 !important;
+}
+.login-card #accountAdminHint {
+  display: block;
+  color: #78909a;
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: center;
+}
+.admin-identity-badge {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  padding: 7px 11px;
+  border: 1px solid rgba(175, 118, 24, .22);
+  border-radius: 11px;
+  background: linear-gradient(135deg, #ffe78e, #ffc754);
+  color: #6f4b0c;
+  font-size: 10px;
+  font-weight: 950;
+  box-shadow: inset 0 1px rgba(255,255,255,.68);
+}
+.admin-role-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 11px 13px;
+  border: 1px solid rgba(207, 158, 53, .22);
+  border-radius: 13px;
+  background: #fff9df;
+  color: #755b25;
+}
+.admin-role-note strong { font-size: 11px; }
+.admin-role-note span { font-size: 9px; font-weight: 700; text-align: right; }
+.admin-role-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 11px;
+}
+.admin-role-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d5e1e5;
+  border-radius: 14px;
+  background: #fff;
+}
+.admin-role-card.is-admin {
+  border-color: rgba(212, 157, 45, .42);
+  background: linear-gradient(135deg, #fffbed, #fff);
+}
+.admin-role-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: #e9f2f5;
+  color: #315d70;
+  font-size: 19px;
+  font-weight: 950;
+}
+.admin-role-card.is-admin .admin-role-avatar { background: #ffe187; color: #704b0d; }
+.admin-role-copy { min-width: 0; }
+.admin-role-copy strong,
+.admin-role-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-role-copy strong { color: #244e61; font-size: 11px; }
+.admin-role-copy small { margin-top: 3px; color: #82969e; font-size: 8px; }
+.admin-role-tag {
+  display: inline-flex;
+  margin-left: 5px;
+  padding: 2px 5px;
+  border-radius: 99px;
+  background: #ffd768;
+  color: #704a0c;
+  font-size: 7px;
+  font-style: normal;
+}
+.admin-role-card button {
+  min-height: 35px;
+  padding: 7px 10px;
+  border: 1px solid #c9d9df;
+  border-radius: 10px;
+  background: #f5fafb;
+  color: #315f72;
+  font-size: 9px;
+  font-weight: 850;
+}
+.admin-role-card button.is-revoke {
+  border-color: rgba(188, 67, 59, .23);
+  background: #fff2f0;
+  color: #ad423c;
+}
+.admin-role-card button:disabled { cursor: not-allowed; opacity: .5; }
+.admin-ai-panel { overflow: hidden; }
+.admin-ai-model {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #edf4ff;
+  color: #41638e;
+  font-size: 9px;
+  font-weight: 850;
+}
+.admin-ai-conversation {
+  display: flex;
+  height: min(54vh, 520px);
+  min-height: 280px;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #d4e0e4;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 10% 5%, rgba(157, 216, 231, .18), transparent 28%),
+    #f7fafb;
+}
+.admin-ai-conversation article {
+  align-self: flex-start;
+  max-width: min(82%, 720px);
+}
+.admin-ai-conversation article.is-user { align-self: flex-end; }
+.admin-ai-conversation article span {
+  display: block;
+  margin: 0 5px 4px;
+  color: #758c96;
+  font-size: 8px;
+  font-weight: 850;
+}
+.admin-ai-conversation article.is-user span { text-align: right; }
+.admin-ai-conversation article p {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #cedde3;
+  border-radius: 14px 14px 14px 5px;
+  background: #fff;
+  color: #294c5c;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.admin-ai-conversation article.is-user p {
+  border-color: #bcd9ac;
+  border-radius: 14px 14px 5px 14px;
+  background: #e9f7dc;
+}
+.admin-ai-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+.admin-ai-form textarea {
+  min-height: 76px;
+  resize: vertical;
+  border: 1px solid #cbdce2;
+  border-radius: 13px;
+  padding: 10px 12px;
+  color: #274e60;
+  font: 700 11px/1.5 inherit;
+}
+.admin-ai-form button { min-width: 92px; }
+.admin-ai-note { display: block; margin-top: 8px; color: #84959c; font-size: 8px; }
+
+@media (max-width: 900px) {
+  .admin-section-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .admin-role-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .admin-section-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-role-note { align-items: flex-start; flex-direction: column; }
+  .admin-role-note span { text-align: left; }
+  .admin-role-card { grid-template-columns: 38px minmax(0, 1fr); }
+  .admin-role-avatar { width: 38px; height: 38px; }
+  .admin-role-card button { grid-column: 1 / -1; width: 100%; }
+  .admin-ai-conversation { height: 48dvh; min-height: 240px; padding: 10px; }
+  .admin-ai-conversation article { max-width: 92%; }
+  .admin-ai-form { grid-template-columns: 1fr; }
+  .admin-ai-form button { min-height: 44px; }
+}
