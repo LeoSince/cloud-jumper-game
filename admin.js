@@ -9,6 +9,7 @@
   const dashboard = document.getElementById("dashboard");
   const logoutButton = document.getElementById("logoutButton");
   const refreshButton = document.getElementById("refreshButton");
+  const repairLeaderboardButton = document.getElementById("repairLeaderboardButton");
   const exportButton = document.getElementById("exportButton");
   const clearButton = document.getElementById("clearButton");
   const searchInput = document.getElementById("searchInput");
@@ -131,7 +132,7 @@
 
   function setBusy(value) {
     busy = Boolean(value);
-    for (const button of [loginButton, refreshButton, exportButton, clearButton, refreshCharactersButton, addCharacterButton, saveCharacterButton, deleteCharacterButton, resetCharacterButton, refreshRedeemCodesButton, addRedeemCodeButton, saveRedeemCodeButton, deleteRedeemCodeButton, activateSiteLockButton, unlockSiteButton, refreshSiteControlButton, ...siteLockDurationButtons]) {
+    for (const button of [loginButton, refreshButton, repairLeaderboardButton, exportButton, clearButton, refreshCharactersButton, addCharacterButton, saveCharacterButton, deleteCharacterButton, resetCharacterButton, refreshRedeemCodesButton, addRedeemCodeButton, saveRedeemCodeButton, deleteRedeemCodeButton, activateSiteLockButton, unlockSiteButton, refreshSiteControlButton, ...siteLockDurationButtons]) {
       if (button) button.disabled = busy;
     }
     for (const button of adminCharacterGrid?.querySelectorAll("button") || []) button.disabled = busy;
@@ -1255,6 +1256,9 @@
   });
 
   refreshButton.addEventListener("click", loadDashboard);
+  repairLeaderboardButton?.addEventListener("click", () => {
+    runAction({ action: "repairLeaderboard" }, "正在扫描全部注册账号并修复玩家列表…");
+  });
   searchInput.addEventListener("input", renderRows);
 
   exportButton.addEventListener("click", () => {
