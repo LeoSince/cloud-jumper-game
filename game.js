@@ -1128,6 +1128,7 @@
   let battleRoomSnapshot = null;
   let battlePendingInvite = null;
   let battleInviteAfterCreate = "";
+  let battleDifficultyAfterCreate = "";
   let battleModeActive = false;
   let battleMatchId = "";
   let battleEndsAt = 0;
@@ -2090,14 +2091,24 @@
     else battleRequestedRoomCode = roomCode;
   }
 
-  function invitePlayerToBattle(entry) {
+  function invitePlayerToBattle(entry, preferredDifficulty = "") {
     const targetId = String(entry?.inviteId || "");
     if (!targetId || targetId === String(playerId)) return;
+    battleDifficultyAfterCreate = ["easy", "normal", "hard", "extreme"].includes(String(preferredDifficulty))
+      ? String(preferredDifficulty)
+      : "";
     closeProfile();
     openBattleDialog();
     if (!battleRoomSnapshot) {
       createBattleRoom(targetId);
       return;
+    }
+    if (battleDifficultyAfterCreate && String(battleRoomSnapshot.hostId) === String(playerId)) {
+      sendBattle("set_difficulty", {
+        roomCode: battleRoomSnapshot.code,
+        difficulty: battleDifficultyAfterCreate,
+      });
+      battleDifficultyAfterCreate = "";
     }
     if (sendBattle("invite", { targetId, roomCode: battleRoomSnapshot.code }) && battleRoomMessage) {
       battleRoomMessage.textContent = `已向 ${cleanPlayerName(entry.name) || "这位玩家"} 发出邀请`;
@@ -2153,6 +2164,13 @@
       if (battleRoomSnapshot && battleInviteAfterCreate) {
         const targetId = battleInviteAfterCreate;
         battleInviteAfterCreate = "";
+        if (battleDifficultyAfterCreate && String(battleRoomSnapshot.hostId) === String(playerId)) {
+          sendBattle("set_difficulty", {
+            roomCode: battleRoomSnapshot.code,
+            difficulty: battleDifficultyAfterCreate,
+          });
+          battleDifficultyAfterCreate = "";
+        }
         sendBattle("invite", { targetId, roomCode: battleRoomSnapshot.code });
         if (battleRoomMessage) battleRoomMessage.textContent = "房间已创建，邀请已发出";
       }
@@ -3287,7 +3305,7 @@
   function renderChatMessages(messages, forceBottom = false) {
     if (!chatList) return;
     const list = Array.isArray(messages) ? messages : [];
-    const fingerprint = JSON.stringify(list.map((message) => [message.id, message.text, message.imageUrl, message.recalled, message.canRecall, message.name, message.avatar]));
+    const fingerprint = JSON.stringify(list.map((message) => [message.id, message.text, message.imageUrl, message.recalled, message.canRecall, message.name, message.avatar, message.battleInvite]));
     if (fingerprint === chatRenderFingerprint) {
       chatMessagesSnapshot = list;
       if (forceBottom) settleChatScroll(true);
@@ -3315,7 +3333,15 @@
       const imageMarkup = imageUrl
         ? `<button class="chat-image-open" type="button" data-chat-image="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 发送的图片"><img class="chat-message-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(message.name || "玩家")} 发送的图片" loading="lazy" /></button>`
         : "";
-      const bubbleContents = `${text ? `<span>${text}</span>` : ""}${imageMarkup}`;
+      const battleInvite = !mine && !recalled && message.battleInvite && String(message.battleInvite.rivalId || "").startsWith("rival-")
+        ? `<button class="chat-battle-accept" type="button" data-chat-battle-invite="${index}"><i aria-hidden="true">⚔</i><span><strong>接受对战</strong><small>${escapeHtml(({
+          easy: "轻松",
+          normal: "标准",
+          hard: "困难",
+          extreme: "疯狂",
+        })[String(message.battleInvite.difficulty)] || "标准")}难度 · 点击进入准备页</small></span><b>›</b></button>`
+        : "";
+      const bubbleContents = `${text ? `<span>${text}</span>` : ""}${imageMarkup}${battleInvite}`;
       const mentionBadge = mentionsMe ? "<em class=\"chat-mentioned-me\">提到你</em>" : "";
       return `<article class="chat-message${mine ? " is-mine" : ""}${mentionsMe ? " is-mention" : ""}"><button class="chat-message-avatar" type="button" data-chat-avatar="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 的资料；长按可以单独@他" title="点击看资料，长按@玩家">${avatar.icon}</button><div class="chat-message-body"><div class="chat-message-meta"><b>${escapeHtml(message.name || "玩家")}</b><span>${chatTimeLabel(message.createdAt)}</span>${mentionBadge}${recallButton}</div><div class="chat-bubble${recalled ? " is-recalled" : ""}">${bubbleContents}</div></div></article>`;
     }).join("") : "<div class=\"chat-empty\">还没有消息，来打个招呼吧！</div>";
@@ -3327,6 +3353,19 @@
       button.addEventListener("click", () => {
         const message = chatMessagesSnapshot[Number(button.dataset.chatImage)];
         if (message?.imageUrl) window.open(message.imageUrl, "_blank", "noopener,noreferrer");
+      });
+    }
+    for (const button of chatList.querySelectorAll("[data-chat-battle-invite]")) {
+      button.addEventListener("click", () => {
+        const message = chatMessagesSnapshot[Number(button.dataset.chatBattleInvite)];
+        const invite = message?.battleInvite;
+        if (!invite?.rivalId) return;
+        invitePlayerToBattle({
+          inviteId: invite.rivalId,
+          name: invite.rivalName || message.name,
+          avatar: message.avatar,
+          selectedCharacter: message.profile?.selectedCharacter || "cloud",
+        }, invite.difficulty);
       });
     }
     for (const button of chatList.querySelectorAll("[data-chat-avatar]")) {
