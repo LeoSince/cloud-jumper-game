@@ -6,6 +6,8 @@ const CHARACTER_CATALOG_KEY = "cloud-jumper:characters:v1";
 const REDEEM_CODE_STORE_KEY = "cloud-jumper:redeem-codes:v1";
 const SITE_LOCK_KEY = "cloud-jumper:site-lock:v1";
 const ADMIN_ROLE_STORE_KEY = "cloud-jumper:admin-roles:v1";
+const REVIVE_CARD_SETTINGS_KEY = "cloud-jumper:revive-card-settings:v1";
+const REVIVE_CARD_BUNDLE_END_AT = Date.parse("2026-08-04T23:59:59+08:00");
 const BEIBEI_DELISTED_AT = Date.parse("2026-07-26T00:00:00+08:00");
 const YUANYUAN_RELEASE_AT = Date.parse("2026-07-27T10:00:00+08:00");
 const YUANYUAN_SALES_KEY = "cloud-jumper:store:yuanyuan-sales:v1";
@@ -68,6 +70,310 @@ const DAILY_CHECKIN_REWARDS = [
   { character: "guoguo", characterName: "果果", fallbackCoins: 300 },
   { coins: 70 }, { coins: 90 }, { coins: 110 }, { coins: 130 }, { coins: 180 }, { coins: 80 }, { coins: 100 }, { coins: 120 }, { coins: 150 }, { coins: 200 }, { coins: 250 }, { coins: 300 }, { coins: 350 },
   { character: "mbappe", characterName: "姆巴佩", fallbackCoins: 500 },
+];
+const JW_BIBLE_COURSE_ROOT = "https://www.jw.org/cmn-hans/多媒体图书馆/书籍/儿童学圣经";
+const REVIVE_QUIZ_EPOCH = Date.parse("2026-07-28T00:00:00+08:00");
+const REVIVE_QUIZ_DAYS = [
+  {
+    lesson: 1,
+    title: "上帝创造天地万物",
+    sourcePath: "第一部分/上帝创造天地万物",
+    questions: [
+      ["谁创造了地球和天地万物？", ["摩西", "耶和华上帝", "挪亚", "亚伯拉罕"], 1],
+      ["按照这课的内容，上帝希望人类怎样对待地球和动物？", ["好好照顾它们", "完全不理会它们", "只照顾大型动物", "把地球留给天使"], 0],
+      ["这课提到，人类跟动物不同的一项能力是什么？", ["可以说话、欢笑和祷告", "不需要食物", "永远不会疲倦", "天生会飞"], 0],
+    ],
+  },
+  {
+    lesson: 2,
+    title: "上帝创造了第一对男女",
+    sourcePath: "第一部分/上帝创造亚当和夏娃",
+    questions: [
+      ["圣经记载的第一个男人叫什么名字？", ["亚当", "亚伯", "以撒", "雅各"], 0],
+      ["上帝用什么创造了夏娃？", ["亚当的一根肋骨", "一块石头", "一棵树", "河里的水"], 0],
+      ["上帝让亚当和夏娃住在伊甸园，并希望他们做什么？", ["组建家庭并把地球变成乐园", "建造高塔", "搬去埃及", "只照顾一棵树"], 0],
+    ],
+  },
+  {
+    lesson: 3,
+    title: "亚当和夏娃不听上帝的话",
+    sourcePath: "第二部分/亚当和夏娃反叛上帝",
+    questions: [
+      ["亚当和夏娃不可以吃哪一棵树的果子？", ["分别善恶树", "无花果树", "橄榄树", "葡萄树"], 0],
+      ["谁借着蛇欺骗夏娃？", ["撒但", "亚伯", "挪亚", "亚伦"], 0],
+      ["亚当和夏娃为什么失去了伊甸园的家？", ["他们明知上帝的吩咐却选择不服从", "他们不会种地", "他们没有建造方舟", "他们迷路了"], 0],
+    ],
+  },
+  {
+    lesson: 4,
+    title: "因怒气而杀人",
+    sourcePath: "第二部分/该隐生气谋杀亚伯",
+    questions: [
+      ["该隐的弟弟叫什么名字？", ["亚伯", "以扫", "约瑟", "约伯"], 0],
+      ["该隐生气时，上帝怎样帮助他？", ["提醒他要控制怒气并做对的事", "叫他离开家人", "让他建造一艘船", "叫他去找法老"], 0],
+      ["从该隐的经历可以学到什么？", ["要尽早控制怒气，不让它带来伤害", "生气时不需要听劝", "嫉妒能解决问题", "做错事只要隐藏就好"], 0],
+    ],
+  },
+  {
+    lesson: 5,
+    title: "挪亚造方舟",
+    sourcePath: "第二部分/挪亚方舟",
+    questions: [
+      ["上帝吩咐挪亚建造什么？", ["方舟", "圣殿", "高塔", "王宫"], 0],
+      ["方舟最主要的用途是什么？", ["在洪水中保护挪亚一家和动物", "帮助挪亚环游世界", "储存金银", "成为一座城市"], 0],
+      ["挪亚长时间建造方舟，最能说明他有什么品质？", ["相信并服从上帝", "喜欢炫耀", "害怕所有动物", "只在意自己"], 0],
+    ],
+  },
+  {
+    lesson: 6,
+    title: "一家八口得救了",
+    sourcePath: "第二部分/挪亚一家得救",
+    questions: [
+      ["大雨一共下了多少天？", ["40天", "7天", "12天", "100天"], 0],
+      ["有多少人进入方舟并在洪水中得救？", ["8人", "2人", "12人", "40人"], 0],
+      ["洪水以后，彩虹让人想起上帝的什么保证？", ["不再用全球洪水毁灭地球", "以后不会再下雨", "所有人都会住在方舟", "动物不再繁殖"], 0],
+    ],
+  },
+  {
+    lesson: 7,
+    title: "巴别塔的故事",
+    sourcePath: "第三部分/巴别塔",
+    questions: [
+      ["巴别的人想建造什么？", ["一座高塔", "一艘方舟", "一座圣幕", "一条大船"], 0],
+      ["上帝怎样制止他们的计划？", ["使他们说不同的语言", "让海水淹没城市", "让他们忘记怎样造砖", "把塔变成山"], 0],
+      ["巴别人坚持聚在一起建高塔，主要违背了什么吩咐？", ["分散到各地居住", "每年守逾越节", "进入方舟", "去埃及储存粮食"], 0],
+    ],
+  },
+  {
+    lesson: 8,
+    title: "亚伯拉罕和撒拉服从上帝",
+    sourcePath: "第三部分/亚伯拉罕和撒拉",
+    questions: [
+      ["亚伯拉罕和撒拉离开了哪座城？", ["吾珥", "耶利哥", "伯利恒", "尼尼微"], 0],
+      ["离开舒适的家乡后，他们主要住在哪里？", ["帐篷里", "王宫里", "方舟里", "城墙上"], 0],
+      ["他们愿意前往陌生地方，说明他们怎样看待上帝的保证？", ["相信上帝会带领和照顾他们", "认为保证不重要", "只相信自己的财富", "打算马上返回吾珥"], 0],
+    ],
+  },
+  {
+    lesson: 9,
+    title: "终于有了一个儿子！",
+    sourcePath: "第三部分/以撒和以实玛利",
+    questions: [
+      ["亚伯拉罕和撒拉等候已久的儿子叫什么？", ["以撒", "以扫", "约书亚", "撒母耳"], 0],
+      ["他们年纪很大才有以撒，这件事说明什么？", ["上帝有能力实现自己的保证", "他们已经忘记保证", "孩子必须在埃及出生", "所有保证都会马上实现"], 0],
+      ["上帝先前说的特别保证会通过哪个儿子继续实现？", ["以撒", "以实玛利", "罗得", "拉班"], 0],
+    ],
+  },
+  {
+    lesson: 10,
+    title: "不要学罗得的妻子",
+    sourcePath: "第三部分/不要学罗得的妻子",
+    questions: [
+      ["天使叫罗得一家逃走时不要做什么？", ["回头看", "带上孩子", "离开城市", "往山上走"], 0],
+      ["罗得的妻子回头后变成了什么？", ["盐柱", "石墙", "一棵树", "一座塔"], 0],
+      ["罗得妻子的经历提醒人不要怎样做？", ["明知吩咐仍留恋身后的错误事物", "遇到危险时赶快离开", "听从清楚的警告", "帮助家人安全逃走"], 0],
+    ],
+  },
+  {
+    lesson: 11,
+    title: "信心的考验",
+    sourcePath: "第三部分/亚伯拉罕和以撒信心的考验",
+    questions: [
+      ["亚伯拉罕带哪个儿子前往摩利亚？", ["以撒", "以实玛利", "雅各", "约瑟"], 0],
+      ["天使制止亚伯拉罕以后，什么代替以撒成为祭物？", ["一只公绵羊", "一头牛", "一只鸽子", "一袋粮食"], 0],
+      ["这课说亚伯拉罕为什么被称为上帝的朋友？", ["即使不明白原因也一直服从上帝", "因为他拥有很多牲畜", "因为他住在大城市", "因为他从不面对考验"], 0],
+    ],
+  },
+  {
+    lesson: 12,
+    title: "雅各得到产业",
+    sourcePath: "第三部分/雅各和以扫的产业",
+    questions: [
+      ["以扫和雅各是什么关系？", ["双胞胎兄弟", "父子", "叔侄", "朋友"], 0],
+      ["以扫用特别的产业换了什么？", ["一顿红羹", "一群羊", "一座帐篷", "一把弓"], 0],
+      ["以扫的选择说明，人在很饿或很急时也应该怎样做？", ["看重长远重要的事，不只顾眼前需要", "马上放弃最重要的东西", "让别人替自己决定", "假装问题不存在"], 0],
+    ],
+  },
+  {
+    lesson: 13,
+    title: "雅各跟以扫和好",
+    sourcePath: "第三部分/雅各跟以扫和好",
+    questions: [
+      ["雅各准备去见哪位哥哥？", ["以扫", "约瑟", "亚伦", "摩西"], 0],
+      ["雅各害怕时做了哪两件有助于和好的事？", ["向上帝祷告并预备礼物", "建高塔并藏起来", "召集军队并先攻击", "返回吾珥并忘记家人"], 0],
+      ["雅各主动谦卑地寻求和平，带来了什么结果？", ["兄弟重新和好", "以扫离开了家乡", "雅各失去所有家人", "两人永远不再见面"], 0],
+    ],
+  },
+  {
+    lesson: 14,
+    title: "一个服从上帝的奴隶",
+    sourcePath: "第四部分/约瑟",
+    questions: [
+      ["约瑟被谁卖去做奴隶？", ["他的哥哥们", "摩西", "挪亚", "约书亚"], 0],
+      ["波提乏的妻子引诱约瑟做错事时，他怎样回应？", ["拒绝并离开", "答应后再道歉", "把事情推给别人", "装作没有听见却留下"], 0],
+      ["约瑟即使被冤枉也继续做对的事，说明他最在意什么？", ["忠于上帝", "马上得到奖励", "让所有人喜欢自己", "保住漂亮衣服"], 0],
+    ],
+  },
+  {
+    lesson: 15,
+    title: "耶和华从没有忘记约瑟",
+    sourcePath: "第四部分/法老做梦",
+    questions: [
+      ["谁帮助法老解释梦的意思？", ["约瑟", "亚伦", "大卫", "参孙"], 0],
+      ["法老的梦预告了怎样的次序？", ["七年丰收后有七年饥荒", "七年饥荒后永远下雨", "三天丰收后四十天洪水", "先建塔再造方舟"], 0],
+      ["约瑟提出什么办法来帮助人度过饥荒？", ["丰收时储存粮食", "把粮食全部吃掉", "离开埃及不再回来", "停止耕种七年"], 0],
+    ],
+  },
+  {
+    lesson: 16,
+    title: "约伯的故事",
+    sourcePath: "第四部分/约伯",
+    questions: [
+      ["在许多考验中仍忠于上帝的人是谁？", ["约伯", "法老", "该隐", "可拉"], 0],
+      ["撒但声称约伯为什么敬奉上帝？", ["只是因为得到许多好处", "因为约伯住在王宫", "因为约伯从不生病", "因为没有人反对他"], 0],
+      ["约伯失去很多东西又患病，却仍忠贞，反驳了撒但的什么说法？", ["人只在生活顺利时才会爱上帝", "人不能照顾动物", "人不应该祷告", "人无法原谅朋友"], 0],
+    ],
+  },
+  {
+    lesson: 17,
+    title: "摩西选择崇拜耶和华",
+    sourcePath: "第四部分/摩西",
+    questions: [
+      ["婴儿摩西被放在什么里面？", ["蒲草箱", "石洞", "帐篷", "木塔"], 0],
+      ["谁在河边发现并收养了摩西？", ["法老的女儿", "撒拉", "路得", "喇合"], 0],
+      ["摩西长大后为什么放弃王宫的优越生活？", ["他选择跟上帝的子民站在一起", "他想成为商人", "他不喜欢埃及的食物", "他要建造巴别塔"], 0],
+    ],
+  },
+  {
+    lesson: 18,
+    title: "燃烧的荆棘丛",
+    sourcePath: "第四部分/燃烧的荆棘丛",
+    questions: [
+      ["摩西看见荆棘丛着火，却怎样？", ["没有烧毁", "变成金子", "长到天上", "掉进河里"], 0],
+      ["上帝派摩西去见谁，要求释放以色列人？", ["法老", "扫罗", "歌利亚", "尼布甲尼撒"], 0],
+      ["摩西担心自己不善于说话时，上帝安排谁帮助他？", ["亚伦", "约瑟", "以撒", "挪亚"], 0],
+    ],
+  },
+  {
+    lesson: 19,
+    title: "头三场灾殃",
+    sourcePath: "第四部分/埃及的头三场灾殃",
+    questions: [
+      ["第一场灾殃使尼罗河水变成什么？", ["血", "油", "沙", "牛奶"], 0],
+      ["头三场灾殃的正确顺序是哪一个？", ["水变血、青蛙、蚊虫", "青蛙、冰雹、黑暗", "蚊虫、洪水、火", "水变血、地震、狮子"], 0],
+      ["法老不断拒绝释放以色列人，说明骄傲会带来什么后果？", ["让问题和伤害继续增加", "马上解决冲突", "使人更愿意听劝", "让灾殃自动停止"], 0],
+    ],
+  },
+  {
+    lesson: 20,
+    title: "接下来的六场灾殃",
+    sourcePath: "第四部分/接下来的六场灾殃",
+    questions: [
+      ["头三场灾殃以后，又接连发生了多少场灾殃？", ["六场", "一场", "三场", "十二场"], 0],
+      ["一些灾殃只打击埃及人，却没有打击以色列人居住的歌珊地，这显示什么？", ["上帝能分清并保护自己的子民", "灾殃没有真正发生", "以色列人已经离开埃及", "法老保护了歌珊地"], 0],
+      ["法老多次答应放人，灾殃一停又反悔，反映了什么问题？", ["他没有真正改变顽固的态度", "他听从了所有吩咐", "他忘了自己是国王", "他已经离开埃及"], 0],
+    ],
+  },
+  {
+    lesson: 21,
+    title: "第十场灾殃",
+    sourcePath: "第四部分/埃及发生的第十场灾殃",
+    questions: [
+      ["以色列人把羊血涂在哪里？", ["门框上", "屋顶上", "衣服上", "河边"], 0],
+      ["每年纪念这次拯救的节日叫什么？", ["逾越节", "住棚节", "五旬节", "普珥节"], 0],
+      ["以色列人严格照着指示预备晚餐并涂羊血，结果怎样？", ["他们的家庭得到保护并获得自由", "他们必须留在埃及", "他们失去了所有牲畜", "他们被要求建一座塔"], 0],
+    ],
+  },
+  {
+    lesson: 22,
+    title: "红海奇迹",
+    sourcePath: "第四部分/分开红海",
+    questions: [
+      ["以色列人逃离埃及时，哪片海被分开？", ["红海", "死海", "加利利海", "地中海"], 0],
+      ["海水分开后，以色列人从哪里走过去？", ["干地", "一座桥", "一艘船", "山顶"], 0],
+      ["前有大海、后有埃及军队时，以色列人得救说明什么？", ["看似无路可走时仍可以信赖上帝的指引", "逃跑永远没有用", "他们需要自己造一座塔", "法老主动帮助了他们"], 0],
+    ],
+  },
+  {
+    lesson: 23,
+    title: "对耶和华的承诺",
+    sourcePath: "第五部分/摩西和西奈山",
+    questions: [
+      ["以色列人在哪座山附近安营？", ["西奈山", "摩利亚山", "橄榄山", "迦密山"], 0],
+      ["以色列人承诺要怎样回应上帝的吩咐？", ["愿意服从", "只听自己喜欢的部分", "等回到埃及再决定", "让别的国家替他们做"], 0],
+      ["上帝在山周围规定界线，人民需要遵守，这说明什么？", ["崇拜上帝时要尊重他的指示", "任何规则都可以忽略", "只有摩西需要服从", "人越靠近危险越勇敢"], 0],
+    ],
+  },
+  {
+    lesson: 24,
+    title: "以色列人不守承诺",
+    sourcePath: "第五部分/摩西十诫和金牛像",
+    questions: [
+      ["摩西在山上时，以色列人造了什么偶像？", ["金牛犊", "银狮子", "石方舟", "木塔"], 0],
+      ["谁在人民催促下做了金牛犊？", ["亚伦", "约书亚", "迦勒", "约瑟"], 0],
+      ["以色列人等得不耐烦就造偶像，说明急躁可能怎样影响人？", ["使人很快忘记刚作出的正确承诺", "使人更仔细思考", "使人更愿意听从好建议", "使所有问题自动解决"], 0],
+    ],
+  },
+  {
+    lesson: 25,
+    title: "用来崇拜上帝的圣幕",
+    sourcePath: "第五部分/摩西和圣幕",
+    questions: [
+      ["圣幕是什么？", ["用来崇拜上帝的特别帐篷", "以色列王的宫殿", "挪亚的方舟", "巴别的高塔"], 0],
+      ["圣幕最里面的重要物品是什么？", ["约柜", "法老的王冠", "歌利亚的剑", "约瑟的粮仓"], 0],
+      ["圣幕为什么设计成可以拆卸和搬运？", ["以色列人在旷野迁移时也能带着它", "材料不够坚固", "要把它卖给埃及人", "只在雨天使用"], 0],
+    ],
+  },
+  {
+    lesson: 26,
+    title: "十二个探子",
+    sourcePath: "第五部分/十二探子",
+    questions: [
+      ["摩西派了多少个探子去侦察迦南？", ["12个", "2个", "7个", "40个"], 0],
+      ["哪两位探子相信在上帝帮助下可以进入迦南？", ["约书亚和迦勒", "可拉和大坦", "摩西和法老", "该隐和亚伯"], 0],
+      ["十个探子只看见高大的敌人和坚固城墙，约书亚和迦勒还考虑了什么？", ["上帝已经答应帮助他们", "埃及军队会回来", "他们应该建造方舟", "他们可以不再前进"], 0],
+    ],
+  },
+  {
+    lesson: 27,
+    title: "他们反叛耶和华",
+    sourcePath: "第五部分/可拉反叛以及亚伦的杖",
+    questions: [
+      ["带头反叛摩西和亚伦的人是谁？", ["可拉", "约瑟", "约伯", "大卫"], 0],
+      ["有多少人跟可拉一起到圣幕献香？", ["250人", "12人", "40人", "600人"], 0],
+      ["亚伦的杖后来发芽开花，主要证明了什么？", ["上帝选择亚伦担任祭司", "亚伦最会种树", "旷野已经变成花园", "可拉被选为领袖"], 0],
+    ],
+  },
+  {
+    lesson: 28,
+    title: "巴兰的驴开口说话",
+    sourcePath: "第五部分/巴兰的驴讲话",
+    questions: [
+      ["路上谁先看见了天使？", ["巴兰的驴", "巴兰", "摩西", "法老"], 0],
+      ["上帝让巴兰的驴做了什么特别的事？", ["开口说话", "飞过山谷", "分开红海", "建造方舟"], 0],
+      ["巴兰因为只顾自己的想法而看不见危险，这提醒人怎样做？", ["停下来听劝并留意上帝的指引", "越生气越要赶快行动", "只要有奖励就不用分辨对错", "动物永远比人聪明"], 0],
+    ],
+  },
+  {
+    lesson: 29,
+    title: "耶和华任命约书亚",
+    sourcePath: "第六部分/约书亚与迦南",
+    questions: [
+      ["谁接替摩西带领以色列人？", ["约书亚", "亚伦", "以扫", "参孙"], 0],
+      ["以色列人进入应许之地前，需要渡过哪条河？", ["约旦河", "尼罗河", "幼发拉底河", "底格里斯河"], 0],
+      ["上帝多次鼓励约书亚勇敢坚强，他要继续做什么才能作出好决定？", ["阅读并遵守上帝的法律", "模仿法老", "依靠人数最多的一方", "停止听取任何建议"], 0],
+    ],
+  },
+  {
+    lesson: 30,
+    title: "喇合让探子藏起来",
+    sourcePath: "第六部分/喇合藏探子",
+    questions: [
+      ["喇合把谁藏在屋顶上？", ["两名以色列探子", "法老的士兵", "挪亚一家", "亚伯拉罕和撒拉"], 0],
+      ["探子吩咐喇合在窗口系上什么作为记号？", ["红绳", "蓝布", "金链", "白旗"], 0],
+      ["耶利哥城墙倒塌时，喇合一家得救主要说明她怎样表现信心？", ["她采取行动帮助探子并照着指示做", "她只在心里想一想", "她依靠城墙一定不会倒", "她把红绳藏起来不让人看见"], 0],
+    ],
+  },
 ];
 
 const apiHeaders = {
@@ -290,6 +596,168 @@ async function handlePublicSiteStatus(request, env) {
   const now = Date.now();
   const lock = await loadSiteLock(env.LEADERBOARD);
   return json(siteLockPayload(lock, now));
+}
+
+function defaultReviveCardSettings() {
+  return {
+    version: 1,
+    enabled: true,
+    maxInventory: 3,
+    dailyUseLimit: 3,
+    singlePrice: 599,
+    bundleEnabled: true,
+    bundleQuantity: 3,
+    bundlePrice: 1099,
+    bundleEndsAt: REVIVE_CARD_BUNDLE_END_AT,
+    dailyQuizEnabled: true,
+    dailyQuizReward: 1,
+    lowMaxLevel: 10,
+    midMaxLevel: 15,
+    emergencyLowPrice: 899,
+    emergencyMidPrice: 999,
+    emergencyHighPrice: 1099,
+    reviveHealthPercent: 100,
+    updatedAt: 0,
+  };
+}
+
+function sanitizeReviveCardSettings(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const defaults = defaultReviveCardSettings();
+  const maxInventory = boundedNumber(source.maxInventory, defaults.maxInventory, 1, 20, 0);
+  const lowMaxLevel = boundedNumber(source.lowMaxLevel, defaults.lowMaxLevel, 1, 19, 0);
+  const midMaxLevel = boundedNumber(source.midMaxLevel, defaults.midMaxLevel, lowMaxLevel + 1, 20, 0);
+  return {
+    version: 1,
+    enabled: source.enabled === undefined ? defaults.enabled : source.enabled === true,
+    maxInventory,
+    dailyUseLimit: boundedNumber(source.dailyUseLimit, defaults.dailyUseLimit, 1, 20, 0),
+    singlePrice: boundedNumber(source.singlePrice, defaults.singlePrice, 0, 999999, 0),
+    bundleEnabled: source.bundleEnabled === undefined ? defaults.bundleEnabled : source.bundleEnabled === true,
+    bundleQuantity: boundedNumber(source.bundleQuantity, defaults.bundleQuantity, 1, maxInventory, 0),
+    bundlePrice: boundedNumber(source.bundlePrice, defaults.bundlePrice, 0, 999999, 0),
+    bundleEndsAt: source.bundleEndsAt === undefined
+      ? defaults.bundleEndsAt
+      : cleanCharacterTimestamp(source.bundleEndsAt),
+    dailyQuizEnabled: source.dailyQuizEnabled === undefined ? defaults.dailyQuizEnabled : source.dailyQuizEnabled === true,
+    dailyQuizReward: boundedNumber(source.dailyQuizReward, defaults.dailyQuizReward, 1, maxInventory, 0),
+    lowMaxLevel,
+    midMaxLevel,
+    emergencyLowPrice: boundedNumber(source.emergencyLowPrice, defaults.emergencyLowPrice, 0, 999999, 0),
+    emergencyMidPrice: boundedNumber(source.emergencyMidPrice, defaults.emergencyMidPrice, 0, 999999, 0),
+    emergencyHighPrice: boundedNumber(source.emergencyHighPrice, defaults.emergencyHighPrice, 0, 999999, 0),
+    reviveHealthPercent: boundedNumber(source.reviveHealthPercent, defaults.reviveHealthPercent, 25, 100, 0),
+    updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || 0)),
+  };
+}
+
+async function loadReviveCardSettings(binding) {
+  if (!binding) return sanitizeReviveCardSettings({});
+  try {
+    return sanitizeReviveCardSettings(await binding.get(REVIVE_CARD_SETTINGS_KEY, { type: "json" }));
+  } catch {
+    return sanitizeReviveCardSettings({});
+  }
+}
+
+async function saveReviveCardSettings(binding, value) {
+  const settings = sanitizeReviveCardSettings({ ...value, updatedAt: Date.now() });
+  settings.updatedAt = Date.now();
+  await binding.put(REVIVE_CARD_SETTINGS_KEY, JSON.stringify(settings));
+  return settings;
+}
+
+function emergencyRevivePrice(level, settingsValue) {
+  const settings = sanitizeReviveCardSettings(settingsValue);
+  const safeLevel = Math.max(1, Math.min(20, Math.round(Number(level) || 1)));
+  if (safeLevel <= settings.lowMaxLevel) return settings.emergencyLowPrice;
+  if (safeLevel <= settings.midMaxLevel) return settings.emergencyMidPrice;
+  return settings.emergencyHighPrice;
+}
+
+function reviveSettingsPayload(settingsValue, now = Date.now()) {
+  const settings = sanitizeReviveCardSettings(settingsValue);
+  const bundleActive = Boolean(
+    settings.enabled &&
+    settings.bundleEnabled &&
+    (!settings.bundleEndsAt || now <= settings.bundleEndsAt)
+  );
+  return {
+    ...settings,
+    bundleActive,
+    bundleRemainingMs: bundleActive && settings.bundleEndsAt
+      ? Math.max(0, settings.bundleEndsAt - now)
+      : 0,
+    questionDays: REVIVE_QUIZ_DAYS.length,
+    sourceSite: "JW.ORG",
+  };
+}
+
+function reviveStatusPayload(gameDataValue, settingsValue, now = Date.now()) {
+  const gameData = sanitizeGameData(gameDataValue);
+  const settings = sanitizeReviveCardSettings(settingsValue);
+  const today = singaporeDateKey(now);
+  const usedToday = gameData.reviveUsedDate === today ? gameData.reviveUsedToday : 0;
+  return {
+    cards: Math.min(settings.maxInventory, gameData.reviveCards),
+    maxInventory: settings.maxInventory,
+    usedToday,
+    dailyUseLimit: settings.dailyUseLimit,
+    remainingUsesToday: Math.max(0, settings.dailyUseLimit - usedToday),
+    quizClaimedToday: gameData.reviveQuizClaimedDate === today,
+    today,
+  };
+}
+
+function normalizeReviveDailyUsage(gameData, today) {
+  if (gameData.reviveUsedDate !== today) {
+    gameData.reviveUsedDate = today;
+    gameData.reviveUsedToday = 0;
+  }
+}
+
+function cleanReviveTransactionId(value) {
+  const id = String(value || "").replace(/[^a-z0-9-]/gi, "").slice(0, 80);
+  return /^[a-z0-9][a-z0-9-]{7,79}$/i.test(id) ? id : "";
+}
+
+function reviveQuizForDate(dateKey) {
+  const parsed = Date.parse(`${String(dateKey || "")}T00:00:00+08:00`);
+  const dayOffset = Number.isFinite(parsed)
+    ? Math.max(0, Math.floor((parsed - REVIVE_QUIZ_EPOCH) / 86400000))
+    : 0;
+  return {
+    index: dayOffset % REVIVE_QUIZ_DAYS.length,
+    ...REVIVE_QUIZ_DAYS[dayOffset % REVIVE_QUIZ_DAYS.length],
+  };
+}
+
+function reviveQuizPayload(gameDataValue, settingsValue, now = Date.now()) {
+  const settings = sanitizeReviveCardSettings(settingsValue);
+  const status = reviveStatusPayload(gameDataValue, settings, now);
+  const quiz = reviveQuizForDate(status.today);
+  const sourceUrl = `${JW_BIBLE_COURSE_ROOT}/${quiz.sourcePath}/`;
+  return {
+    enabled: settings.enabled && settings.dailyQuizEnabled,
+    date: status.today,
+    cycleDay: quiz.index + 1,
+    cycleLength: REVIVE_QUIZ_DAYS.length,
+    lesson: quiz.lesson,
+    title: quiz.title,
+    sourceTitle: `JW.ORG《大家一起学圣经》第 ${quiz.lesson} 课：${quiz.title}`,
+    sourceUrl,
+    rewardCards: settings.dailyQuizReward,
+    claimedToday: status.quizClaimedToday,
+    canClaim: status.cards + settings.dailyQuizReward <= settings.maxInventory,
+    questions: quiz.questions.map((question, index) => ({
+      id: `day-${quiz.index + 1}-q${index + 1}`,
+      difficulty: index === 0 ? "三年级" : "六年级",
+      question: question[0],
+      options: question[1],
+      sourceTitle: `第 ${quiz.lesson} 课：${quiz.title}`,
+      sourceUrl,
+    })),
+  };
 }
 
 function cleanRedeemCode(value) {
@@ -2578,6 +3046,15 @@ function sanitizeGameData(value) {
     heartResetVersion: HEART_RESET_VERSION,
     dailyCheckinLastDate: /^\d{4}-\d{2}-\d{2}$/.test(String(data.dailyCheckinLastDate || "")) ? String(data.dailyCheckinLastDate) : "",
     dailyCheckinTotal: Math.max(0, Math.min(1000000, Math.round(Number(data.dailyCheckinTotal) || 0))),
+    reviveCards: Math.max(0, Math.min(20, Math.round(Number(data.reviveCards) || 0))),
+    reviveUsedDate: /^\d{4}-\d{2}-\d{2}$/.test(String(data.reviveUsedDate || "")) ? String(data.reviveUsedDate) : "",
+    reviveUsedToday: Math.max(0, Math.min(20, Math.round(Number(data.reviveUsedToday) || 0))),
+    reviveQuizClaimedDate: /^\d{4}-\d{2}-\d{2}$/.test(String(data.reviveQuizClaimedDate || "")) ? String(data.reviveQuizClaimedDate) : "",
+    reviveQuizAttemptsDate: /^\d{4}-\d{2}-\d{2}$/.test(String(data.reviveQuizAttemptsDate || "")) ? String(data.reviveQuizAttemptsDate) : "",
+    reviveQuizAttempts: Math.max(0, Math.min(1000, Math.round(Number(data.reviveQuizAttempts) || 0))),
+    reviveTransactionIds: [...new Set((Array.isArray(data.reviveTransactionIds) ? data.reviveTransactionIds : [])
+      .map(cleanReviveTransactionId)
+      .filter(Boolean))].slice(-200),
     crabRunsPlayed: Math.max(0, Math.min(1000000, Math.round(Number(data.crabRunsPlayed) || 0))),
     battleMatches: Math.max(0, Math.min(1000000, Math.round(Number(data.battleMatches) || 0))),
     battleWins: Math.max(0, Math.min(1000000, Math.round(Number(data.battleWins) || 0))),
@@ -2640,6 +3117,13 @@ function mergeAccountGameData(currentValue, incomingValue) {
   incoming.accountUpgraded = incoming.heartUpgradeLevel >= 1;
   incoming.dailyCheckinLastDate = current.dailyCheckinLastDate;
   incoming.dailyCheckinTotal = current.dailyCheckinTotal;
+  incoming.reviveCards = current.reviveCards;
+  incoming.reviveUsedDate = current.reviveUsedDate;
+  incoming.reviveUsedToday = current.reviveUsedToday;
+  incoming.reviveQuizClaimedDate = current.reviveQuizClaimedDate;
+  incoming.reviveQuizAttemptsDate = current.reviveQuizAttemptsDate;
+  incoming.reviveQuizAttempts = current.reviveQuizAttempts;
+  incoming.reviveTransactionIds = [...current.reviveTransactionIds];
   incoming.crabRunsPlayed = Math.max(current.crabRunsPlayed, incoming.crabRunsPlayed);
   incoming.battleMatches = current.battleMatches;
   incoming.battleWins = current.battleWins;
@@ -3222,6 +3706,13 @@ async function handleAccount(request, env) {
     // Daily rewards are created by the server, never imported from a browser snapshot.
     initialGameData.dailyCheckinLastDate = "";
     initialGameData.dailyCheckinTotal = 0;
+    initialGameData.reviveCards = 0;
+    initialGameData.reviveUsedDate = "";
+    initialGameData.reviveUsedToday = 0;
+    initialGameData.reviveQuizClaimedDate = "";
+    initialGameData.reviveQuizAttemptsDate = "";
+    initialGameData.reviveQuizAttempts = 0;
+    initialGameData.reviveTransactionIds = [];
     const account = {
       version: 1,
       revision: 1,
@@ -3459,17 +3950,210 @@ async function handleAccount(request, env) {
     return json({ ...accountPayload(account), alreadyClaimed: false, dailyReward });
   }
 
+  if (action === "reviveQuiz") {
+    const now = Date.now();
+    const settings = await loadReviveCardSettings(env.LEADERBOARD);
+    const gameData = sanitizeGameData(account.gameData);
+    return json({
+      ...accountPayload(account),
+      revive: reviveStatusPayload(gameData, settings, now),
+      settings: reviveSettingsPayload(settings, now),
+      quiz: reviveQuizPayload(gameData, settings, now),
+    });
+  }
+
+  if (action === "submitReviveQuiz") {
+    const now = Date.now();
+    const today = singaporeDateKey(now);
+    const settings = await loadReviveCardSettings(env.LEADERBOARD);
+    if (!settings.enabled || !settings.dailyQuizEnabled) return json({ error: "revive_quiz_disabled" }, 409);
+    if (String(body?.quizDate || "") !== today) return json({ error: "revive_quiz_expired" }, 409);
+    const gameData = sanitizeGameData(account.gameData);
+    gameData.reviveCards = Math.min(settings.maxInventory, gameData.reviveCards);
+    if (gameData.reviveQuizClaimedDate === today) {
+      return json({
+        ...accountPayload(account),
+        alreadyClaimed: true,
+        revive: reviveStatusPayload(gameData, settings, now),
+        settings: reviveSettingsPayload(settings, now),
+        quiz: reviveQuizPayload(gameData, settings, now),
+      });
+    }
+    if (gameData.reviveCards + settings.dailyQuizReward > settings.maxInventory) {
+      return json({
+        error: "revive_inventory_full",
+        revive: reviveStatusPayload(gameData, settings, now),
+        settings: reviveSettingsPayload(settings, now),
+      }, 409);
+    }
+    const quiz = reviveQuizForDate(today);
+    const submittedAnswers = Array.isArray(body?.answers) ? body.answers : [];
+    if (submittedAnswers.length !== quiz.questions.length) return json({ error: "revive_quiz_incomplete" }, 400);
+    const normalizedAnswers = submittedAnswers.map((answer) => Math.max(-1, Math.min(3, Math.round(Number(answer)))));
+    const correct = quiz.questions.map((question, index) => normalizedAnswers[index] === Number(question[2]));
+    const correctCount = correct.filter(Boolean).length;
+    if (gameData.reviveQuizAttemptsDate !== today) {
+      gameData.reviveQuizAttemptsDate = today;
+      gameData.reviveQuizAttempts = 0;
+    }
+    gameData.reviveQuizAttempts = Math.min(1000, gameData.reviveQuizAttempts + 1);
+    const passed = correctCount === quiz.questions.length;
+    if (passed) {
+      gameData.reviveCards += settings.dailyQuizReward;
+      gameData.reviveQuizClaimedDate = today;
+    }
+    account.gameData = sanitizeGameData(gameData);
+    account.updatedAt = now;
+    await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
+    return json({
+      ...accountPayload(account),
+      alreadyClaimed: false,
+      revive: reviveStatusPayload(account.gameData, settings, now),
+      settings: reviveSettingsPayload(settings, now),
+      quiz: reviveQuizPayload(account.gameData, settings, now),
+      quizResult: {
+        passed,
+        correctCount,
+        total: quiz.questions.length,
+        correct,
+        rewardCards: passed ? settings.dailyQuizReward : 0,
+      },
+    });
+  }
+
+  if (action === "purchaseReviveCards") {
+    const now = Date.now();
+    const settings = await loadReviveCardSettings(env.LEADERBOARD);
+    if (!settings.enabled) return json({ error: "revive_cards_disabled" }, 409);
+    const transactionId = cleanReviveTransactionId(body?.transactionId);
+    if (!transactionId) return json({ error: "invalid_revive_transaction" }, 400);
+    const gameData = sanitizeGameData(account.gameData);
+    if (gameData.reviveTransactionIds.includes(transactionId)) {
+      return json({
+        ...accountPayload(account),
+        alreadyProcessed: true,
+        revive: reviveStatusPayload(gameData, settings, now),
+        settings: reviveSettingsPayload(settings, now),
+      });
+    }
+    const offer = String(body?.offer || "") === "bundle" ? "bundle" : "single";
+    const bundleActive = settings.bundleEnabled && (!settings.bundleEndsAt || now <= settings.bundleEndsAt);
+    if (offer === "bundle" && !bundleActive) return json({ error: "revive_bundle_ended" }, 409);
+    const quantity = offer === "bundle" ? settings.bundleQuantity : 1;
+    const price = offer === "bundle" ? settings.bundlePrice : settings.singlePrice;
+    gameData.reviveCards = Math.min(settings.maxInventory, gameData.reviveCards);
+    if (gameData.reviveCards + quantity > settings.maxInventory) {
+      return json({
+        error: "revive_inventory_space",
+        availableSpace: Math.max(0, settings.maxInventory - gameData.reviveCards),
+      }, 409);
+    }
+    if (gameData.walletCoins < price) return json({ error: "insufficient_coins" }, 409);
+    gameData.walletCoins -= price;
+    gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
+    gameData.reviveCards += quantity;
+    gameData.reviveTransactionIds.push(transactionId);
+    appendCoinLedger(gameData, {
+      id: `revive-store-${transactionId}`.slice(0, 90),
+      amount: -price,
+      balanceAfter: gameData.walletCoins,
+      createdAt: now,
+      type: "revive_card_purchase",
+      label: offer === "bundle" ? `复活卡限时组合 ×${quantity}` : "复活卡 ×1",
+      detail: offer === "bundle" ? "限时组合优惠" : "冒险商店购买",
+    });
+    account.gameData = sanitizeGameData(gameData);
+    account.updatedAt = now;
+    await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
+    await syncAccountRanking(env.LEADERBOARD, account);
+    return json({
+      ...accountPayload(account),
+      alreadyProcessed: false,
+      revive: reviveStatusPayload(account.gameData, settings, now),
+      settings: reviveSettingsPayload(settings, now),
+      revivePurchase: { offer, quantity, price },
+    });
+  }
+
+  if (action === "useReviveCard" || action === "purchaseEmergencyRevive") {
+    const now = Date.now();
+    const today = singaporeDateKey(now);
+    const settings = await loadReviveCardSettings(env.LEADERBOARD);
+    if (!settings.enabled) return json({ error: "revive_cards_disabled" }, 409);
+    const transactionId = cleanReviveTransactionId(body?.transactionId);
+    if (!transactionId) return json({ error: "invalid_revive_transaction" }, 400);
+    const gameData = sanitizeGameData(account.gameData);
+    normalizeReviveDailyUsage(gameData, today);
+    gameData.reviveCards = Math.min(settings.maxInventory, gameData.reviveCards);
+    if (gameData.reviveTransactionIds.includes(transactionId)) {
+      return json({
+        ...accountPayload(account),
+        alreadyProcessed: true,
+        reviveGranted: true,
+        revive: reviveStatusPayload(gameData, settings, now),
+        settings: reviveSettingsPayload(settings, now),
+        restoreHealthPercent: settings.reviveHealthPercent,
+      });
+    }
+    if (gameData.reviveUsedToday >= settings.dailyUseLimit) {
+      return json({
+        error: "revive_daily_limit",
+        revive: reviveStatusPayload(gameData, settings, now),
+      }, 409);
+    }
+    let price = 0;
+    if (action === "useReviveCard") {
+      if (gameData.reviveCards < 1) return json({ error: "revive_card_empty" }, 409);
+      gameData.reviveCards -= 1;
+    } else {
+      const level = Math.max(1, Math.min(20, Math.round(Number(body?.level) || 1)));
+      price = emergencyRevivePrice(level, settings);
+      if (gameData.walletCoins < price) return json({ error: "insufficient_coins" }, 409);
+      gameData.walletCoins -= price;
+      gameData.walletRevision = Math.min(1000000000, gameData.walletRevision + 1);
+      appendCoinLedger(gameData, {
+        id: `emergency-revive-${transactionId}`.slice(0, 90),
+        amount: -price,
+        balanceAfter: gameData.walletCoins,
+        createdAt: now,
+        type: "emergency_revive",
+        label: `第 ${level} 关立即复活`,
+        detail: "生命耗尽时立即购买并使用",
+      });
+    }
+    gameData.reviveUsedToday += 1;
+    gameData.reviveTransactionIds.push(transactionId);
+    account.gameData = sanitizeGameData(gameData);
+    account.updatedAt = now;
+    await env.LEADERBOARD.put(accountRecordKey(account.id), JSON.stringify(account));
+    if (price > 0) await syncAccountRanking(env.LEADERBOARD, account);
+    return json({
+      ...accountPayload(account),
+      alreadyProcessed: false,
+      reviveGranted: true,
+      revive: reviveStatusPayload(account.gameData, settings, now),
+      settings: reviveSettingsPayload(settings, now),
+      restoreHealthPercent: settings.reviveHealthPercent,
+      emergencyPrice: price,
+    });
+  }
+
   if (action === "storeStatus") {
     const now = Date.now();
-    const [reservations, yuanyuanSales] = await Promise.all([
+    const [reservations, yuanyuanSales, reviveSettings] = await Promise.all([
       loadYunqingReservations(env.LEADERBOARD),
       loadYuanyuanSales(env.LEADERBOARD),
+      loadReviveCardSettings(env.LEADERBOARD),
     ]);
     return json({
       ...accountPayload(account),
       store: {
         ...yunqingStorePayload(reservations, account, now),
         yuanyuan: yuanyuanStorePayload(yuanyuanSales, account, now),
+        revive: {
+          ...reviveSettingsPayload(reviveSettings, now),
+          ...reviveStatusPayload(account.gameData, reviveSettings, now),
+        },
       },
     });
   }
@@ -4211,6 +4895,51 @@ async function handleAdminRedeemCodes(request, env) {
   return json(redeemCodeAdminPayload(store, message));
 }
 
+function reviveAdminPayload(settingsValue, message = "") {
+  const now = Date.now();
+  return {
+    ok: true,
+    message,
+    serverTime: now,
+    settings: reviveSettingsPayload(settingsValue, now),
+    quiz: {
+      cycleLength: REVIVE_QUIZ_DAYS.length,
+      questionsPerDay: 3,
+      totalQuestions: REVIVE_QUIZ_DAYS.reduce((total, day) => total + day.questions.length, 0),
+      sourceSite: "JW.ORG",
+      sourceCollection: `${JW_BIBLE_COURSE_ROOT}/`,
+    },
+  };
+}
+
+async function handleAdminReviveCards(request, env) {
+  if (!env.LEADERBOARD) return json({ error: "kv_not_bound" }, 503);
+  const access = await adminAccess(request, env);
+  if (!access) return json({ error: "unauthorized" }, 401);
+  let settings = await loadReviveCardSettings(env.LEADERBOARD);
+  if (request.method === "GET") return json(reviveAdminPayload(settings));
+  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid_json" }, 400);
+  }
+  const action = String(body?.action || "");
+  if (action === "saveReviveSettings") {
+    settings = await saveReviveCardSettings(env.LEADERBOARD, {
+      ...settings,
+      ...(body?.settings && typeof body.settings === "object" ? body.settings : {}),
+    });
+    return json(reviveAdminPayload(settings, "复活卡设置已保存，玩家下次打开商店或死亡时立即使用新设置。"));
+  }
+  if (action === "resetReviveSettings") {
+    settings = await saveReviveCardSettings(env.LEADERBOARD, defaultReviveCardSettings());
+    return json(reviveAdminPayload(settings, "复活卡设置已恢复为 v57 默认值。"));
+  }
+  return json({ error: "unknown_action" }, 400);
+}
+
 async function siteControlPayload(binding, message = "") {
   const now = Date.now();
   const [lock, sales] = await Promise.all([
@@ -4656,9 +5385,11 @@ export default {
           : null;
         return json({
           ok: true,
-          version: "v56",
+          version: "v57",
           rankingRepairVersion: ACCOUNT_SCAN_VERSION,
           localReplyVariants: LOCAL_REPLY_VARIANT_COUNT,
+          reviveQuizDays: REVIVE_QUIZ_DAYS.length,
+          reviveQuizQuestions: REVIVE_QUIZ_DAYS.reduce((total, day) => total + day.questions.length, 0),
           geminiConfigured: Boolean(env.GEMINI_API_KEY),
           geminiModel: configuredGeminiModel(env),
           geminiModels: configuredGeminiModels(env),
@@ -4698,6 +5429,10 @@ export default {
       if (url.pathname === "/api/admin-redeem-codes") {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
         return handleAdminRedeemCodes(request, env);
+      }
+      if (url.pathname === "/api/admin-revive") {
+        if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
+        return handleAdminReviveCards(request, env);
       }
       if (url.pathname === "/api/admin-coin-repair") {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
