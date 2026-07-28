@@ -35,8 +35,11 @@ const CHAT_INDEX_KEY = "cloud-jumper:chat:index:v1";
 const CHAT_IMAGE_PREFIX = "cloud-jumper:chat:image:";
 const CHAT_RATE_PREFIX = "cloud-jumper:chat:rate:";
 const CHAT_AI_RATE_PREFIX = "cloud-jumper:chat:ai-rate:";
+const CHAT_GEMINI_RATE_PREFIX = "cloud-jumper:chat:gemini-rate:";
 const CHAT_AI_OUTREACH_PREFIX = "cloud-jumper:chat:outreach:";
 const CHAT_AI_STATUS_KEY = "cloud-jumper:chat:openai-status:v1";
+const CHAT_GEMINI_STATUS_KEY = "cloud-jumper:chat:gemini-status:v1";
+const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
 const CHAT_MAX_MESSAGES = 120;
 const CHAT_RECALL_MS = 5 * 60 * 1000;
 const CHAT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -1370,6 +1373,18 @@ function directCompetitorFallback(profile, analysis, accountName, snapshot, seed
   const mention = `@${cleanName(accountName) || "玩家"}`;
   const specific = specificCompetitorAnswer(analysis, accountName);
   if (specific) return specific;
+  const focus = cleanChatText(analysis.focusText || analysis.cleanText)
+    .replace(/[?？!！。]+$/g, "")
+    .trim();
+  if (/^(?:好|好的|行|可以|嗯|嗯嗯|哦|知道了|明白了|谢谢|谢了|收到)$/i.test(focus)) {
+    return `${mention} 好，有什么想问的直接说。`;
+  }
+  if (/(?:介绍|说说|什么是|了解).*(?:openai|chatgpt)|(?:openai|chatgpt).*(?:是什么|做什么|介绍)/i.test(focus)) {
+    return `${mention} OpenAI 是开发 ChatGPT 和多种人工智能模型的公司，也提供 API，让网站接入问答、图片、语音等功能。`;
+  }
+  if (/(?:介绍|说说|什么是|了解).*(?:gemini|谷歌ai)|(?:gemini|谷歌ai).*(?:是什么|做什么|介绍)/i.test(focus)) {
+    return `${mention} Gemini 是 Google 的人工智能模型和聊天产品，也提供 API，可以接入网站做问答、图片理解和内容生成。`;
+  }
   if (analysis.intent === "weather") {
     return `${mention} 实时天气查询刚才没有成功，我不想随口编。你把城市和“今天/明天”写清楚，过几秒再问我一次。`;
   }
@@ -1380,9 +1395,7 @@ function directCompetitorFallback(profile, analysis, accountName, snapshot, seed
     return `${mention} 在，我看到你叫我了。你想聊关卡路线、人物，还是直接开一局对战？`;
   }
   if (["general", "casual", "question"].includes(analysis.intent)) {
-    const topic = cleanChatText(analysis.focusText || analysis.cleanText)
-      .replace(/[?？!！。]+$/g, "")
-      .slice(0, 42);
+    const topic = focus.slice(0, 42);
     return analysis.isQuestion
       ? `${mention} 我看到你问的是“${topic || "刚才那件事"}”。这条我暂时没把握，不想答偏；再补一个具体条件，我按那个回答。`
       : `${mention} 我看到你说的是“${topic || "刚才那件事"}”。我先按这个话题接，不另外扯关卡进度。`;
@@ -1429,6 +1442,133 @@ function extractOpenAIResponseText(payload) {
     }
   }
   return "";
+}
+
+function configuredGeminiModel(env) {
+  const candidate = String(env?.GEMINI_MODEL || DEFAULT_GEMINI_MODEL)
+    .trim()
+    .replace(/^models\//i, "");
+  return /^[a-z0-9][a-z0-9._-]{1,70}$/i.test(candidate)
+    ? candidate
+    : DEFAULT_GEMINI_MODEL;
+}
+
+function extractGeminiResponseText(payload) {
+  const candidates = Array.isArray(payload?.candidates) ? payload.candidates : [];
+  for (const candidate of candidates) {
+    const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
+    const text = parts
+      .filter((part) => part?.thought !== true && typeof part?.text === "string")
+      .map((part) => part.text)
+      .join("");
+    if (text.trim()) return text;
+  }
+  if (typeof payload?.text === "string") return payload.text;
+  return "";
+}
+
+async function recordGeminiStatus(env, value) {
+  if (!env?.LEADERBOARD) return;
+  try {
+    await env.LEADERBOARD.put(CHAT_GEMINI_STATUS_KEY, JSON.stringify(normalizeOpenAIStatus({
+      ...value,
+      checkedAt: Date.now(),
+      model: configuredGeminiModel(env),
+    })), { expirationTtl: 7 * 24 * 60 * 60 });
+  } catch {
+    // Diagnostics must never block chat.
+  }
+}
+
+async function generateGeminiCompetitorReply(env, profile, account, analysis, recentMessages, snapshot) {
+  const apiKey = String(env?.GEMINI_API_KEY || "").trim();
+  if (!apiKey || !env?.LEADERBOARD) return "";
+  const rateKey = `${CHAT_GEMINI_RATE_PREFIX}${String(account?.id || cleanPlayerId(account?.playerId) || "unknown")}`;
+  const lastAt = Number(await env.LEADERBOARD.get(rateKey)) || 0;
+  const now = Date.now();
+  const cooldownMs = analysis.directProfile ? CHAT_DIRECT_AI_COOLDOWN_MS : CHAT_QUESTION_AI_COOLDOWN_MS;
+  if (lastAt && now - lastAt < cooldownMs) return "";
+  await env.LEADERBOARD.put(rateKey, String(now), { expirationTtl: 90 });
+  const context = (Array.isArray(recentMessages) ? recentMessages : [])
+    .filter((message) => message && !message.recalled && cleanChatText(message.text))
+    .slice(-6)
+    .map((message) => `${cleanName(message.name) || "玩家"}：${cleanChatText(message.text)}`)
+    .join("\n");
+  const model = configuredGeminiModel(env);
+  const instructions = [
+    `你是游戏《云朵小勇士》里的挑战者角色“${profile.name}”。`,
+    "用自然、简短、有逻辑的中文回答，通常 1–3 句。",
+    "必须真正回答玩家最后一句话；最近对话只用于理解代词，不能跟着旧话题跑。",
+    "第一句直接给答案，不要说“我看到你说的是”、不要解释自己正在按什么话题回答。",
+    "如果玩家只说“好、嗯、知道了”，就自然简短回应，不要复述这一个字。",
+    "基础常识问题直接回答；缺少必要条件时只追问最关键的一项。",
+    "除非玩家主动问你在做什么，否则不要谈自己刚上线、准备玩哪关或学习谁的路线。",
+    "不要声称自己是现实中的真人，不要编造刚发生的战绩、天气或新闻。",
+    "游戏规则：每关100分；三连跳落地才重置；第三跳更矮；洞穴入口回满血；好友对战可选难度且大招每局一次。",
+    `回复开头自然地带上 @${cleanName(account?.name) || "玩家"}，总长度不超过 180 个汉字。`,
+  ].join("\n");
+  const inputText = [
+    `当前意图：${analysis.intent}${analysis.secondaryIntent ? `；次要意图：${analysis.secondaryIntent}` : ""}`,
+    `角色当前进度：第${snapshot.level}关；正在使用${snapshot.selectedCharacter}`,
+    context ? `最近对话：\n${context}` : "最近对话：无",
+    `必须回答的消息：${analysis.focusText || analysis.cleanText}`,
+  ].join("\n\n");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: instructions }],
+          },
+          contents: [{
+            role: "user",
+            parts: [{ text: inputText }],
+          }],
+          generationConfig: {
+            maxOutputTokens: 220,
+          },
+        }),
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) {
+      let reason = `http_${response.status}`;
+      try {
+        const errorPayload = await response.json();
+        reason = String(errorPayload?.error?.status || errorPayload?.error?.code || reason);
+      } catch {
+        // The HTTP status is enough for the safe diagnostic.
+      }
+      await recordGeminiStatus(env, { ok: false, status: response.status, reason });
+      return "";
+    }
+    const payload = await response.json();
+    const reply = cleanChatText(extractGeminiResponseText(payload));
+    const blockReason = String(payload?.promptFeedback?.blockReason || payload?.candidates?.[0]?.finishReason || "");
+    await recordGeminiStatus(env, {
+      ok: Boolean(reply),
+      status: response.status,
+      reason: reply ? "ok" : (blockReason || "empty_response"),
+    });
+    return reply;
+  } catch (error) {
+    await recordGeminiStatus(env, {
+      ok: false,
+      status: 0,
+      reason: error?.name === "AbortError" ? "timeout" : "network_error",
+    });
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function generateOpenAICompetitorReply(env, profile, account, analysis, recentMessages, snapshot) {
@@ -1547,16 +1687,33 @@ async function triggeredCompetitorChatReplies(text, account, recentMessages, env
   const profile = analysis.directProfile || DAILY_COMPETITORS[seed % DAILY_COMPETITORS.length];
   const snapshot = simulateCompetitor(profile, now, restartAt);
   let primaryText = "";
-  const useCloudReply = Boolean(
+  const shouldUseModelReply = Boolean(analysis.directProfile || analysis.isQuestion);
+  const preferOpenAIWebSearch = Boolean(
     env?.OPENAI_API_KEY &&
-    (analysis.directProfile || analysis.isQuestion)
+    String(env.OPENAI_WEB_SEARCH || "").toLocaleLowerCase() === "true" &&
+    ["weather", "news"].includes(analysis.intent)
   );
-  if (useCloudReply) {
+  const acceptModelReply = (value) => {
+    const mentioned = ensurePlayerMention(value, cleanAccountName);
+    return isCompetitorReplyRelevant(mentioned, analysis) ? mentioned : "";
+  };
+  if (preferOpenAIWebSearch && shouldUseModelReply) {
     primaryText = await generateOpenAICompetitorReply(env, profile, account, analysis, recentMessages, snapshot);
+    if (primaryText) {
+      primaryText = acceptModelReply(primaryText);
+    }
   }
-  if (primaryText) {
-    primaryText = ensurePlayerMention(primaryText, cleanAccountName);
-    if (!isCompetitorReplyRelevant(primaryText, analysis)) primaryText = "";
+  if (!primaryText && env?.GEMINI_API_KEY && shouldUseModelReply) {
+    primaryText = await generateGeminiCompetitorReply(env, profile, account, analysis, recentMessages, snapshot);
+    if (primaryText) {
+      primaryText = acceptModelReply(primaryText);
+    }
+  }
+  if (!primaryText && !preferOpenAIWebSearch && env?.OPENAI_API_KEY && shouldUseModelReply) {
+    primaryText = await generateOpenAICompetitorReply(env, profile, account, analysis, recentMessages, snapshot);
+    if (primaryText) {
+      primaryText = acceptModelReply(primaryText);
+    }
   }
   if (!primaryText) primaryText = directCompetitorFallback(
     profile,
@@ -3973,11 +4130,17 @@ export default {
         const openAILastCheck = env.LEADERBOARD
           ? normalizeOpenAIStatus(await env.LEADERBOARD.get(CHAT_AI_STATUS_KEY, { type: "json" }))
           : null;
+        const geminiLastCheck = env.LEADERBOARD
+          ? normalizeOpenAIStatus(await env.LEADERBOARD.get(CHAT_GEMINI_STATUS_KEY, { type: "json" }))
+          : null;
         return json({
           ok: true,
-          version: "v52",
+          version: "v53",
           rankingRepairVersion: ACCOUNT_SCAN_VERSION,
           localReplyVariants: LOCAL_REPLY_VARIANT_COUNT,
+          geminiConfigured: Boolean(env.GEMINI_API_KEY),
+          geminiModel: configuredGeminiModel(env),
+          geminiLastCheck,
           openAIConfigured: Boolean(env.OPENAI_API_KEY),
           openAIWebSearchEnabled: String(env.OPENAI_WEB_SEARCH || "").toLocaleLowerCase() === "true",
           openAILastCheck,
