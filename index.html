@@ -7,8 +7,8 @@
     <meta name="description" content="支持跨设备账号、金币隐私、共享排名、黑暗洞穴、随机二连跳悬崖和二十个主题关卡的原创手机横版闯关游戏。" />
     <title>云朵小勇士｜20关渐进挑战</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./globals.css?v=55" />
-    <script src="./game.js?v=55" defer></script>
+    <link rel="stylesheet" href="./globals.css?v=56" />
+    <script src="./game.js?v=56" defer></script>
   </head>
   <body>
     <main class="game-shell" id="gameShell">
@@ -343,7 +343,7 @@
                   <input id="chatTextInput" type="text" maxlength="240" autocomplete="off" placeholder="输入消息…" aria-label="聊天消息" />
                   <button id="chatSendButton" type="submit">发送</button>
                 </form>
-                <small class="chat-note">长按任意头像可单独 @对方 · 普通 @ 会稍后回复 · 想马上叫回：@名字 admin：问题</small>
+                <small class="chat-note" id="chatInteractionNote">长按头像可以 @ 对方 · 长按自己的消息可以撤回</small>
               </section>
             </div>
           </section>
