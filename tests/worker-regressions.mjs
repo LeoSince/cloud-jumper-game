@@ -1027,6 +1027,7 @@ async function testRivalRepliesUnderstandIntentAndWaitForBattleConsent() {
   const env = createEnv();
   const health = await api(env, "/api/health");
   assert.ok(health.localReplyVariants >= 10000, "the local compositional reply engine must expose at least 10,000 variants");
+  assert.equal(health.geminiConfigured, false);
   assert.equal(health.openAIConfigured, false);
 
   const krabsPlayer = await register(env, {
@@ -1143,6 +1144,92 @@ async function testDirectMentionsUseCloudReplyAndRejectIrrelevantOutput() {
   }
 }
 
+async function testGeminiRepliesTakePriorityAndLocalFallbackStaysNatural() {
+  const env = createEnv();
+  env.GEMINI_API_KEY = "gemini-test-only";
+  env.GEMINI_MODEL = "gemini-3.5-flash-lite";
+  env.OPENAI_API_KEY = "openai-should-not-run";
+  const player = await register(env, {
+    name: "Gemini测试",
+    playerId: "player-gemini-reply-test-0001",
+  });
+  const originalFetch = globalThis.fetch;
+  let geminiCalls = 0;
+  let openAICalls = 0;
+  let geminiRequest = null;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.startsWith("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent")) {
+      geminiCalls += 1;
+      geminiRequest = {
+        headers: new Headers(init?.headers),
+        body: JSON.parse(String(init?.body || "{}")),
+      };
+      return new Response(JSON.stringify({
+        candidates: [{
+          content: {
+            role: "model",
+            parts: [{
+              text: "@Gemini测试 OpenAI 是开发 ChatGPT 和多种人工智能模型的公司，也向网站开发者提供 API。",
+            }],
+          },
+          finishReason: "STOP",
+        }],
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url === "https://api.openai.com/v1/responses") {
+      openAICalls += 1;
+      return new Response(JSON.stringify({ output_text: "不应该调用这里" }), { status: 200 });
+    }
+    return originalFetch(input, init);
+  };
+
+  try {
+    await api(env, "/api/chat", {
+      token: player.token,
+      body: { action: "send", text: "@小砚 介绍OpenAI" },
+    });
+    assert.equal(geminiCalls, 1, "Gemini should be the first model used for direct mentions");
+    assert.equal(openAICalls, 0, "OpenAI should remain only a fallback when Gemini succeeds");
+    assert.equal(geminiRequest.headers.get("x-goog-api-key"), "gemini-test-only");
+    assert.match(geminiRequest.body.systemInstruction.parts[0].text, /必须真正回答/);
+    const geminiInput = geminiRequest.body.contents[0].parts[0].text;
+    assert.equal((geminiInput.match(/介绍OpenAI/g) || []).length, 1);
+
+    const stored = await env.LEADERBOARD.get("cloud-jumper:chat:index:v1", { type: "json" });
+    const reply = stored.messages.find((message) =>
+      String(message.playerId).startsWith("rival-") &&
+      String(message.text).includes("@Gemini测试"));
+    assert.match(reply.text, /开发 ChatGPT|人工智能模型|API/);
+    assert.doesNotMatch(reply.text, /我看到你说的是|先按这个话题接/);
+
+    const health = await api(env, "/api/health");
+    assert.equal(health.version, "v53");
+    assert.equal(health.geminiConfigured, true);
+    assert.equal(health.geminiModel, "gemini-3.5-flash-lite");
+    assert.equal(health.geminiLastCheck?.ok, true);
+    assert.equal(health.geminiLastCheck?.status, 200);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  const localEnv = createEnv();
+  const localPlayer = await register(localEnv, {
+    name: "自然备用",
+    playerId: "player-natural-fallback-test-0001",
+  });
+  await api(localEnv, "/api/chat", {
+    token: localPlayer.token,
+    body: { action: "send", text: "@小砚 好" },
+  });
+  const localStored = await localEnv.LEADERBOARD.get("cloud-jumper:chat:index:v1", { type: "json" });
+  const localReply = localStored.messages.find((message) =>
+    String(message.playerId).startsWith("rival-") &&
+    String(message.text).includes("@自然备用"));
+  assert.match(localReply.text, /好，有什么想问的直接说/);
+  assert.doesNotMatch(localReply.text, /我看到你说的是|先按这个话题接/);
+}
+
 async function testDailyChatterYieldsToRealPlayerMessages() {
   const env = createEnv();
   const player = await register(env, {
@@ -1199,7 +1286,7 @@ function testResponsiveChatAndCliffRescueArePackaged() {
   assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\)/);
 }
 
-function testV52RelevantOpenAIRepliesArePackaged() {
+function testV53GeminiRepliesArePackaged() {
   const html = readFileSync(new URL("../admin/index.html", import.meta.url), "utf8");
   const adminScript = readFileSync(new URL("../admin.js", import.meta.url), "utf8");
   const workerScript = readFileSync(new URL("../_worker.js", import.meta.url), "utf8");
@@ -1210,6 +1297,9 @@ function testV52RelevantOpenAIRepliesArePackaged() {
   assert.match(workerScript, /https:\/\/api\.openai\.com\/v1\/responses/);
   assert.match(workerScript, /OPENAI_API_KEY/);
   assert.match(workerScript, /OPENAI_WEB_SEARCH/);
+  assert.match(workerScript, /GEMINI_API_KEY/);
+  assert.match(workerScript, /gemini-3\.5-flash-lite/);
+  assert.match(workerScript, /generativelanguage\.googleapis\.com/);
   assert.match(workerScript, /CHAT_DIRECT_AI_COOLDOWN_MS = 6 \* 1000/);
   assert.match(workerScript, /isCompetitorReplyRelevant/);
   assert.match(workerScript, /openAILastCheck/);
@@ -1225,8 +1315,8 @@ function testSiteControlAndYuanyuanUiArePackaged() {
   assert.match(html, /id="siteLockCountdown"/);
   assert.match(html, /id="yuanyuanOffer"/);
   assert.match(html, /id="yuanyuanStock"/);
-  assert.match(html, /globals\.css\?v=52/);
-  assert.match(html, /game\.js\?v=52/);
+  assert.match(html, /globals\.css\?v=53/);
+  assert.match(html, /game\.js\?v=53/);
   assert.match(script, /accountRequest\("purchaseYuanyuan"/);
   assert.match(script, /function drawYuanyuanCharacter/);
   assert.match(script, /function triggerYuanyuanSmash/);
@@ -1302,8 +1392,8 @@ function testPremiumVisualsAndFrameSmoothingArePackaged() {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../game.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../globals.css", import.meta.url), "utf8");
-  assert.match(html, /globals\.css\?v=52/);
-  assert.match(html, /game\.js\?v=52/);
+  assert.match(html, /globals\.css\?v=53/);
+  assert.match(html, /game\.js\?v=53/);
   assert.match(script, /function characterVisualTier/);
   assert.match(script, /function updatePremiumCharacterEffects/);
   assert.match(script, /function drawPremiumCharacterEffects/);
@@ -1335,6 +1425,7 @@ await testYuanyuanLimitedSaleIsServerAuthoritativeAndIdempotent();
 await testRivalChatHasDailyThreadsAndContextualReplies();
 await testRivalRepliesUnderstandIntentAndWaitForBattleConsent();
 await testDirectMentionsUseCloudReplyAndRejectIrrelevantOutput();
+await testGeminiRepliesTakePriorityAndLocalFallbackStaysNatural();
 await testDailyChatterYieldsToRealPlayerMessages();
 await testOnlineStatusIsPrivateByChoiceAndExactForAdmin();
 await testAdminRouteRedirectsOnlyOnce();
@@ -1344,7 +1435,7 @@ testAdminCharacterManagementUiIsPackaged();
 testLeaderboardUsesProfileOnlySystemDisclosureAndSeasonRules();
 testRedeemCodeManagementUiIsPackaged();
 testResponsiveChatAndCliffRescueArePackaged();
-testV52RelevantOpenAIRepliesArePackaged();
+testV53GeminiRepliesArePackaged();
 testSiteControlAndYuanyuanUiArePackaged();
 testPresenceAndBlackHoleGuidanceArePackaged();
 testPremiumVisualsAndFrameSmoothingArePackaged();
