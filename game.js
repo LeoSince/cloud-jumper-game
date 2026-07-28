@@ -130,6 +130,36 @@
   const homeHeartCount = document.getElementById("homeHeartCount");
   const homeHeartShortcut = document.getElementById("homeHeartShortcut");
   const homeHeartAction = document.getElementById("homeHeartAction");
+  const homeReviveShortcut = document.getElementById("homeReviveShortcut");
+  const homeReviveCount = document.getElementById("homeReviveCount");
+  const homeReviveLimit = document.getElementById("homeReviveLimit");
+  const homeReviveAction = document.getElementById("homeReviveAction");
+  const dailyReviveCard = document.getElementById("dailyReviveCard");
+  const dailyReviveTitle = document.getElementById("dailyReviveTitle");
+  const dailyReviveSummary = document.getElementById("dailyReviveSummary");
+  const dailyReviveButton = document.getElementById("dailyReviveButton");
+  const dailyReviveStatus = document.getElementById("dailyReviveMessage");
+  const reviveStoreStatus = document.getElementById("reviveStoreStatus");
+  const reviveSingleButton = document.getElementById("reviveSingleButton");
+  const reviveBundleButton = document.getElementById("reviveBundleButton");
+  const reviveBundleCountdown = document.getElementById("reviveBundleCountdown");
+  const reviveQuizDialog = document.getElementById("reviveQuizDialog");
+  const reviveQuizForm = document.getElementById("reviveQuizForm");
+  const reviveQuizCloseButton = document.getElementById("reviveQuizCloseButton");
+  const reviveQuizKicker = document.getElementById("reviveQuizKicker");
+  const reviveQuizTitle = document.getElementById("reviveQuizTitle");
+  const reviveQuizIntro = document.getElementById("reviveQuizIntro");
+  const reviveQuestionList = document.getElementById("reviveQuestionList");
+  const reviveQuizSource = document.getElementById("reviveQuizSource");
+  const reviveQuizStatus = document.getElementById("reviveQuizStatus");
+  const reviveQuizSubmitButton = document.getElementById("reviveQuizSubmitButton");
+  const revivePrompt = document.getElementById("revivePrompt");
+  const revivePromptCount = document.getElementById("revivePromptCount");
+  const revivePromptRemaining = document.getElementById("revivePromptRemaining");
+  const reviveUseButton = document.getElementById("reviveUseButton");
+  const reviveEmergencyButton = document.getElementById("reviveEmergencyButton");
+  const reviveAbandonButton = document.getElementById("reviveAbandonButton");
+  const revivePromptStatus = document.getElementById("revivePromptStatus");
   const homeTabButtons = [...document.querySelectorAll("[data-home-tab]")];
   const chatTabButton = homeTabButtons.find((button) => button.dataset.homeTab === "chat");
   const homeTabPanels = [...document.querySelectorAll("[data-home-panel]")];
@@ -223,6 +253,27 @@
   const YUNQING_UNLOCK_AT = Date.parse("2026-07-16T00:00:00+08:00");
   const YUNQING_RESERVATION_PRICE = 500;
   const HEART_RESET_VERSION = 2;
+  const DEFAULT_REVIVE_SETTINGS = {
+    enabled: true,
+    maxInventory: 3,
+    dailyUseLimit: 3,
+    singlePrice: 599,
+    bundleEnabled: true,
+    bundleQuantity: 3,
+    bundlePrice: 1099,
+    bundleEndsAt: Date.parse("2026-08-04T23:59:59+08:00"),
+    bundleActive: true,
+    dailyQuizEnabled: true,
+    dailyQuizReward: 1,
+    lowMaxLevel: 10,
+    midMaxLevel: 15,
+    emergencyLowPrice: 899,
+    emergencyMidPrice: 999,
+    emergencyHighPrice: 1099,
+    reviveHealthPercent: 100,
+    questionDays: 30,
+    sourceSite: "JW.ORG",
+  };
   const DAILY_CHECKIN_REWARDS = [
     { coins: 30 }, { coins: 40 }, { coins: 50 }, { coins: 60 }, { coins: 80 }, { coins: 100 },
     { character: "messi", characterName: "梅西", fallbackCoins: 200 },
@@ -325,6 +376,19 @@
       actionLabel: "查看个人设置",
       actionProfile: true,
       closeLabel: "我知道了",
+    },
+    {
+      id: "revive-card-launch-v57-20260728",
+      kind: "offer",
+      icon: "✚",
+      kicker: "新道具 · 每日免费任务",
+      title: "复活卡上线：没血也能继续！",
+      message: "每天完成 3 道圣经选择题可以免费领取 1 张复活卡；商店也可单张购买，三张组合本周限时优惠。",
+      detail: "每个账号最多持有 3 张、每天最多使用 3 张。题目资料全部来自 JW.ORG 官方中文内容。",
+      actionLabel: "查看复活卡",
+      actionTab: "shop",
+      actionStoreCategory: "other",
+      closeLabel: "稍后再看",
     },
   ];
   const LEVEL_NAMES = ["草原起跑", "浮木小径", "落枝预警", "双层山谷", "极速转折", "裂地冲刺", "高空连跳", "机关走廊", "极限弹跳", "风暴分界", "乌鸦围城", "双洞追击", "坠物走廊", "三层迷阵", "五次磨炼", "黑洞工厂", "极速天梯", "连续崩塌", "终极围攻", "云端王座"];
@@ -1221,6 +1285,21 @@
   let dailyCheckinLastDate = String(readSetting("cloud-jumper-daily-checkin-last-date", ""));
   let dailyCheckinTotal = Math.max(0, Math.round(Number(readSetting("cloud-jumper-daily-checkin-total", 0)) || 0));
   let dailyCheckinBusy = false;
+  let reviveCards = 0;
+  let reviveUsedDate = "";
+  let reviveUsedToday = 0;
+  let reviveQuizClaimedDate = "";
+  let reviveQuizAttemptsDate = "";
+  let reviveQuizAttempts = 0;
+  let reviveTransactionIds = [];
+  let reviveSettings = { ...DEFAULT_REVIVE_SETTINGS };
+  let reviveQuizData = null;
+  let reviveQuizBusy = false;
+  let reviveStoreBusy = false;
+  let revivePromptBusy = false;
+  let revivePromptRequestVersion = 0;
+  let reviveBundleTimer = 0;
+  let pendingRevive = null;
   let redeemCodeBusy = false;
   let crabRunsPlayed = Math.max(0, Math.round(Number(readSetting("cloud-jumper-crab-runs", 0)) || 0));
   let crabTripleActive = false;
@@ -1485,6 +1564,13 @@
       heartResetVersion,
       dailyCheckinLastDate,
       dailyCheckinTotal,
+      reviveCards,
+      reviveUsedDate,
+      reviveUsedToday,
+      reviveQuizClaimedDate,
+      reviveQuizAttemptsDate,
+      reviveQuizAttempts,
+      reviveTransactionIds,
       crabRunsPlayed,
       battleMatches,
       battleWins,
@@ -1531,6 +1617,15 @@
     maxHearts = heartUpgradeLevel >= 2 ? 7 : accountUpgraded ? 5 : 3;
     dailyCheckinLastDate = /^\d{4}-\d{2}-\d{2}$/.test(String(cloudData.dailyCheckinLastDate || "")) ? String(cloudData.dailyCheckinLastDate) : "";
     dailyCheckinTotal = Math.max(0, Math.round(Number(cloudData.dailyCheckinTotal) || 0));
+    reviveCards = Math.max(0, Math.min(20, Math.round(Number(cloudData.reviveCards) || 0)));
+    reviveUsedDate = /^\d{4}-\d{2}-\d{2}$/.test(String(cloudData.reviveUsedDate || "")) ? String(cloudData.reviveUsedDate) : "";
+    reviveUsedToday = Math.max(0, Math.min(20, Math.round(Number(cloudData.reviveUsedToday) || 0)));
+    reviveQuizClaimedDate = /^\d{4}-\d{2}-\d{2}$/.test(String(cloudData.reviveQuizClaimedDate || "")) ? String(cloudData.reviveQuizClaimedDate) : "";
+    reviveQuizAttemptsDate = /^\d{4}-\d{2}-\d{2}$/.test(String(cloudData.reviveQuizAttemptsDate || "")) ? String(cloudData.reviveQuizAttemptsDate) : "";
+    reviveQuizAttempts = Math.max(0, Math.min(1000, Math.round(Number(cloudData.reviveQuizAttempts) || 0)));
+    reviveTransactionIds = [...new Set((Array.isArray(cloudData.reviveTransactionIds) ? cloudData.reviveTransactionIds : [])
+      .map((id) => String(id).replace(/[^a-z0-9-]/gi, "").slice(0, 80))
+      .filter(Boolean))].slice(-200);
     crabRunsPlayed = Math.max(0, Math.round(Number(cloudData.crabRunsPlayed) || 0));
     battleMatches = Math.max(0, Math.round(Number(cloudData.battleMatches) || 0));
     battleWins = Math.max(0, Math.round(Number(cloudData.battleWins) || 0));
@@ -1538,14 +1633,14 @@
     battleRankPoints = Math.max(0, Math.round(Number(cloudData.battlePoints) || 0));
     battleBestScore = Math.max(0, Math.round(Number(cloudData.battleBestScore) || 0));
     battleCoinsEarned = Math.max(0, Math.round(Number(cloudData.battleCoinsEarned) || 0));
-    if (gameState !== "playing" && gameState !== "paused") hearts = maxHearts;
+    if (gameState !== "playing" && gameState !== "paused" && gameState !== "revivePrompt") hearts = maxHearts;
     const validIds = new Set(CHARACTER_DEFS.map((character) => character.id));
     unlockedCharacters = new Set((Array.isArray(cloudData.unlockedCharacters) ? cloudData.unlockedCharacters : ["cloud"])
       .filter((id) => validIds.has(id) || (!characterCatalogLoaded && /^custom-[a-z0-9][a-z0-9-]{2,48}$/i.test(String(id)))));
     unlockedCharacters.add("cloud");
     selectedCharacter = unlockedCharacters.has(String(cloudData.selectedCharacter)) ? String(cloudData.selectedCharacter) : "cloud";
     selectedSkin = SKIN_TONES[String(cloudData.selectedSkin)] ? String(cloudData.selectedSkin) : "light";
-    if (gameState !== "playing" && gameState !== "paused") resetStaminaForCharacter();
+    if (gameState !== "playing" && gameState !== "paused" && gameState !== "revivePrompt") resetStaminaForCharacter();
     highestUnlocked = Math.max(1, Math.min(MAX_LEVELS, Number(cloudData.highestUnlocked) || 1));
     completedLevelSet = new Set((Array.isArray(cloudData.completedLevels) ? cloudData.completedLevels : []).map(Number).filter((level) => level >= 1 && level <= MAX_LEVELS));
     levelBest = cloudData.levelBest && typeof cloudData.levelBest === "object" ? cloudData.levelBest : {};
@@ -1564,6 +1659,10 @@
     writeSetting("cloud-jumper-heart-reset-version", heartResetVersion);
     writeSetting("cloud-jumper-daily-checkin-last-date", dailyCheckinLastDate);
     writeSetting("cloud-jumper-daily-checkin-total", dailyCheckinTotal);
+    writeSetting("cloud-jumper-revive-cards", reviveCards);
+    writeSetting("cloud-jumper-revive-used-date", reviveUsedDate);
+    writeSetting("cloud-jumper-revive-used-today", reviveUsedToday);
+    writeSetting("cloud-jumper-revive-quiz-claimed-date", reviveQuizClaimedDate);
     writeSetting("cloud-jumper-crab-runs", crabRunsPlayed);
     writeSetting("cloud-jumper-unlocked", JSON.stringify([...unlockedCharacters]));
     writeSetting("cloud-jumper-selected", selectedCharacter);
@@ -1583,6 +1682,7 @@
     setupSkinPicker();
     renderCharacterShop();
     renderDailyCheckin();
+    renderReviveUi();
     if (coinHistorySection && !coinHistorySection.classList.contains("is-hidden")) renderCoinHistory();
     updateHud(true);
   }
@@ -1718,6 +1818,8 @@
       refreshYunqingStoreStatus();
     } else {
       updateAccountUpgradeUi();
+      renderReviveUi();
+      refreshYunqingStoreStatus();
     }
   }
 
@@ -2340,6 +2442,16 @@
       redeem_code_expired: "这个兑换码已经过期",
       redeem_code_already_used: "这个账号已经领取过该兑换码",
       redeem_reward_unavailable: "兑换码对应的人物暂时不可用",
+      revive_quiz_disabled: "每日复活卡答题目前没有开放",
+      revive_quiz_expired: "今天的题目已经更新，请重新打开答题页面",
+      revive_inventory_full: "复活卡已经装满，请先在游戏中使用一张",
+      revive_quiz_incomplete: "请先回答全部 3 道题",
+      revive_cards_disabled: "复活卡功能目前没有开放",
+      invalid_revive_transaction: "这次复活请求无效，请重新操作",
+      revive_bundle_ended: "三张复活卡的限时优惠已经结束",
+      revive_inventory_space: "复活卡空位不足，无法购买这个组合",
+      revive_daily_limit: "今天的复活次数已经用完，请明天再来",
+      revive_card_empty: "当前没有复活卡，可以选择立即购买并复活",
       request_timeout: "连接超时，请检查网络后重试",
       network_offline: "当前没有网络，联网后会自动重试",
       network_error: "网络暂时不稳定，请稍后重试",
@@ -2523,6 +2635,7 @@
       }
       const error = new Error(accountErrorMessage(code));
       error.code = code;
+      error.payload = payload;
       throw error;
     }
     return payload;
@@ -2581,6 +2694,7 @@
     if (siteLockActive) return;
     scheduleChatUnreadPolling(120);
     loadLeaderboard();
+    refreshYunqingStoreStatus();
     connectBattleSocket();
     schedulePresenceHeartbeat(450);
     const requestedBattle = cleanRoomCode(new URLSearchParams(window.location.search).get("battle"));
@@ -3854,6 +3968,392 @@
     updateAccountUpgradeUi();
   }
 
+  function boundedReviveNumber(value, fallback, minimum, maximum) {
+    const parsed = Number(value);
+    return Math.max(minimum, Math.min(maximum, Number.isFinite(parsed) ? Math.round(parsed) : fallback));
+  }
+
+  function cleanReviveSettings(value) {
+    const source = value && typeof value === "object" ? value : {};
+    const base = { ...DEFAULT_REVIVE_SETTINGS, ...reviveSettings };
+    const maxInventory = boundedReviveNumber(source.maxInventory, base.maxInventory, 1, 20);
+    const lowMaxLevel = boundedReviveNumber(source.lowMaxLevel, base.lowMaxLevel, 1, 19);
+    const midMaxLevel = boundedReviveNumber(source.midMaxLevel, base.midMaxLevel, lowMaxLevel + 1, 20);
+    return {
+      ...base,
+      enabled: source.enabled === undefined ? base.enabled !== false : source.enabled === true,
+      maxInventory,
+      dailyUseLimit: boundedReviveNumber(source.dailyUseLimit, base.dailyUseLimit, 1, 20),
+      singlePrice: boundedReviveNumber(source.singlePrice, base.singlePrice, 0, 999999),
+      bundleEnabled: source.bundleEnabled === undefined ? base.bundleEnabled !== false : source.bundleEnabled === true,
+      bundleQuantity: boundedReviveNumber(source.bundleQuantity, base.bundleQuantity, 1, maxInventory),
+      bundlePrice: boundedReviveNumber(source.bundlePrice, base.bundlePrice, 0, 999999),
+      bundleEndsAt: Math.max(0, Number(source.bundleEndsAt ?? base.bundleEndsAt) || 0),
+      bundleActive: source.bundleActive === undefined ? base.bundleActive !== false : source.bundleActive === true,
+      dailyQuizEnabled: source.dailyQuizEnabled === undefined ? base.dailyQuizEnabled !== false : source.dailyQuizEnabled === true,
+      dailyQuizReward: boundedReviveNumber(source.dailyQuizReward, base.dailyQuizReward, 1, maxInventory),
+      lowMaxLevel,
+      midMaxLevel,
+      emergencyLowPrice: boundedReviveNumber(source.emergencyLowPrice, base.emergencyLowPrice, 0, 999999),
+      emergencyMidPrice: boundedReviveNumber(source.emergencyMidPrice, base.emergencyMidPrice, 0, 999999),
+      emergencyHighPrice: boundedReviveNumber(source.emergencyHighPrice, base.emergencyHighPrice, 0, 999999),
+      reviveHealthPercent: boundedReviveNumber(source.reviveHealthPercent, base.reviveHealthPercent, 25, 100),
+      questionDays: boundedReviveNumber(source.questionDays, base.questionDays, 1, 365),
+      sourceSite: String(source.sourceSite || base.sourceSite || "JW.ORG").slice(0, 24),
+    };
+  }
+
+  function applyReviveStatus(status) {
+    if (!status || typeof status !== "object") return;
+    reviveCards = Math.max(0, Math.min(20, Math.round(Number(status.cards) || 0)));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(status.today || ""))) {
+      reviveUsedDate = String(status.today);
+      reviveUsedToday = Math.max(0, Math.min(20, Math.round(Number(status.usedToday) || 0)));
+      if (status.quizClaimedToday === true) reviveQuizClaimedDate = String(status.today);
+      else if (reviveQuizClaimedDate === String(status.today)) reviveQuizClaimedDate = "";
+    }
+    writeSetting("cloud-jumper-revive-cards", reviveCards);
+    writeSetting("cloud-jumper-revive-used-date", reviveUsedDate);
+    writeSetting("cloud-jumper-revive-used-today", reviveUsedToday);
+    writeSetting("cloud-jumper-revive-quiz-claimed-date", reviveQuizClaimedDate);
+  }
+
+  function applyRevivePayload(payload) {
+    if (!payload || typeof payload !== "object") return;
+    if (payload.settings) reviveSettings = cleanReviveSettings(payload.settings);
+    if (payload.revive) applyReviveStatus(payload.revive);
+    if (payload.quiz) reviveQuizData = payload.quiz;
+    renderReviveUi();
+  }
+
+  function applyReviveStore(store) {
+    if (!store || typeof store !== "object") return;
+    reviveSettings = cleanReviveSettings(store);
+    applyReviveStatus(store);
+    renderReviveUi();
+  }
+
+  function emergencyRevivePriceForLevel(level = currentLevel) {
+    const safeLevel = Math.max(1, Math.min(MAX_LEVELS, Math.round(Number(level) || 1)));
+    if (safeLevel <= reviveSettings.lowMaxLevel) return reviveSettings.emergencyLowPrice;
+    if (safeLevel <= reviveSettings.midMaxLevel) return reviveSettings.emergencyMidPrice;
+    return reviveSettings.emergencyHighPrice;
+  }
+
+  function formatReviveOfferTime(milliseconds) {
+    const totalSeconds = Math.max(0, Math.ceil(Number(milliseconds) / 1000));
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (days > 0) return `${days}天 ${hours}小时`;
+    if (hours > 0) return `${hours}小时 ${minutes}分`;
+    return `${Math.max(0, minutes)}分`;
+  }
+
+  function reviveBundleIsActive(now = Date.now()) {
+    return Boolean(
+      reviveSettings.enabled &&
+      reviveSettings.bundleEnabled &&
+      reviveSettings.bundleActive &&
+      (!reviveSettings.bundleEndsAt || now <= reviveSettings.bundleEndsAt)
+    );
+  }
+
+  function renderReviveUi(message = "") {
+    const today = singaporeDateKey();
+    const usedToday = reviveUsedDate === today ? reviveUsedToday : 0;
+    const remainingUses = Math.max(0, reviveSettings.dailyUseLimit - usedToday);
+    const claimedToday = reviveQuizClaimedDate === today || (reviveQuizData?.date === today && reviveQuizData?.claimedToday === true);
+    const inventoryFull = reviveCards >= reviveSettings.maxInventory;
+    const bundleActive = reviveBundleIsActive();
+    const bundleFits = reviveCards + reviveSettings.bundleQuantity <= reviveSettings.maxInventory;
+    const emergencyPrice = emergencyRevivePriceForLevel(currentLevel);
+
+    if (homeReviveCount) homeReviveCount.textContent = String(reviveCards);
+    if (homeReviveLimit) homeReviveLimit.textContent = String(reviveSettings.maxInventory);
+    if (homeReviveAction) {
+      homeReviveAction.textContent = inventoryFull
+        ? "已装满"
+        : claimedToday
+          ? "去商店 ›"
+          : "免费获取 ›";
+    }
+    homeReviveShortcut?.classList.toggle("is-full", inventoryFull);
+    homeReviveShortcut?.toggleAttribute("disabled", reviveSettings.enabled === false);
+
+    if (dailyReviveTitle) {
+      dailyReviveTitle.textContent = reviveQuizData?.date === today && reviveQuizData?.title
+        ? `今日：${reviveQuizData.title}`
+        : "圣经三题挑战";
+    }
+    if (dailyReviveSummary) {
+      dailyReviveSummary.textContent = claimedToday
+        ? `今天已领取 ${reviveSettings.dailyQuizReward} 张复活卡`
+        : `答对 3 题，领取 ${reviveSettings.dailyQuizReward} 张复活卡`;
+    }
+    if (dailyReviveButton) {
+      dailyReviveButton.disabled = (
+        reviveQuizBusy ||
+        !accountAuthenticated ||
+        !reviveSettings.enabled ||
+        !reviveSettings.dailyQuizEnabled ||
+        claimedToday ||
+        inventoryFull
+      );
+      dailyReviveButton.textContent = reviveQuizBusy
+        ? "读取中…"
+        : claimedToday
+          ? "今日已领取"
+          : inventoryFull
+            ? "复活卡已满"
+            : "开始答题";
+    }
+    dailyReviveCard?.classList.toggle("is-claimed", claimedToday);
+    if (dailyReviveStatus) {
+      dailyReviveStatus.textContent = message || (
+        !reviveSettings.enabled || !reviveSettings.dailyQuizEnabled
+          ? "每日任务目前暂停开放"
+          : claimedToday
+            ? `明天会更换题目 · 当前 ${reviveCards}/${reviveSettings.maxInventory} 张`
+            : `${reviveSettings.questionDays} 天题库循环 · 资料全部来自 JW.ORG`
+      );
+    }
+
+    if (reviveStoreStatus) {
+      reviveStoreStatus.textContent = `当前 ${reviveCards} / ${reviveSettings.maxInventory} 张 · 今天还能使用 ${remainingUses} 次`;
+    }
+    if (reviveSingleButton) {
+      reviveSingleButton.disabled = reviveStoreBusy || !accountAuthenticated || !reviveSettings.enabled || inventoryFull;
+      reviveSingleButton.textContent = `● ${reviveSettings.singlePrice} · 购买 1 张`;
+    }
+    if (reviveBundleButton) {
+      reviveBundleButton.disabled = reviveStoreBusy || !accountAuthenticated || !bundleActive || !bundleFits;
+      reviveBundleButton.innerHTML = `<b>${bundleActive ? "限时" : "结束"}</b> ● ${reviveSettings.bundlePrice} · 购买 ${reviveSettings.bundleQuantity} 张`;
+      reviveBundleButton.classList.toggle("is-ended", !bundleActive);
+    }
+    if (reviveBundleCountdown) {
+      const remaining = reviveSettings.bundleEndsAt ? Math.max(0, reviveSettings.bundleEndsAt - Date.now()) : 0;
+      reviveBundleCountdown.textContent = !reviveSettings.enabled
+        ? "复活卡商店目前暂停开放"
+        : bundleActive
+          ? `三张优惠剩余 ${formatReviveOfferTime(remaining)}`
+          : "三张组合优惠已经结束，仍可单张购买";
+    }
+
+    if (revivePromptCount) revivePromptCount.textContent = String(reviveCards);
+    if (revivePromptRemaining) revivePromptRemaining.textContent = String(remainingUses);
+    if (reviveUseButton) {
+      reviveUseButton.disabled = revivePromptBusy || reviveCards < 1 || remainingUses < 1 || !reviveSettings.enabled;
+      reviveUseButton.textContent = reviveCards > 0 ? "使用 1 张复活卡" : "当前没有复活卡";
+    }
+    if (reviveEmergencyButton) {
+      reviveEmergencyButton.disabled = revivePromptBusy || remainingUses < 1 || !reviveSettings.enabled;
+      reviveEmergencyButton.textContent = `立即购买并复活 · ●${emergencyPrice}`;
+    }
+    if (reviveAbandonButton) reviveAbandonButton.disabled = revivePromptBusy;
+
+    window.clearInterval(reviveBundleTimer);
+    reviveBundleTimer = 0;
+    if (bundleActive && reviveSettings.bundleEndsAt) {
+      reviveBundleTimer = window.setInterval(() => {
+        if (!reviveBundleIsActive()) {
+          reviveSettings.bundleActive = false;
+          window.clearInterval(reviveBundleTimer);
+          reviveBundleTimer = 0;
+        }
+        renderReviveUi();
+      }, 60000);
+    }
+  }
+
+  function newReviveTransactionId(prefix = "revive") {
+    const randomPart = window.crypto?.randomUUID?.().replace(/-/g, "") || Math.random().toString(36).slice(2);
+    return `${prefix}-${Date.now().toString(36)}-${randomPart}`.replace(/[^a-z0-9-]/gi, "").slice(0, 80);
+  }
+
+  async function purchaseReviveOffer(offer) {
+    if (reviveStoreBusy) return;
+    if (!accountAuthenticated || !accountToken) return showAccountGate("login", "请先登录账号再购买复活卡");
+    const selectedOffer = offer === "bundle" ? "bundle" : "single";
+    reviveStoreBusy = true;
+    renderReviveUi("正在向云端确认购买…");
+    try {
+      const payload = await accountRequest("purchaseReviveCards", {
+        offer: selectedOffer,
+        transactionId: newReviveTransactionId(`store-${selectedOffer}`),
+      }, true);
+      if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
+      applyRevivePayload(payload);
+      const purchase = payload?.revivePurchase || {};
+      renderReviveUi(`购买成功：获得 ${Math.max(1, Number(purchase.quantity) || 1)} 张复活卡。`);
+      enqueueNotice({
+        id: `revive-purchase-${Date.now()}`,
+        kind: "reward",
+        icon: "✚",
+        kicker: "复活卡已到账",
+        title: `获得 ${Math.max(1, Number(purchase.quantity) || 1)} 张复活卡`,
+        message: `当前共有 ${reviveCards}/${reviveSettings.maxInventory} 张，生命耗尽时可以直接继续本局。`,
+        detail: `每天最多使用 ${reviveSettings.dailyUseLimit} 次复活机会。`,
+        closeLabel: "知道了",
+      });
+      playTone(620, 0.08, "square", 0.035, 0);
+      playTone(880, 0.13, "triangle", 0.03, 0.08);
+      loadLeaderboard(true);
+    } catch (error) {
+      applyRevivePayload(error.payload);
+      renderReviveUi(error.message || "购买暂时失败，请稍后重试。");
+      playTone(170, 0.08, "square", 0.02, 0);
+    } finally {
+      reviveStoreBusy = false;
+      renderReviveUi(dailyReviveStatus?.textContent || "");
+    }
+  }
+
+  function renderReviveQuiz() {
+    const quiz = reviveQuizData;
+    if (!quiz || !reviveQuestionList) return;
+    if (reviveQuizKicker) reviveQuizKicker.textContent = `每日复活卡任务 · 第 ${quiz.cycleDay || 1}/${quiz.cycleLength || reviveSettings.questionDays} 天`;
+    if (reviveQuizTitle) reviveQuizTitle.textContent = quiz.title || "圣经三题挑战";
+    if (reviveQuizIntro) {
+      reviveQuizIntro.textContent = `${quiz.sourceTitle || "JW.ORG 官方资料"}。第一题适合三年级，第二、三题按六年级理解程度设计。`;
+    }
+    const questions = Array.isArray(quiz.questions) ? quiz.questions : [];
+    reviveQuestionList.innerHTML = questions.map((question, questionIndex) => {
+      const options = Array.isArray(question.options) ? question.options : [];
+      return `<fieldset class="revive-question" data-revive-question="${questionIndex}">
+        <legend><span>${questionIndex + 1}</span>${escapeHtml(question.question || "")}<small>${escapeHtml(question.difficulty || "")}</small></legend>
+        <div class="revive-option-grid">${options.map((option, optionIndex) => `<label>
+          <input type="radio" name="revive-answer-${questionIndex}" value="${optionIndex}">
+          <span>${String.fromCharCode(65 + optionIndex)}. ${escapeHtml(option)}</span>
+        </label>`).join("")}</div>
+      </fieldset>`;
+    }).join("");
+    if (reviveQuizSource) {
+      const sourceUrl = String(quiz.sourceUrl || "");
+      reviveQuizSource.href = /^https:\/\/www\.jw\.org\//i.test(sourceUrl) ? sourceUrl : "https://www.jw.org/cmn-hans/";
+      reviveQuizSource.textContent = `在 JW.ORG 查看第 ${quiz.lesson || quiz.cycleDay || 1} 课官方资料 ↗`;
+    }
+    if (reviveQuizSubmitButton) {
+      reviveQuizSubmitButton.disabled = reviveQuizBusy || quiz.claimedToday === true;
+      reviveQuizSubmitButton.textContent = quiz.claimedToday === true ? "今天已经领取" : "提交 3 个答案";
+    }
+    if (reviveQuizStatus) {
+      reviveQuizStatus.classList.remove("is-error", "is-success");
+      reviveQuizStatus.textContent = quiz.claimedToday === true
+        ? "今天的复活卡已经领取，明天会出现新题目。"
+        : `全部答对即可获得 ${quiz.rewardCards || reviveSettings.dailyQuizReward} 张复活卡，答错可以重试。`;
+    }
+  }
+
+  async function openDailyReviveQuiz() {
+    if (reviveQuizBusy) return;
+    if (!accountAuthenticated || !accountToken) return showAccountGate("login", "请先登录账号再参加每日答题");
+    reviveQuizBusy = true;
+    renderReviveUi("正在读取今天的 JW.ORG 题目…");
+    try {
+      const payload = await accountRequest("reviveQuiz", {}, true);
+      if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
+      applyRevivePayload(payload);
+      renderReviveQuiz();
+      reviveQuizDialog?.classList.remove("is-hidden");
+      window.setTimeout(() => reviveQuizCloseButton?.focus(), 30);
+    } catch (error) {
+      applyRevivePayload(error.payload);
+      renderReviveUi(error.message || "题目暂时无法读取，请稍后重试。");
+    } finally {
+      reviveQuizBusy = false;
+      renderReviveUi(dailyReviveStatus?.textContent || "");
+      if (!reviveQuizDialog?.classList.contains("is-hidden")) renderReviveQuiz();
+    }
+  }
+
+  function closeReviveQuiz() {
+    if (reviveQuizBusy) return;
+    reviveQuizDialog?.classList.add("is-hidden");
+  }
+
+  async function submitDailyReviveQuiz() {
+    if (reviveQuizBusy || !reviveQuizData) return;
+    const questions = Array.isArray(reviveQuizData.questions) ? reviveQuizData.questions : [];
+    const answers = questions.map((question, index) => {
+      const checked = reviveQuestionList?.querySelector(`input[name="revive-answer-${index}"]:checked`);
+      return checked ? Number(checked.value) : -1;
+    });
+    for (const [index, answer] of answers.entries()) {
+      reviveQuestionList?.querySelector(`[data-revive-question="${index}"]`)?.classList.toggle("is-wrong", answer < 0);
+    }
+    if (answers.some((answer) => answer < 0)) {
+      if (reviveQuizStatus) {
+        reviveQuizStatus.textContent = "请先回答全部 3 道题。";
+        reviveQuizStatus.classList.add("is-error");
+      }
+      return;
+    }
+    reviveQuizBusy = true;
+    if (reviveQuizSubmitButton) {
+      reviveQuizSubmitButton.disabled = true;
+      reviveQuizSubmitButton.textContent = "核对答案中…";
+    }
+    try {
+      const payload = await accountRequest("submitReviveQuiz", {
+        quizDate: reviveQuizData.date,
+        answers,
+      }, true);
+      if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
+      applyRevivePayload(payload);
+      const result = payload?.quizResult;
+      if (payload?.alreadyClaimed || result?.passed) {
+        if (reviveQuizStatus) {
+          reviveQuizStatus.textContent = payload?.alreadyClaimed
+            ? "今天已经领取过复活卡，明天再来挑战。"
+            : `全部答对！${result.rewardCards || reviveSettings.dailyQuizReward} 张复活卡已加入账号。`;
+          reviveQuizStatus.classList.remove("is-error");
+          reviveQuizStatus.classList.add("is-success");
+        }
+        if (reviveQuizSubmitButton) {
+          reviveQuizSubmitButton.disabled = true;
+          reviveQuizSubmitButton.textContent = "领取成功";
+        }
+        renderReviveUi("每日任务完成，复活卡已经到账。");
+        enqueueNotice({
+          id: `revive-quiz-${reviveQuizData.date}`,
+          kind: "reward",
+          icon: "✚",
+          kicker: "每日任务完成",
+          title: `获得 ${result?.rewardCards || reviveSettings.dailyQuizReward} 张复活卡！`,
+          message: `3 道题全部答对，当前共有 ${reviveCards}/${reviveSettings.maxInventory} 张。`,
+          detail: "每天会换一篇 JW.ORG 资料和一组新题目。",
+          closeLabel: "收下奖励",
+        });
+        playTone(620, 0.08, "square", 0.035, 0);
+        playTone(900, 0.16, "triangle", 0.03, 0.08);
+      } else {
+        const correct = Array.isArray(result?.correct) ? result.correct : [];
+        for (const [index, isCorrect] of correct.entries()) {
+          reviveQuestionList?.querySelector(`[data-revive-question="${index}"]`)?.classList.toggle("is-wrong", !isCorrect);
+        }
+        if (reviveQuizStatus) {
+          reviveQuizStatus.textContent = `答对 ${result?.correctCount || 0}/3。红色题目需要再想想，可以查看 JW.ORG 资料后重试。`;
+          reviveQuizStatus.classList.remove("is-success");
+          reviveQuizStatus.classList.add("is-error");
+        }
+      }
+    } catch (error) {
+      applyRevivePayload(error.payload);
+      if (reviveQuizStatus) {
+        reviveQuizStatus.textContent = error.message || "提交暂时失败，请稍后重试。";
+        reviveQuizStatus.classList.remove("is-success");
+        reviveQuizStatus.classList.add("is-error");
+      }
+    } finally {
+      reviveQuizBusy = false;
+      if (reviveQuizSubmitButton && reviveQuizClaimedDate !== singaporeDateKey()) {
+        reviveQuizSubmitButton.disabled = false;
+        reviveQuizSubmitButton.textContent = "重新提交答案";
+      }
+    }
+  }
+
   function singaporeDateKey(now = Date.now()) {
     return new Date(Number(now) + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
   }
@@ -4188,6 +4688,7 @@
         purchased: status.purchased === true,
       };
     }
+    if (store.revive && typeof store.revive === "object") applyReviveStore(store.revive);
     updateYuanyuanOffer(true);
   }
 
@@ -4199,6 +4700,7 @@
       applyYunqingStore(payload?.store);
       if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
       renderCharacterShop();
+      renderReviveUi();
     } catch {
       // The shop remains usable from the last synced account data while offline.
     } finally {
@@ -4591,6 +5093,10 @@
   function showHome() {
     battleModeActive = false;
     battleMatchId = "";
+    pendingRevive = null;
+    revivePromptBusy = false;
+    revivePrompt?.classList.add("is-hidden");
+    canvas.dataset.revivePrompt = "false";
     gameState = "home";
     canvas.dataset.gameState = gameState;
     keyboardCrouchHeld = false;
@@ -4620,6 +5126,7 @@
     setupSkinPicker();
     updateWalletUi();
     renderDailyCheckin();
+    renderReviveUi();
     updateCloudAccountUi();
     nameGate?.classList.add("is-hidden");
     if (!accountAuthenticated) {
@@ -4627,6 +5134,7 @@
       return;
     }
     accountGate?.classList.add("is-hidden");
+    refreshYunqingStoreStatus();
     loadLeaderboard();
     registerCurrentPlayer();
     if (battlePendingInvite) window.setTimeout(openBattleDialog, 420);
@@ -4636,6 +5144,10 @@
 
   function showLevelSelect(message = "", success = true) {
     battleModeActive = false;
+    pendingRevive = null;
+    revivePromptBusy = false;
+    revivePrompt?.classList.add("is-hidden");
+    canvas.dataset.revivePrompt = "false";
     gameState = "levelSelect";
     stopChatPolling();
     stopChatUnreadPolling();
@@ -4795,6 +5307,10 @@
       return;
     }
     const startingBattle = options?.battle === true;
+    pendingRevive = null;
+    revivePromptBusy = false;
+    revivePrompt?.classList.add("is-hidden");
+    canvas.dataset.revivePrompt = "false";
     if (!startingBattle) battleModeActive = false;
     crabTripleActive = false;
     if (!startingBattle && selectedCharacter === "krabs") {
@@ -5241,8 +5757,12 @@
     battleFinalPayload = result;
     battleFinished = true;
     battleModeActive = false;
+    pendingRevive = null;
+    revivePromptBusy = false;
+    revivePrompt?.classList.add("is-hidden");
     gameState = "battleResult";
     canvas.dataset.gameState = gameState;
+    canvas.dataset.revivePrompt = "false";
     canvas.dataset.battleMode = "false";
     canvas.dataset.battleOpponentReady = "false";
     gameControls?.classList.add("is-hidden");
@@ -6862,6 +7382,217 @@
     return false;
   }
 
+  function setRevivePromptMessage(message, isError = false) {
+    if (!revivePromptStatus) return;
+    revivePromptStatus.textContent = message;
+    revivePromptStatus.classList.toggle("is-error", isError);
+  }
+
+  async function refreshRevivePromptStatus() {
+    if (!accountAuthenticated || !accountToken || gameState !== "revivePrompt") return;
+    const requestVersion = revivePromptRequestVersion;
+    try {
+      const payload = await accountRequest("storeStatus", {}, true);
+      if (requestVersion !== revivePromptRequestVersion || gameState !== "revivePrompt" || revivePromptBusy) return;
+      applyYunqingStore(payload?.store);
+      if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
+      renderReviveUi();
+    } catch {
+      setRevivePromptMessage("暂时无法刷新账号数据，仍可重试复活。", true);
+    }
+  }
+
+  function openRevivePrompt(fell, source) {
+    if (gameState !== "playing" || pendingRevive) return;
+    pendingRevive = {
+      id: newReviveTransactionId("death"),
+      fell: Boolean(fell),
+      source: String(source || "obstacle"),
+      x: Number(player?.x) || START_X,
+      y: Number(player?.y) || GROUND_Y - NORMAL_HEIGHT,
+      surfaceY: Number(player?.surfaceY) || GROUND_Y,
+      openedAt: Date.now(),
+    };
+    revivePromptRequestVersion += 1;
+    gameState = "revivePrompt";
+    canvas.dataset.gameState = gameState;
+    canvas.dataset.revivePrompt = "true";
+    keyboardCrouchHeld = false;
+    pointerCrouchHeld = false;
+    keyboardBoostHeld = false;
+    pointerBoostHeld = false;
+    keyboardMoveLeftHeld = false;
+    keyboardMoveRightHeld = false;
+    releaseControllerControls();
+    clearGesture();
+    if (player) {
+      player.vx = 0;
+      player.vy = 0;
+    }
+    pauseButton?.classList.add("is-hidden");
+    compactHudButton?.classList.add("is-hidden");
+    gameControls?.classList.add("is-hidden");
+    gestureHint.classList.remove("is-visible");
+    revivePrompt?.classList.remove("is-hidden");
+    setRevivePromptMessage("请选择一种方式继续");
+    renderReviveUi();
+    playTone(210, 0.12, "triangle", 0.028, 0);
+    playTone(310, 0.18, "triangle", 0.024, 0.12);
+    window.setTimeout(() => {
+      if (reviveCards > 0) reviveUseButton?.focus();
+      else reviveEmergencyButton?.focus();
+    }, 40);
+    refreshRevivePromptStatus();
+  }
+
+  function safePositionAfterRevive(death) {
+    const deathX = Math.max(START_X, Number(death?.x) || checkpointX || START_X);
+    let resumeX = deathX + (death?.fell ? 0 : 46);
+    const groundAt = (x) => groundSegments.find((segment) => x + 18 >= segment.start && x + 18 <= segment.end);
+    let ground = groundAt(resumeX);
+    if (death?.fell || !ground) {
+      ground = groundSegments.find((segment) => segment.end >= deathX + 22 && segment.start > deathX - 36)
+        || groundSegments.find((segment) => segment.end >= checkpointX + 20)
+        || groundSegments[0];
+      if (ground) resumeX = Math.max(ground.start + 44, Math.min(ground.end - 60, deathX + 28));
+    }
+    if (death?.source === "blackHole") {
+      const hole = hazards
+        .filter((hazard) => hazard.kind === "blackHole")
+        .sort((a, b) => Math.abs(a.x - deathX) - Math.abs(b.x - deathX))[0];
+      if (hole) resumeX = Math.max(resumeX, hole.x + hole.w + 50);
+      ground = groundAt(resumeX) || ground;
+    }
+    if (!groundAt(resumeX)) {
+      const next = groundSegments.find((segment) => segment.start > resumeX - 30);
+      if (next) {
+        ground = next;
+        resumeX = next.start + 44;
+      }
+    }
+    resumeX = Math.max(START_X, Math.min(levelEnd - 90, resumeX));
+    const surface = getSurfaces()
+      .filter((item) => resumeX + player.w * 0.5 >= item.start + 4 && resumeX + player.w * 0.5 <= item.end - 4)
+      .sort((a, b) => a.y - b.y)[0];
+    return {
+      x: resumeX,
+      surfaceY: surface?.y || GROUND_Y,
+    };
+  }
+
+  function resumeFromRevive(healthPercent = reviveSettings.reviveHealthPercent) {
+    if (gameState !== "revivePrompt" || !pendingRevive || !player) return;
+    const death = pendingRevive;
+    const position = safePositionAfterRevive(death);
+    const restored = Math.max(0.5, Math.min(maxHearts, Math.ceil((maxHearts * Math.max(25, Number(healthPercent) || 100) / 100) * 2) / 2));
+    hearts = restored;
+    resetStaminaForCharacter();
+    player.x = position.x;
+    player.h = NORMAL_HEIGHT;
+    player.y = position.surfaceY - NORMAL_HEIGHT;
+    player.vx = 0;
+    player.vy = -185;
+    player.onGround = false;
+    player.surfaceY = position.surfaceY;
+    player.invulnerable = 2.35;
+    player.airJumpsUsed = 0;
+    player.jumpCycleLocked = false;
+    player.pendingThirdJump = 0;
+    player.thirdJumpRecovery = 0;
+    player.flipAngle = 0;
+    player.flipElapsed = 0;
+    player.flipDuration = 0;
+    player.flipTurns = 0;
+    cliffFallState = null;
+    cliffRescueGrace = 0.65;
+    previousScoreX = player.x;
+    checkpointX = Math.max(checkpointX, Math.min(player.x, levelEnd - 120));
+    jumpBuffer = 0;
+    coyoteTime = 0.1;
+    pendingRevive = null;
+    revivePromptBusy = false;
+    gameState = "playing";
+    canvas.dataset.gameState = gameState;
+    canvas.dataset.revivePrompt = "false";
+    canvas.dataset.lastSpecial = "revived";
+    revivePrompt?.classList.add("is-hidden");
+    pauseButton?.classList.remove("is-hidden");
+    compactHudButton?.classList.remove("is-hidden");
+    gameControls?.classList.toggle("is-hidden", !battleModeActive);
+    updateHud(true);
+    updateMissionHud();
+    renderReviveUi();
+    announce(`复活成功，恢复 ${restored} 滴血，从刚才附近继续。`);
+    activateSkillBadge("✚", "复活成功", 1.25);
+    spawnPremiumLandingBurst(player.x + player.w * 0.5, position.surfaceY);
+    playTone(460, 0.08, "triangle", 0.03, 0);
+    playTone(680, 0.11, "triangle", 0.03, 0.07);
+    playTone(920, 0.16, "square", 0.025, 0.16);
+    lastFrame = performance.now();
+    try {
+      canvas.focus({ preventScroll: true });
+    } catch {
+      canvas.focus();
+    }
+  }
+
+  async function performRevive(action) {
+    if (revivePromptBusy || gameState !== "revivePrompt" || !pendingRevive) return;
+    if (!accountAuthenticated || !accountToken) {
+      setRevivePromptMessage("请先保持账号登录，才能安全使用复活卡。", true);
+      return;
+    }
+    const accountAction = action === "emergency" ? "purchaseEmergencyRevive" : "useReviveCard";
+    revivePromptBusy = true;
+    revivePromptRequestVersion += 1;
+    renderReviveUi();
+    setRevivePromptMessage(action === "emergency" ? "正在购买并复活…" : "正在使用复活卡…");
+    try {
+      const payload = await accountRequest(accountAction, {
+        level: currentLevel,
+        transactionId: `${pendingRevive.id}-${action === "emergency" ? "buy" : "card"}`.slice(0, 80),
+      }, true);
+      if (payload?.account?.gameData) applyAccountGameData(payload.account.gameData);
+      applyRevivePayload(payload);
+      if (!payload?.reviveGranted) throw new Error("服务器没有确认本次复活，请重试。");
+      resumeFromRevive(payload.restoreHealthPercent);
+      loadLeaderboard(true);
+    } catch (error) {
+      applyRevivePayload(error.payload);
+      revivePromptBusy = false;
+      renderReviveUi();
+      setRevivePromptMessage(error.message || "复活暂时失败，请重试。", true);
+      playTone(170, 0.08, "square", 0.02, 0);
+      refreshRevivePromptStatus();
+    }
+  }
+
+  function abandonRevive() {
+    if (revivePromptBusy || gameState !== "revivePrompt") return;
+    revivePromptRequestVersion += 1;
+    pendingRevive = null;
+    revivePrompt?.classList.add("is-hidden");
+    canvas.dataset.revivePrompt = "false";
+    if (battleModeActive) {
+      const leavingMatchId = battleMatchId;
+      sendBattle("leave_match", { matchId: leavingMatchId });
+      battleModeActive = false;
+      battleMatchId = "";
+      battleFinished = true;
+      gameState = "battleLobby";
+      canvas.dataset.gameState = gameState;
+      battleLiveHud?.classList.add("is-hidden");
+      gameControls?.classList.add("is-hidden");
+      battleUltimateButton?.classList.add("is-hidden");
+      overlay.classList.add("is-hidden");
+      openBattleDialog();
+      return;
+    }
+    gameState = "playing";
+    canvas.dataset.gameState = gameState;
+    finishGame(false);
+  }
+
   function handleDamage(fell, amount = 1, source = fell ? "fall" : "obstacle") {
     if (gameState !== "playing") return;
     if (cliffFallState?.active) clearCliffFallState(false);
@@ -6923,24 +7654,7 @@
     updateHud(true);
 
     if (hearts <= 0) {
-      if (battleModeActive) {
-        battleScore = Math.max(0, battleScore - 8);
-        hearts = maxHearts;
-        player.x = Math.max(START_X, checkpointX);
-        player.y = GROUND_Y - NORMAL_HEIGHT;
-        player.h = NORMAL_HEIGHT;
-        player.vx = 0;
-        player.vy = -220;
-        player.onGround = false;
-        player.surfaceY = GROUND_Y;
-        player.invulnerable = 2.1;
-        player.airJumpsUsed = 0;
-        player.jumpCycleLocked = false;
-        updateHud(true);
-        announce("生命耗尽：已在最近位置恢复，扣除 8 对战积分。 ");
-        return;
-      }
-      finishGame(false);
+      openRevivePrompt(fell, source);
       return;
     }
 
@@ -10250,7 +10964,7 @@
     } else if (event.code === "KeyX" && gameState === "playing" && battleModeActive) {
       event.preventDefault();
       if (!event.repeat) useBattleUltimate();
-    } else if (event.code === "Enter" && gameState !== "playing" && gameState !== "paused") {
+    } else if (event.code === "Enter" && gameState !== "playing" && gameState !== "paused" && gameState !== "revivePrompt") {
       event.preventDefault();
       handlePrimaryAction();
     }
@@ -10333,6 +11047,28 @@
     setHomeTab("shop");
     setStoreCategory("other");
   });
+  homeReviveShortcut?.addEventListener("click", () => {
+    if (reviveQuizClaimedDate !== singaporeDateKey() && reviveCards < reviveSettings.maxInventory) {
+      openDailyReviveQuiz();
+      return;
+    }
+    setHomeTab("shop");
+    setStoreCategory("other");
+  });
+  dailyReviveButton?.addEventListener("click", openDailyReviveQuiz);
+  reviveSingleButton?.addEventListener("click", () => purchaseReviveOffer("single"));
+  reviveBundleButton?.addEventListener("click", () => purchaseReviveOffer("bundle"));
+  reviveQuizCloseButton?.addEventListener("click", closeReviveQuiz);
+  reviveQuizDialog?.addEventListener("pointerdown", (event) => {
+    if (event.target === reviveQuizDialog) closeReviveQuiz();
+  });
+  reviveQuizForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submitDailyReviveQuiz();
+  });
+  reviveUseButton?.addEventListener("click", () => performRevive("card"));
+  reviveEmergencyButton?.addEventListener("click", () => performRevive("emergency"));
+  reviveAbandonButton?.addEventListener("click", abandonRevive);
   profileButton?.addEventListener("click", openOwnProfile);
   profileCloseButton?.addEventListener("click", closeProfile);
   profileInviteButton?.addEventListener("click", () => invitePlayerToBattle(publicProfileTarget));
@@ -10703,7 +11439,7 @@
         update(stepDelta);
       }
     }
-    else if (gameState !== "paused") updateParticles(dt);
+    else if (gameState !== "paused" && gameState !== "revivePrompt") updateParticles(dt);
     if (gameState === "home") updateYuanyuanOffer();
     if (gameState === "playing" || canvasSizeDirty || now - lastPassiveDrawAt >= 90) {
       draw();
