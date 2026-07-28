@@ -7,8 +7,8 @@
     <meta name="description" content="支持跨设备账号、金币隐私、共享排名、黑暗洞穴、随机二连跳悬崖和二十个主题关卡的原创手机横版闯关游戏。" />
     <title>云朵小勇士｜20关渐进挑战</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./globals.css?v=56" />
-    <script src="./game.js?v=56" defer></script>
+    <link rel="stylesheet" href="./globals.css?v=57" />
+    <script src="./game.js?v=57" defer></script>
   </head>
   <body>
     <main class="game-shell" id="gameShell">
@@ -163,6 +163,7 @@
               <div><span class="stat-icon coin-stat" aria-hidden="true">●</span><small>金币</small><strong id="homeWallet">0</strong></div>
               <div><span class="stat-icon" aria-hidden="true">🏁</span><small>已解锁</small><strong><b id="homeUnlockedLevel">1</b>/20</strong></div>
               <button class="home-heart-shortcut" id="homeHeartShortcut" type="button" aria-label="查看生命升级商品"><span class="stat-icon heart-stat" aria-hidden="true">♥</span><small>生命</small><strong><b id="homeHeartCount">3</b> 滴</strong><em id="homeHeartAction">升级 ›</em></button>
+              <button class="home-revive-shortcut" id="homeReviveShortcut" type="button" aria-label="查看复活卡和每日任务"><span class="stat-icon revive-stat" aria-hidden="true">✚</span><small>复活卡</small><strong><b id="homeReviveCount">0</b> / <b id="homeReviveLimit">3</b></strong><em id="homeReviveAction">获取 ›</em></button>
             </div>
 
             <nav class="home-tabs" aria-label="主界面功能" role="tablist">
@@ -200,6 +201,17 @@
                   <div class="daily-checkin-grid" id="dailyCheckinGrid" aria-label="30 天签到奖励"></div>
                 </details>
                 <p class="daily-checkin-message" id="dailyCheckinMessage" role="status"></p>
+              </section>
+
+              <section class="daily-revive-card" id="dailyReviveCard" aria-labelledby="dailyReviveTitle">
+                <span class="daily-revive-icon" aria-hidden="true">✚</span>
+                <div>
+                  <small>每天免费任务 · 资料来自 JW.ORG</small>
+                  <strong id="dailyReviveTitle">圣经三题挑战</strong>
+                  <em id="dailyReviveSummary">答对 3 题，领取 1 张复活卡</em>
+                </div>
+                <button id="dailyReviveButton" type="button">开始答题</button>
+                <p id="dailyReviveMessage" role="status">30 天题库循环，每天只能领取一次</p>
               </section>
 
               <div class="result-line is-hidden" id="resultLine">
@@ -256,6 +268,20 @@
                     <span><strong>其他商品</strong><small>账号强化与礼物兑换</small></span>
                   </div>
                   <div class="store-other-grid">
+                    <article class="store-product-card revive-card-product">
+                      <span class="store-product-icon revive-product-icon" aria-hidden="true">✚</span>
+                      <div class="store-product-copy">
+                        <small>生命耗尽后继续本局</small>
+                        <strong>复活卡</strong>
+                        <p id="reviveStoreStatus">当前 0 / 3 张 · 每天最多使用 3 张</p>
+                      </div>
+                      <div class="revive-buy-actions">
+                        <button id="reviveSingleButton" type="button">● 599 · 购买 1 张</button>
+                        <button class="is-sale" id="reviveBundleButton" type="button"><b>限时</b> ● 1099 · 购买 3 张</button>
+                      </div>
+                      <p class="store-product-message" id="reviveBundleCountdown">三张优惠到 8 月 4 日</p>
+                    </article>
+
                     <article class="store-product-card heart-upgrade-product">
                       <span class="store-product-icon" aria-hidden="true">♥</span>
                       <div class="store-product-copy">
@@ -520,6 +546,38 @@
           <button class="notice-action" id="noticeActionButton" type="button">立即查看</button>
           <button class="notice-close" id="noticeCloseButton" type="button">稍后再看</button>
         </div>
+      </section>
+
+      <section class="revive-quiz-dialog is-hidden" id="reviveQuizDialog" aria-modal="true" role="dialog" aria-labelledby="reviveQuizTitle">
+        <form class="revive-quiz-card" id="reviveQuizForm">
+          <button class="revive-dialog-close" id="reviveQuizCloseButton" type="button" aria-label="关闭每日答题">×</button>
+          <span class="revive-quiz-mark" aria-hidden="true">✚</span>
+          <small id="reviveQuizKicker">每日复活卡任务</small>
+          <h2 id="reviveQuizTitle">圣经三题挑战</h2>
+          <p id="reviveQuizIntro">第一题适合三年级，第二、三题按六年级理解程度设计。</p>
+          <div class="revive-question-list" id="reviveQuestionList"></div>
+          <a class="revive-source-link" id="reviveQuizSource" href="https://www.jw.org/cmn-hans/" target="_blank" rel="noopener noreferrer">在 JW.ORG 查看今天的官方资料 ↗</a>
+          <p class="revive-quiz-status" id="reviveQuizStatus" role="status"></p>
+          <button class="revive-quiz-submit" id="reviveQuizSubmitButton" type="submit">提交 3 个答案</button>
+        </form>
+      </section>
+
+      <section class="revive-prompt is-hidden" id="revivePrompt" aria-modal="true" role="dialog" aria-labelledby="revivePromptTitle">
+        <article class="revive-prompt-card">
+          <div class="revive-prompt-glow" aria-hidden="true"></div>
+          <span class="revive-prompt-icon" aria-hidden="true">✚</span>
+          <small>生命已经用完</small>
+          <h2 id="revivePromptTitle">再救一救吧！</h2>
+          <p>继续留在刚才的位置，生命和体力会恢复。</p>
+          <div class="revive-prompt-stock">
+            <span><small>我的复活卡</small><strong><b id="revivePromptCount">0</b> 张</strong></span>
+            <span><small>今天还能复活</small><strong><b id="revivePromptRemaining">3</b> 次</strong></span>
+          </div>
+          <button class="revive-use-button" id="reviveUseButton" type="button">使用 1 张复活卡</button>
+          <button class="revive-emergency-button" id="reviveEmergencyButton" type="button">立即购买并复活 · ●899</button>
+          <button class="revive-abandon-button" id="reviveAbandonButton" type="button">放弃本局</button>
+          <p class="revive-prompt-status" id="revivePromptStatus" role="status">请选择一种方式继续</p>
+        </article>
       </section>
 
       <div class="sr-only" id="gameAnnouncement" aria-live="polite"></div>
