@@ -118,6 +118,33 @@
   const yuanyuanDropRemaining = document.getElementById("yuanyuanDropRemaining");
   const yuanyuanDropRelease = document.getElementById("yuanyuanDropRelease");
   const yuanyuanBuyerList = document.getElementById("yuanyuanBuyerList");
+  const reviveAdminStatus = document.getElementById("reviveAdminStatus");
+  const reviveAdminLiveTitle = document.getElementById("reviveAdminLiveTitle");
+  const reviveAdminLiveSummary = document.getElementById("reviveAdminLiveSummary");
+  const reviveAdminQuizCount = document.getElementById("reviveAdminQuizCount");
+  const reviveAdminSourceLink = document.getElementById("reviveAdminSourceLink");
+  const reviveSettingsForm = document.getElementById("reviveSettingsForm");
+  const refreshReviveSettingsButton = document.getElementById("refreshReviveSettingsButton");
+  const resetReviveSettingsButton = document.getElementById("resetReviveSettingsButton");
+  const saveReviveSettingsButton = document.getElementById("saveReviveSettingsButton");
+  const reviveInputs = {
+    enabled: document.getElementById("reviveEnabledInput"),
+    dailyQuizEnabled: document.getElementById("reviveQuizEnabledInput"),
+    maxInventory: document.getElementById("reviveMaxInventoryInput"),
+    dailyUseLimit: document.getElementById("reviveDailyUseLimitInput"),
+    dailyQuizReward: document.getElementById("reviveQuizRewardInput"),
+    reviveHealthPercent: document.getElementById("reviveHealthPercentInput"),
+    bundleEnabled: document.getElementById("reviveBundleEnabledInput"),
+    singlePrice: document.getElementById("reviveSinglePriceInput"),
+    bundleQuantity: document.getElementById("reviveBundleQuantityInput"),
+    bundlePrice: document.getElementById("reviveBundlePriceInput"),
+    bundleEndsAt: document.getElementById("reviveBundleEndsInput"),
+    lowMaxLevel: document.getElementById("reviveLowMaxLevelInput"),
+    emergencyLowPrice: document.getElementById("reviveEmergencyLowPriceInput"),
+    midMaxLevel: document.getElementById("reviveMidMaxLevelInput"),
+    emergencyMidPrice: document.getElementById("reviveEmergencyMidPriceInput"),
+    emergencyHighPrice: document.getElementById("reviveEmergencyHighPriceInput"),
+  };
   const accountAdminLoginButton = document.getElementById("accountAdminLoginButton");
   const adminIdentityBadge = document.getElementById("adminIdentityBadge");
   const refreshAdminRolesButton = document.getElementById("refreshAdminRolesButton");
@@ -144,6 +171,7 @@
   let editingRedeemCode = null;
   let siteControlData = null;
   let siteControlServerOffset = 0;
+  let reviveAdminData = null;
   let selectedAdminTab = "players";
   let adminAccessData = null;
   let adminAccounts = [];
@@ -152,7 +180,7 @@
 
   function setBusy(value) {
     busy = Boolean(value);
-    for (const button of [loginButton, accountAdminLoginButton, refreshButton, repairLeaderboardButton, exportButton, clearButton, refreshCharactersButton, addCharacterButton, saveCharacterButton, deleteCharacterButton, resetCharacterButton, refreshRedeemCodesButton, addRedeemCodeButton, saveRedeemCodeButton, deleteRedeemCodeButton, activateSiteLockButton, unlockSiteButton, refreshSiteControlButton, refreshAdminRolesButton, sendAdminAiButton, clearAdminAiButton, ...siteLockDurationButtons]) {
+    for (const button of [loginButton, accountAdminLoginButton, refreshButton, repairLeaderboardButton, exportButton, clearButton, refreshCharactersButton, addCharacterButton, saveCharacterButton, deleteCharacterButton, resetCharacterButton, refreshRedeemCodesButton, addRedeemCodeButton, saveRedeemCodeButton, deleteRedeemCodeButton, activateSiteLockButton, unlockSiteButton, refreshSiteControlButton, refreshReviveSettingsButton, resetReviveSettingsButton, saveReviveSettingsButton, refreshAdminRolesButton, sendAdminAiButton, clearAdminAiButton, ...siteLockDurationButtons]) {
       if (button) button.disabled = busy;
     }
     for (const button of adminCharacterGrid?.querySelectorAll("button") || []) button.disabled = busy;
@@ -184,8 +212,14 @@
     siteControlStatus.classList.toggle("is-error", error);
   }
 
+  function setReviveAdminStatus(message, error = false) {
+    if (!reviveAdminStatus) return;
+    reviveAdminStatus.textContent = message;
+    reviveAdminStatus.classList.toggle("is-error", error);
+  }
+
   function setAdminTab(tab) {
-    const selected = ["players", "characters", "redeem-codes", "site-control", "roles", "ai"].includes(tab) ? tab : "players";
+    const selected = ["players", "characters", "redeem-codes", "site-control", "revive", "roles", "ai"].includes(tab) ? tab : "players";
     selectedAdminTab = selected;
     for (const button of adminTabButtons) {
       const active = button.dataset.adminTab === selected;
@@ -1013,6 +1047,100 @@
     }
   }
 
+  function renderReviveAdminData(data = reviveAdminData) {
+    if (!data || typeof data !== "object") return;
+    reviveAdminData = data;
+    const settings = data.settings && typeof data.settings === "object" ? data.settings : {};
+    const quiz = data.quiz && typeof data.quiz === "object" ? data.quiz : {};
+    setInputValue(reviveInputs.enabled, settings.enabled === true);
+    setInputValue(reviveInputs.dailyQuizEnabled, settings.dailyQuizEnabled === true);
+    setInputValue(reviveInputs.maxInventory, Math.max(1, Number(settings.maxInventory) || 3));
+    setInputValue(reviveInputs.dailyUseLimit, Math.max(1, Number(settings.dailyUseLimit) || 3));
+    setInputValue(reviveInputs.dailyQuizReward, Math.max(1, Number(settings.dailyQuizReward) || 1));
+    setInputValue(reviveInputs.reviveHealthPercent, Math.max(25, Number(settings.reviveHealthPercent) || 100));
+    setInputValue(reviveInputs.bundleEnabled, settings.bundleEnabled === true);
+    setInputValue(reviveInputs.singlePrice, Math.max(0, Number(settings.singlePrice) || 0));
+    setInputValue(reviveInputs.bundleQuantity, Math.max(1, Number(settings.bundleQuantity) || 3));
+    setInputValue(reviveInputs.bundlePrice, Math.max(0, Number(settings.bundlePrice) || 0));
+    setInputValue(reviveInputs.bundleEndsAt, formatDateTimeInput(settings.bundleEndsAt));
+    setInputValue(reviveInputs.lowMaxLevel, Math.max(1, Number(settings.lowMaxLevel) || 10));
+    setInputValue(reviveInputs.emergencyLowPrice, Math.max(0, Number(settings.emergencyLowPrice) || 0));
+    setInputValue(reviveInputs.midMaxLevel, Math.max(2, Number(settings.midMaxLevel) || 15));
+    setInputValue(reviveInputs.emergencyMidPrice, Math.max(0, Number(settings.emergencyMidPrice) || 0));
+    setInputValue(reviveInputs.emergencyHighPrice, Math.max(0, Number(settings.emergencyHighPrice) || 0));
+
+    if (reviveAdminLiveTitle) {
+      reviveAdminLiveTitle.textContent = settings.enabled === true ? "复活卡正常开放" : "复活卡已暂停";
+    }
+    if (reviveAdminLiveSummary) {
+      const bundleText = settings.bundleActive === true
+        ? ` · ${settings.bundleQuantity || 3} 张组合优惠中`
+        : " · 组合优惠未开放";
+      reviveAdminLiveSummary.textContent = `最多持有 ${settings.maxInventory || 3} 张 · 每天最多使用 ${settings.dailyUseLimit || 3} 张${bundleText}`;
+    }
+    if (reviveAdminQuizCount) {
+      reviveAdminQuizCount.textContent = `${quiz.cycleLength || 30} 天 · ${quiz.totalQuestions || 90} 题`;
+    }
+    if (reviveAdminSourceLink && /^https:\/\/www\.jw\.org\//i.test(String(quiz.sourceCollection || ""))) {
+      reviveAdminSourceLink.href = String(quiz.sourceCollection);
+    }
+    if (data.message) setReviveAdminStatus(data.message);
+  }
+
+  function collectReviveSettings() {
+    const maxInventory = Math.max(1, Math.min(20, Math.round(Number(reviveInputs.maxInventory?.value) || 3)));
+    const lowMaxLevel = Math.max(1, Math.min(19, Math.round(Number(reviveInputs.lowMaxLevel?.value) || 10)));
+    const midMaxLevel = Math.max(2, Math.min(20, Math.round(Number(reviveInputs.midMaxLevel?.value) || 15)));
+    return {
+      enabled: reviveInputs.enabled?.checked === true,
+      dailyQuizEnabled: reviveInputs.dailyQuizEnabled?.checked === true,
+      maxInventory,
+      dailyUseLimit: Math.max(1, Math.min(20, Math.round(Number(reviveInputs.dailyUseLimit?.value) || 3))),
+      dailyQuizReward: Math.max(1, Math.min(20, Math.round(Number(reviveInputs.dailyQuizReward?.value) || 1))),
+      reviveHealthPercent: Math.max(25, Math.min(100, Math.round(Number(reviveInputs.reviveHealthPercent?.value) || 100))),
+      bundleEnabled: reviveInputs.bundleEnabled?.checked === true,
+      singlePrice: Math.max(0, Math.min(999999, Math.round(Number(reviveInputs.singlePrice?.value) || 0))),
+      bundleQuantity: Math.max(1, Math.min(20, Math.round(Number(reviveInputs.bundleQuantity?.value) || 3))),
+      bundlePrice: Math.max(0, Math.min(999999, Math.round(Number(reviveInputs.bundlePrice?.value) || 0))),
+      bundleEndsAt: parseDateTimeInput(reviveInputs.bundleEndsAt?.value),
+      lowMaxLevel,
+      emergencyLowPrice: Math.max(0, Math.min(999999, Math.round(Number(reviveInputs.emergencyLowPrice?.value) || 0))),
+      midMaxLevel,
+      emergencyMidPrice: Math.max(0, Math.min(999999, Math.round(Number(reviveInputs.emergencyMidPrice?.value) || 0))),
+      emergencyHighPrice: Math.max(0, Math.min(999999, Math.round(Number(reviveInputs.emergencyHighPrice?.value) || 0))),
+    };
+  }
+
+  async function loadReviveAdminDashboard() {
+    if (busy) return;
+    setBusy(true);
+    setReviveAdminStatus("正在读取复活卡设置…");
+    try {
+      const data = await requestAdmin("GET", null, "/api/admin-revive");
+      renderReviveAdminData(data);
+      setReviveAdminStatus("复活卡设置已更新");
+    } catch (error) {
+      setReviveAdminStatus(error.message, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runReviveAdminAction(body, workingMessage) {
+    if (busy) return;
+    setBusy(true);
+    setReviveAdminStatus(workingMessage);
+    try {
+      const data = await requestAdmin("POST", body, "/api/admin-revive");
+      renderReviveAdminData(data);
+      setReviveAdminStatus(data.message || "复活卡设置已保存");
+    } catch (error) {
+      setReviveAdminStatus(error.message, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function adminAvatarIcon(value) {
     return ({
       cloud: "☁",
@@ -1190,11 +1318,12 @@
     setStatus("正在读取 Cloudflare KV…");
     try {
       accountToken = String(localStorage.getItem("cloud-jumper-account-token") || accountToken || "");
-      const [data, characterData, redeemCodeData, siteData, roleData, aiData] = await Promise.all([
+      const [data, characterData, redeemCodeData, siteData, reviveData, roleData, aiData] = await Promise.all([
         requestAdmin(),
         requestAdmin("GET", null, "/api/admin-characters"),
         requestAdmin("GET", null, "/api/admin-redeem-codes"),
         requestAdmin("GET", null, "/api/admin-site-control"),
+        requestAdmin("GET", null, "/api/admin-revive"),
         requestAdmin("GET", null, "/api/admin-roles"),
         requestAdmin("GET", null, "/api/admin-ai"),
       ]);
@@ -1202,6 +1331,7 @@
       renderCharacterData(characterData);
       renderRedeemCodeData(redeemCodeData);
       renderSiteControlData(siteData, true);
+      renderReviveAdminData(reviveData);
       renderAdminRoles(roleData);
       if (adminAiModel) adminAiModel.textContent = aiData.configured ? `Gemini · ${aiData.model}` : "Gemini 未配置";
       setAdminAiStatus(aiData.configured ? "Gemini 已连接" : "请先配置 GEMINI_API_KEY", !aiData.configured);
@@ -1209,6 +1339,7 @@
       setCharacterStatus(`已载入 ${characterData.characters?.length || 0} 个人物`);
       setRedeemCodeStatus(`已载入 ${redeemCodeData.codes?.length || 0} 个兑换码`);
       setSiteControlStatus("网站状态已更新");
+      setReviveAdminStatus("复活卡设置已更新");
       if (password) sessionStorage.setItem("cloud-jumper-admin-session", password);
       else sessionStorage.removeItem("cloud-jumper-admin-session");
       sessionStorage.removeItem("cloud-jumper-admin-autologin-disabled");
@@ -1461,6 +1592,28 @@
     runSiteControlAction({ action: "unlockSite" }, "正在解除网站封锁…");
   });
   refreshSiteControlButton?.addEventListener("click", loadSiteControlDashboard);
+  refreshReviveSettingsButton?.addEventListener("click", loadReviveAdminDashboard);
+  reviveSettingsForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const settings = collectReviveSettings();
+    if (settings.dailyQuizReward > settings.maxInventory) {
+      return setReviveAdminStatus("每日答题奖励不能超过最多持有数量", true);
+    }
+    if (settings.bundleQuantity > settings.maxInventory) {
+      return setReviveAdminStatus("组合数量不能超过最多持有数量", true);
+    }
+    if (settings.midMaxLevel <= settings.lowMaxLevel) {
+      return setReviveAdminStatus("中级关卡截止必须大于低级关卡截止", true);
+    }
+    if (settings.bundleEnabled && settings.bundleEndsAt > 0 && settings.bundleEndsAt <= Date.now()) {
+      if (!confirm("组合优惠截止时间已经过去，保存后玩家会看到优惠结束。仍要保存吗？")) return;
+    }
+    runReviveAdminAction({ action: "saveReviveSettings", settings }, "正在保存复活卡设置…");
+  });
+  resetReviveSettingsButton?.addEventListener("click", () => {
+    if (!confirm("确定把复活卡价格、上限、每日次数和答题奖励全部恢复为 v57 默认设置？")) return;
+    runReviveAdminAction({ action: "resetReviveSettings" }, "正在恢复复活卡默认设置…");
+  });
   refreshAdminRolesButton?.addEventListener("click", loadAdminRoles);
   adminRoleSearchInput?.addEventListener("input", renderAdminRoleList);
   adminRoleList?.addEventListener("click", (event) => {
@@ -1498,6 +1651,7 @@
     adminAccounts = [];
     adminAccessData = null;
     siteControlData = null;
+    reviveAdminData = null;
     closeCharacterEditor();
     closeRedeemCodeEditor();
     setAdminTab("players");

@@ -6400,3 +6400,698 @@ body,
   text-decoration: none;
   box-shadow: 0 4px 0 rgba(159, 99, 20, .14);
 }
+
+/* v57 — 复活卡、每日圣经挑战与死亡救援 */
+.home-panel .home-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.home-stats .revive-stat {
+  background: linear-gradient(145deg, #e8f8ff, #e9fff3);
+  color: #168e79;
+  box-shadow: inset 0 0 0 1px rgba(30, 151, 126, .12);
+}
+
+.home-revive-shortcut em {
+  position: absolute;
+  right: 17px;
+  bottom: 5px;
+  color: #15856f;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.home-revive-shortcut::after {
+  border-color: #168e79 !important;
+}
+
+.home-revive-shortcut.is-full em {
+  color: #728d87;
+}
+
+.home-revive-shortcut.is-full::after {
+  display: none;
+}
+
+.daily-revive-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 9px;
+  min-width: 0;
+  min-height: 76px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(35, 143, 119, .19);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 92% 0, rgba(255, 222, 105, .26), transparent 35%),
+    linear-gradient(145deg, #effaff, #f2fff6);
+}
+
+.daily-revive-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(30, 144, 121, .18);
+  border-radius: 13px;
+  background: linear-gradient(145deg, #ffffff, #daf7ed);
+  color: #168f78;
+  font-size: 22px;
+  font-weight: 950;
+  box-shadow: 0 4px 10px rgba(37, 117, 102, .1);
+}
+
+.daily-revive-card > div {
+  min-width: 0;
+}
+
+.daily-revive-card small,
+.daily-revive-card strong,
+.daily-revive-card em {
+  display: block;
+}
+
+.daily-revive-card small {
+  color: #738b88;
+  font-size: 7px;
+  font-weight: 850;
+}
+
+.daily-revive-card strong {
+  margin: 2px 0;
+  color: #245d53;
+  font-size: 12px;
+}
+
+.daily-revive-card em {
+  overflow: hidden;
+  color: #6d775e;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-revive-card > button {
+  min-width: 69px;
+  min-height: 37px;
+  padding: 7px 9px;
+  border: 1px solid rgba(20, 131, 107, .18);
+  border-radius: 11px;
+  background: linear-gradient(180deg, #52d7b5, #25ad90);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 950;
+  box-shadow: 0 3px 0 #187b68;
+}
+
+.daily-revive-card > button:disabled {
+  border-color: rgba(95, 121, 115, .1);
+  background: #dce9e5;
+  color: #718782;
+  box-shadow: 0 2px 0 #bdceca;
+}
+
+.daily-revive-card > p {
+  grid-column: 2 / -1;
+  min-height: 11px;
+  margin: -3px 0 0;
+  color: #71857f;
+  font-size: 7px;
+  font-weight: 750;
+}
+
+.daily-revive-card.is-claimed {
+  background: linear-gradient(145deg, #f3f8f6, #fbfaf1);
+}
+
+.revive-card-product {
+  border-color: rgba(27, 145, 122, .2);
+  background:
+    radial-gradient(circle at 100% 0, rgba(255, 211, 83, .18), transparent 32%),
+    linear-gradient(145deg, #f0fbff, #f2fff5);
+}
+
+.revive-card-product .revive-product-icon {
+  border-color: rgba(29, 145, 122, .17);
+  background: linear-gradient(145deg, #ecfbff, #dcf8ed);
+  color: #148d75;
+  font-weight: 950;
+}
+
+.revive-buy-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.revive-buy-actions button {
+  min-height: 39px;
+  padding: 7px 8px;
+  border: 1px solid rgba(37, 122, 105, .18);
+  border-radius: 11px;
+  background: #e6f5f0;
+  color: #28675c;
+  font-size: 8px;
+  font-weight: 950;
+}
+
+.revive-buy-actions button.is-sale {
+  position: relative;
+  border-color: rgba(222, 163, 37, .32);
+  background: linear-gradient(180deg, #ffe990, #ffc852);
+  color: #734b0b;
+  box-shadow: 0 3px 0 rgba(177, 111, 15, .28);
+}
+
+.revive-buy-actions button b {
+  display: inline-block;
+  margin-right: 3px;
+  padding: 2px 4px;
+  border-radius: 5px;
+  background: rgba(119, 69, 0, .12);
+  font-size: 6px;
+}
+
+.revive-buy-actions button:disabled {
+  background: #e5ecea;
+  color: #879590;
+  box-shadow: none;
+}
+
+.revive-quiz-dialog,
+.revive-prompt {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  background: rgba(15, 39, 47, .64);
+  backdrop-filter: blur(13px);
+  -webkit-backdrop-filter: blur(13px);
+}
+
+.revive-quiz-dialog.is-hidden,
+.revive-prompt.is-hidden {
+  display: none;
+}
+
+.revive-quiz-card {
+  position: relative;
+  overflow: auto;
+  width: min(620px, 100%);
+  max-height: min(88dvh, 760px);
+  padding: 21px;
+  border: 1px solid rgba(54, 128, 113, .22);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 92% 4%, rgba(255, 215, 89, .25), transparent 25%),
+    linear-gradient(155deg, #f8ffff, #fffdf2);
+  color: #244f58;
+  box-shadow: 0 28px 80px rgba(4, 23, 29, .35), inset 0 1px 0 #fff;
+  scrollbar-width: thin;
+}
+
+.revive-dialog-close {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(47, 84, 89, .14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .88);
+  color: #557177;
+  font-size: 21px;
+}
+
+.revive-quiz-mark {
+  display: grid;
+  width: 49px;
+  height: 49px;
+  place-items: center;
+  margin-bottom: 9px;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #52d9ba, #178f79);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 950;
+  box-shadow: 0 7px 18px rgba(24, 132, 111, .22);
+}
+
+.revive-quiz-card > small {
+  color: #6f8b85;
+  font-size: 9px;
+  font-weight: 950;
+}
+
+.revive-quiz-card h2 {
+  margin: 3px 45px 4px 0;
+  color: #1c5049;
+  font-size: 23px;
+}
+
+.revive-quiz-card > p {
+  margin: 0 0 12px;
+  color: #6a7d7a;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.55;
+}
+
+.revive-question-list {
+  display: grid;
+  gap: 10px;
+}
+
+.revive-question {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(57, 111, 102, .15);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .82);
+}
+
+.revive-question.is-wrong {
+  border-color: rgba(211, 80, 88, .38);
+  background: #fff5f5;
+  animation: reviveQuestionShake .28s ease both;
+}
+
+.revive-question legend {
+  width: 100%;
+  padding: 0;
+  color: #254e53;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.revive-question legend span {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #e3f3ee;
+  color: #31816f;
+  font-size: 7px;
+}
+
+.revive-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.revive-option-grid label {
+  position: relative;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 9px;
+  border: 1px solid rgba(57, 99, 103, .13);
+  border-radius: 11px;
+  background: #f6faf9;
+  color: #49646a;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.revive-option-grid label:has(input:checked) {
+  border-color: #34ae91;
+  background: #e6f9f2;
+  color: #176b5a;
+  box-shadow: inset 0 0 0 1px rgba(52, 174, 145, .18);
+}
+
+.revive-option-grid input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #25a78b;
+}
+
+.revive-source-link {
+  display: inline-flex;
+  min-height: 35px;
+  align-items: center;
+  margin: 12px 0 5px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #edf5f4;
+  color: #397569;
+  font-size: 8px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.revive-quiz-status {
+  min-height: 16px;
+  margin: 3px 0 8px !important;
+  color: #6b7f7a !important;
+  font-size: 9px !important;
+}
+
+.revive-quiz-status.is-error {
+  color: #b84952 !important;
+}
+
+.revive-quiz-status.is-success {
+  color: #16805f !important;
+}
+
+.revive-quiz-submit {
+  width: 100%;
+  min-height: 47px;
+  border: 1px solid rgba(18, 122, 101, .18);
+  border-radius: 13px;
+  background: linear-gradient(180deg, #54dabb, #25a98c);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 950;
+  box-shadow: 0 4px 0 #177c68;
+}
+
+.revive-quiz-submit:disabled {
+  background: #dbe7e4;
+  color: #748a84;
+  box-shadow: 0 2px 0 #bdceca;
+}
+
+.revive-prompt {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(86, 221, 190, .13), transparent 31%),
+    rgba(8, 22, 29, .75);
+}
+
+.revive-prompt-card {
+  position: relative;
+  overflow: hidden;
+  width: min(420px, 100%);
+  padding: 24px;
+  border: 1px solid rgba(75, 210, 178, .32);
+  border-radius: 25px;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(255, 222, 109, .32), transparent 42%),
+    linear-gradient(155deg, #f8ffff, #f9fff4);
+  color: #294f57;
+  text-align: center;
+  box-shadow: 0 32px 100px rgba(0, 12, 18, .5), inset 0 1px 0 #fff;
+}
+
+.revive-prompt-glow {
+  position: absolute;
+  top: -90px;
+  left: 50%;
+  width: 220px;
+  height: 170px;
+  border-radius: 50%;
+  background: rgba(255, 216, 82, .2);
+  filter: blur(25px);
+  transform: translateX(-50%);
+}
+
+.revive-prompt-icon {
+  position: relative;
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  margin: 0 auto 10px;
+  border: 2px solid rgba(255, 255, 255, .8);
+  border-radius: 21px;
+  background: linear-gradient(145deg, #63e2c1, #16957c);
+  color: #fff;
+  font-size: 35px;
+  font-weight: 950;
+  box-shadow: 0 9px 24px rgba(22, 137, 113, .28);
+  animation: reviveCardPulse 1.55s ease-in-out infinite;
+}
+
+.revive-prompt-card > small {
+  color: #7d928d;
+  font-size: 9px;
+  font-weight: 950;
+}
+
+.revive-prompt-card h2 {
+  margin: 3px 0 5px;
+  color: #174f47;
+  font-size: 27px;
+}
+
+.revive-prompt-card > p {
+  margin: 0 0 13px;
+  color: #6b807d;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.revive-prompt-stock {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 11px;
+}
+
+.revive-prompt-stock span {
+  padding: 9px;
+  border: 1px solid rgba(56, 111, 101, .13);
+  border-radius: 12px;
+  background: rgba(239, 248, 246, .86);
+}
+
+.revive-prompt-stock small,
+.revive-prompt-stock strong {
+  display: block;
+}
+
+.revive-prompt-stock small {
+  color: #79908a;
+  font-size: 7px;
+  font-weight: 850;
+}
+
+.revive-prompt-stock strong {
+  margin-top: 3px;
+  color: #24675b;
+  font-size: 13px;
+}
+
+.revive-use-button,
+.revive-emergency-button,
+.revive-abandon-button {
+  width: 100%;
+  min-height: 45px;
+  margin-top: 7px;
+  border-radius: 13px;
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.revive-use-button {
+  border: 1px solid rgba(18, 122, 101, .2);
+  background: linear-gradient(180deg, #54dabb, #22a689);
+  color: #fff;
+  box-shadow: 0 4px 0 #167764;
+}
+
+.revive-emergency-button {
+  border: 1px solid rgba(218, 158, 40, .3);
+  background: linear-gradient(180deg, #ffe386, #ffc14a);
+  color: #71480a;
+  box-shadow: 0 4px 0 #c68120;
+}
+
+.revive-abandon-button {
+  min-height: 39px;
+  border: 0;
+  background: transparent;
+  color: #80918e;
+}
+
+.revive-use-button:disabled,
+.revive-emergency-button:disabled {
+  border-color: rgba(90, 112, 107, .1);
+  background: #dfe8e5;
+  color: #7f8e8a;
+  box-shadow: none;
+}
+
+.revive-prompt-status {
+  min-height: 14px;
+  margin: 7px 0 0 !important;
+  color: #738682 !important;
+  font-size: 8px !important;
+}
+
+.revive-prompt-status.is-error {
+  color: #b64750 !important;
+}
+
+@keyframes reviveCardPulse {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.035); }
+}
+
+@keyframes reviveQuestionShake {
+  0%, 100% { transform: translateX(0); }
+  35% { transform: translateX(-4px); }
+  70% { transform: translateX(4px); }
+}
+
+@media (max-width: 700px) {
+  .home-panel .home-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-revive-shortcut em {
+    right: 13px;
+    bottom: 4px;
+    font-size: 6px;
+  }
+
+  .daily-revive-card {
+    grid-template-columns: 35px minmax(0, 1fr) auto;
+    min-height: 68px;
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .daily-revive-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    font-size: 18px;
+  }
+
+  .daily-revive-card > button {
+    min-width: 62px;
+    min-height: 35px;
+    padding: 6px;
+    font-size: 8px;
+  }
+
+  .revive-quiz-card {
+    max-height: 92dvh;
+    padding: 16px 13px;
+    border-radius: 19px;
+  }
+
+  .revive-quiz-card h2 {
+    font-size: 20px;
+  }
+
+  .revive-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .revive-prompt-card {
+    padding: 20px 15px;
+    border-radius: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .home-revive-shortcut em {
+    position: static;
+    grid-column: 1;
+    font-size: 6px;
+  }
+
+  .daily-revive-card {
+    grid-template-columns: 31px minmax(0, 1fr);
+  }
+
+  .daily-revive-icon {
+    width: 31px;
+    height: 31px;
+  }
+
+  .daily-revive-card > button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .daily-revive-card > p {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-height: 570px) and (orientation: landscape) {
+  .revive-quiz-dialog,
+  .revive-prompt {
+    place-items: start center;
+    overflow: auto;
+    padding-top: max(7px, env(safe-area-inset-top));
+  }
+
+  .revive-quiz-card {
+    max-height: none;
+    padding: 12px 16px;
+  }
+
+  .revive-question-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .revive-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .revive-prompt-card {
+    width: min(720px, 94vw);
+    padding: 13px 18px;
+  }
+
+  .revive-prompt-icon {
+    width: 46px;
+    height: 46px;
+    margin-bottom: 5px;
+    border-radius: 14px;
+    font-size: 24px;
+  }
+
+  .revive-prompt-card h2 {
+    font-size: 21px;
+  }
+
+  .revive-prompt-stock {
+    max-width: 410px;
+    margin: 0 auto 7px;
+  }
+
+  .revive-use-button,
+  .revive-emergency-button,
+  .revive-abandon-button {
+    display: inline-block;
+    width: calc(33.333% - 6px);
+    min-height: 39px;
+    margin: 4px 2px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revive-prompt-icon,
+  .revive-question.is-wrong {
+    animation: none !important;
+  }
+}

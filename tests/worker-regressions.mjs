@@ -1204,7 +1204,7 @@ async function testGeminiRepliesTakePriorityAndLocalFallbackStaysNatural() {
     assert.doesNotMatch(reply.text, /我看到你说的是|先按这个话题接/);
 
     const health = await api(env, "/api/health");
-    assert.equal(health.version, "v56");
+    assert.equal(health.version, "v57");
     assert.equal(health.geminiConfigured, true);
     assert.equal(health.geminiModel, "gemini-3.5-flash-lite");
     assert.equal(health.geminiLastCheck?.ok, true);
@@ -1443,8 +1443,8 @@ function testSiteControlAndYuanyuanUiArePackaged() {
   assert.match(html, /id="siteLockCountdown"/);
   assert.match(html, /id="yuanyuanOffer"/);
   assert.match(html, /id="yuanyuanStock"/);
-  assert.match(html, /globals\.css\?v=56/);
-  assert.match(html, /game\.js\?v=56/);
+  assert.match(html, /globals\.css\?v=57/);
+  assert.match(html, /game\.js\?v=57/);
   assert.match(script, /accountRequest\("purchaseYuanyuan"/);
   assert.match(script, /function drawYuanyuanCharacter/);
   assert.match(script, /function triggerYuanyuanSmash/);
@@ -1520,8 +1520,8 @@ function testPremiumVisualsAndFrameSmoothingArePackaged() {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../game.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../globals.css", import.meta.url), "utf8");
-  assert.match(html, /globals\.css\?v=56/);
-  assert.match(html, /game\.js\?v=56/);
+  assert.match(html, /globals\.css\?v=57/);
+  assert.match(html, /game\.js\?v=57/);
   assert.match(script, /function characterVisualTier/);
   assert.match(script, /function updatePremiumCharacterEffects/);
   assert.match(script, /function drawPremiumCharacterEffects/);
@@ -1654,6 +1654,263 @@ function testAdminRolesAiAndChatModerationUiArePackaged() {
   assert.match(css, /\.chat-list\.is-admin-selecting/);
 }
 
+async function testReviveCardsQuizStoreAndUsageAreServerAuthoritative() {
+  const originalNow = Date.now;
+  Date.now = () => Date.parse("2026-07-28T12:00:00+08:00");
+  try {
+    const env = createEnv();
+    const registered = await register(env, {
+      name: "复活卡测试",
+      playerId: "player-revive-card-test-0001",
+      walletCoins: 5000,
+      gameData: {
+        reviveCards: 20,
+        reviveUsedToday: 20,
+        reviveQuizClaimedDate: "2026-07-28",
+      },
+    });
+    const token = registered.token;
+    assert.equal(registered.account.gameData.reviveCards, 0, "registration must not accept forged revive cards");
+    assert.equal(registered.account.gameData.reviveUsedToday, 0, "registration must not accept forged daily usage");
+
+    const quiz = await api(env, "/api/account", {
+      token,
+      body: { action: "reviveQuiz" },
+    });
+    assert.equal(quiz.settings.questionDays, 30);
+    assert.equal(quiz.quiz.questions.length, 3);
+    assert.equal(quiz.quiz.cycleDay, 1);
+    assert.match(quiz.quiz.sourceUrl, /^https:\/\/www\.jw\.org\/cmn-hans\//);
+    assert.ok(quiz.quiz.questions.every((question) => !("answer" in question) && !("correct" in question)));
+    assert.equal(quiz.quiz.questions[0].difficulty, "三年级");
+    assert.equal(quiz.quiz.questions[1].difficulty, "六年级");
+
+    const wrong = await api(env, "/api/account", {
+      token,
+      body: {
+        action: "submitReviveQuiz",
+        quizDate: quiz.quiz.date,
+        answers: [0, 0, 0],
+      },
+    });
+    assert.equal(wrong.quizResult.passed, false);
+    assert.equal(wrong.account.gameData.reviveCards, 0);
+
+    const passed = await api(env, "/api/account", {
+      token,
+      body: {
+        action: "submitReviveQuiz",
+        quizDate: quiz.quiz.date,
+        answers: [1, 0, 0],
+      },
+    });
+    assert.equal(passed.quizResult.passed, true);
+    assert.equal(passed.account.gameData.reviveCards, 1);
+
+    const replay = await api(env, "/api/account", {
+      token,
+      body: {
+        action: "submitReviveQuiz",
+        quizDate: quiz.quiz.date,
+        answers: [1, 0, 0],
+      },
+    });
+    assert.equal(replay.alreadyClaimed, true);
+    assert.equal(replay.account.gameData.reviveCards, 1, "daily quiz must only award once");
+
+    const forgedSave = await api(env, "/api/account", {
+      token,
+      body: {
+        action: "save",
+        showCoins: true,
+        gameData: {
+          ...replay.account.gameData,
+          reviveCards: 20,
+          reviveUsedToday: 0,
+        },
+      },
+    });
+    assert.equal(forgedSave.account.gameData.reviveCards, 1, "browser saves must not mint revive cards");
+
+    const single = await api(env, "/api/account", {
+      token,
+      body: {
+        action: "purchaseReviveCards",
+        offer: "single",
+        transactionId: "revive-single-test-0001",
+      },
+    });
+    assert.equal(single.account.gameData.walletCoins, 4401);
+    assert.equal(single.account.gameData.reviveCards, 2);
+
+    const second = await register(env, {
+      name: "组合购买测试",
+      playerId: "player-revive-card-test-0002",
+      walletCoins: 5000,
+    });
+    const bundle = await api(env, "/api/account", {
+      token: second.token,
+      body: {
+        action: "purchaseReviveCards",
+        offer: "bundle",
+        transactionId: "revive-bundle-test-0001",
+      },
+    });
+    assert.equal(bundle.revivePurchase.quantity, 3);
+    assert.equal(bundle.account.gameData.reviveCards, 3);
+    assert.equal(bundle.account.gameData.walletCoins, 3901);
+    const full = await apiError(env, "/api/account", {
+      token: second.token,
+      body: {
+        action: "purchaseReviveCards",
+        offer: "single",
+        transactionId: "revive-full-test-0001",
+      },
+    });
+    assert.equal(full.data.error, "revive_inventory_space");
+
+    const firstUse = await api(env, "/api/account", {
+      token: second.token,
+      body: {
+        action: "useReviveCard",
+        level: 5,
+        transactionId: "revive-use-test-0001",
+      },
+    });
+    assert.equal(firstUse.account.gameData.reviveCards, 2);
+    assert.equal(firstUse.revive.usedToday, 1);
+    const repeatedUse = await api(env, "/api/account", {
+      token: second.token,
+      body: {
+        action: "useReviveCard",
+        level: 5,
+        transactionId: "revive-use-test-0001",
+      },
+    });
+    assert.equal(repeatedUse.alreadyProcessed, true);
+    assert.equal(repeatedUse.account.gameData.reviveCards, 2);
+    assert.equal(repeatedUse.revive.usedToday, 1, "retrying a request must not spend a second card");
+
+    const emergency = await api(env, "/api/account", {
+      token: second.token,
+      body: {
+        action: "purchaseEmergencyRevive",
+        level: 11,
+        transactionId: "revive-buy-test-0001",
+      },
+    });
+    assert.equal(emergency.emergencyPrice, 999);
+    assert.equal(emergency.account.gameData.walletCoins, 2902);
+    assert.equal(emergency.revive.usedToday, 2);
+
+    await api(env, "/api/account", {
+      token: second.token,
+      body: {
+        action: "useReviveCard",
+        level: 16,
+        transactionId: "revive-use-test-0002",
+      },
+    });
+    const dailyLimit = await apiError(env, "/api/account", {
+      token: second.token,
+      body: {
+        action: "purchaseEmergencyRevive",
+        level: 16,
+        transactionId: "revive-buy-test-0002",
+      },
+    });
+    assert.equal(dailyLimit.data.error, "revive_daily_limit");
+  } finally {
+    Date.now = originalNow;
+  }
+}
+
+async function testAdminCanManageReviveCardSettings() {
+  const originalNow = Date.now;
+  Date.now = () => Date.parse("2026-07-29T10:00:00+08:00");
+  try {
+    const env = createEnv();
+    const initial = await api(env, "/api/admin-revive", { admin: true });
+    assert.equal(initial.quiz.cycleLength, 30);
+    assert.equal(initial.quiz.totalQuestions, 90);
+    assert.match(initial.quiz.sourceCollection, /^https:\/\/www\.jw\.org\/cmn-hans\//);
+    assert.equal(initial.settings.singlePrice, 599);
+    assert.equal(initial.settings.bundlePrice, 1099);
+
+    const changed = await api(env, "/api/admin-revive", {
+      admin: true,
+      body: {
+        action: "saveReviveSettings",
+        settings: {
+          maxInventory: 5,
+          dailyUseLimit: 4,
+          singlePrice: 777,
+          dailyQuizReward: 2,
+          emergencyLowPrice: 901,
+          emergencyMidPrice: 1001,
+          emergencyHighPrice: 1101,
+          reviveHealthPercent: 75,
+        },
+      },
+    });
+    assert.equal(changed.settings.maxInventory, 5);
+    assert.equal(changed.settings.dailyUseLimit, 4);
+    assert.equal(changed.settings.singlePrice, 777);
+    assert.equal(changed.settings.dailyQuizReward, 2);
+    assert.equal(changed.settings.reviveHealthPercent, 75);
+
+    const player = await register(env, {
+      name: "后台设置同步",
+      playerId: "player-revive-admin-test-0001",
+      walletCoins: 5000,
+    });
+    const store = await api(env, "/api/account", {
+      token: player.token,
+      body: { action: "storeStatus" },
+    });
+    assert.equal(store.store.revive.maxInventory, 5);
+    assert.equal(store.store.revive.singlePrice, 777);
+    assert.equal(store.store.revive.dailyQuizReward, 2);
+
+    const reset = await api(env, "/api/admin-revive", {
+      admin: true,
+      body: { action: "resetReviveSettings" },
+    });
+    assert.equal(reset.settings.maxInventory, 3);
+    assert.equal(reset.settings.singlePrice, 599);
+    assert.equal(reset.settings.reviveHealthPercent, 100);
+  } finally {
+    Date.now = originalNow;
+  }
+}
+
+function testV57ReviveCardUiIsPackaged() {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const script = readFileSync(new URL("../game.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../globals.css", import.meta.url), "utf8");
+  const workerScript = readFileSync(new URL("../_worker.js", import.meta.url), "utf8");
+  const adminHtml = readFileSync(new URL("../admin/index.html", import.meta.url), "utf8");
+  const adminScript = readFileSync(new URL("../admin.js", import.meta.url), "utf8");
+  const adminCss = readFileSync(new URL("../admin.css", import.meta.url), "utf8");
+  assert.match(html, /id="homeReviveShortcut"/);
+  assert.match(html, /id="dailyReviveButton"/);
+  assert.match(html, /id="reviveQuizDialog"/);
+  assert.match(html, /id="revivePrompt"/);
+  assert.match(html, /再救一救吧！/);
+  assert.match(script, /function openRevivePrompt/);
+  assert.match(script, /function resumeFromRevive/);
+  assert.match(script, /purchaseEmergencyRevive/);
+  assert.match(css, /v57 — 复活卡、每日圣经挑战与死亡救援/);
+  assert.match(workerScript, /const REVIVE_QUIZ_DAYS = \[/);
+  assert.match(workerScript, /"\/api\/admin-revive"/);
+  assert.match(workerScript, /version: "v57"/);
+  assert.match(adminHtml, /data-admin-tab="revive"/);
+  assert.match(adminHtml, /id="reviveSettingsForm"/);
+  assert.match(adminHtml, /JW\.ORG 官方资料/);
+  assert.match(adminScript, /"\/api\/admin-revive"/);
+  assert.match(adminCss, /v57 — 复活卡后台/);
+}
+
 await testRepeatedSaveDoesNotMintBattleRewardAgain();
 await testStaleWalletSnapshotCannotOverwriteCloudBalance();
 await testLoginAndRestoreDoNotRewriteAccountOrRanking();
@@ -1678,6 +1935,8 @@ await testGeminiUsesSmartPrimaryAndFallsBackByModel();
 await testAdminMentionIsImmediateAndNormalMentionWaitsNaturally();
 await testDailyChatterYieldsToRealPlayerMessages();
 await testOnlineStatusIsPrivateByChoiceAndExactForAdmin();
+await testReviveCardsQuizStoreAndUsageAreServerAuthoritative();
+await testAdminCanManageReviveCardSettings();
 await testAccountAdminsCanEnterManageRolesAndPermanentlyDeleteChat();
 await testAdminRouteRedirectsOnlyOnce();
 testAdminBrowserUsesRootApiPaths();
@@ -1691,4 +1950,5 @@ testSiteControlAndYuanyuanUiArePackaged();
 testPresenceAndBlackHoleGuidanceArePackaged();
 testPremiumVisualsAndFrameSmoothingArePackaged();
 testAdminRolesAiAndChatModerationUiArePackaged();
+testV57ReviveCardUiIsPackaged();
 console.log("worker regression tests passed");
