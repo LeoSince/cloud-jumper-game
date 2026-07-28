@@ -7,8 +7,8 @@
     <meta name="description" content="支持跨设备账号、金币隐私、共享排名、黑暗洞穴、随机二连跳悬崖和二十个主题关卡的原创手机横版闯关游戏。" />
     <title>云朵小勇士｜20关渐进挑战</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./globals.css?v=54" />
-    <script src="./game.js?v=54" defer></script>
+    <link rel="stylesheet" href="./globals.css?v=55" />
+    <script src="./game.js?v=55" defer></script>
   </head>
   <body>
     <main class="game-shell" id="gameShell">
@@ -321,6 +321,15 @@
                   </div>
                 </div>
                 <p class="chat-status" id="chatStatus" role="status">打开聊天后自动更新</p>
+                <div class="chat-admin-toolbar is-hidden" id="chatAdminToolbar" aria-label="管理员聊天工具">
+                  <button id="chatAdminManageButton" type="button">管理消息</button>
+                  <div class="chat-admin-selection is-hidden" id="chatAdminSelection">
+                    <span id="chatAdminSelectionCount">已选 0 条</span>
+                    <button id="chatAdminSelectAllButton" type="button">全选可删消息</button>
+                    <button class="is-danger" id="chatAdminDeleteButton" type="button" disabled>永久删除</button>
+                    <button id="chatAdminCancelButton" type="button">取消</button>
+                  </div>
+                </div>
                 <div class="chat-list" id="chatList" aria-live="polite">
                   <div class="chat-empty">还没有消息，来打个招呼吧！</div>
                 </div>
@@ -406,6 +415,7 @@
             </div>
 
             <button class="profile-save-button" id="profileSaveButton" type="button">保存个人资料</button>
+            <a class="profile-admin-link is-hidden" id="profileAdminLink" href="./admin/">进入管理后台</a>
             <button class="profile-logout-button" id="logoutAccountButton" type="button">退出登录</button>
           </div>
 
