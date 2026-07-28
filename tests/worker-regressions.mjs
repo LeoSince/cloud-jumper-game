@@ -1104,7 +1104,7 @@ async function testDirectMentionsUseCloudReplyAndRejectIrrelevantOutput() {
   };
 
   try {
-    await env.LEADERBOARD.put(`cloud-jumper:chat:ai-rate:${player.account.id}`, String(Date.now() - 7000));
+    await env.LEADERBOARD.put(`cloud-jumper:chat:ai-rate:${player.account.id}`, String(Date.now() - 13000));
     await api(env, "/api/chat", {
       token: player.token,
       body: { action: "send", text: "@雾中第七码头 你好，你刚才在聊什么？" },
@@ -1120,7 +1120,7 @@ async function testDirectMentionsUseCloudReplyAndRejectIrrelevantOutput() {
     assert.match(replies.at(-1).text, /复测悬崖路线/);
 
     await env.LEADERBOARD.put(`cloud-jumper:chat:rate:${player.account.id}`, String(Date.now() - 1000));
-    await env.LEADERBOARD.put(`cloud-jumper:chat:ai-rate:${player.account.id}`, String(Date.now() - 7000));
+    await env.LEADERBOARD.put(`cloud-jumper:chat:ai-rate:${player.account.id}`, String(Date.now() - 13000));
     await api(env, "/api/chat", {
       token: player.token,
       body: { action: "send", text: "@雾中第七码头 广州今天天气怎么样？" },
@@ -1130,7 +1130,7 @@ async function testDirectMentionsUseCloudReplyAndRejectIrrelevantOutput() {
     replies = stored.messages.filter((message) =>
       String(message.playerId).startsWith("rival-") &&
       String(message.text).includes("@连续提问"));
-    const weatherReply = replies.at(-1).text;
+    const weatherReply = replies.find((message) => /天气|城市|查询/.test(message.text))?.text || "";
     assert.match(weatherReply, /天气|城市|查询/);
     assert.doesNotMatch(weatherReply, /刚上线|第5关|学一下你们的路线/);
 
@@ -1204,7 +1204,7 @@ async function testGeminiRepliesTakePriorityAndLocalFallbackStaysNatural() {
     assert.doesNotMatch(reply.text, /我看到你说的是|先按这个话题接/);
 
     const health = await api(env, "/api/health");
-    assert.equal(health.version, "v53");
+    assert.equal(health.version, "v56");
     assert.equal(health.geminiConfigured, true);
     assert.equal(health.geminiModel, "gemini-3.5-flash-lite");
     assert.equal(health.geminiLastCheck?.ok, true);
@@ -1228,6 +1228,129 @@ async function testGeminiRepliesTakePriorityAndLocalFallbackStaysNatural() {
     String(message.text).includes("@自然备用"));
   assert.match(localReply.text, /好，有什么想问的直接说/);
   assert.doesNotMatch(localReply.text, /我看到你说的是|先按这个话题接/);
+}
+
+async function testGeminiUsesSmartPrimaryAndFallsBackByModel() {
+  const env = createEnv();
+  env.GEMINI_API_KEY = "gemini-routing-test";
+  const player = await register(env, {
+    name: "模型分流",
+    playerId: "player-gemini-routing-test-0001",
+  });
+  const originalFetch = globalThis.fetch;
+  const attemptedModels = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (!url.startsWith("https://generativelanguage.googleapis.com/")) return originalFetch(input, init);
+    const model = decodeURIComponent(url.match(/\/models\/([^:]+):generateContent/)?.[1] || "");
+    attemptedModels.push(model);
+    if (model === "gemini-3.6-flash") {
+      return new Response(JSON.stringify({
+        error: { status: "RESOURCE_EXHAUSTED", code: 429 },
+      }), { status: 429, headers: { "content-type": "application/json" } });
+    }
+    assert.equal(new Headers(init?.headers).get("x-goog-api-key"), "gemini-routing-test");
+    return new Response(JSON.stringify({
+      candidates: [{
+        content: {
+          role: "model",
+          parts: [{ text: "@模型分流 第10关的大洞要在边缘前提前起跳，第二跳留到人物开始下落时再按。" }],
+        },
+        finishReason: "STOP",
+      }],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  try {
+    await api(env, "/api/chat", {
+      token: player.token,
+      body: { action: "send", text: "@小砚 第10关的大洞怎么跳？" },
+    });
+    assert.deepEqual(
+      attemptedModels,
+      ["gemini-3.6-flash", "gemini-3.5-flash"],
+      "the newest stable model should run first, followed by the first free fallback",
+    );
+    const health = await api(env, "/api/health");
+    assert.equal(health.geminiModel, "gemini-3.6-flash");
+    assert.deepEqual(health.geminiModels, [
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+      "gemini-3.5-flash-lite",
+    ]);
+    assert.equal(health.geminiLastCheck?.ok, true);
+    assert.equal(health.geminiLastCheck?.model, "gemini-3.5-flash");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+async function testAdminMentionIsImmediateAndNormalMentionWaitsNaturally() {
+  const env = createEnv();
+  env.GEMINI_API_KEY = "gemini-timing-test";
+  const player = await register(env, {
+    name: "回复节奏",
+    playerId: "player-rival-reply-timing-test-0001",
+  });
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (!url.startsWith("https://generativelanguage.googleapis.com/")) return originalFetch(input, init);
+    const body = JSON.parse(String(init?.body || "{}"));
+    requests.push(body);
+    const prompt = String(body?.contents?.[0]?.parts?.[0]?.text || "");
+    const text = prompt.includes("蟹老板")
+      ? "@回复节奏 蟹老板的金蟹局每三局触发一次，那一局吸币范围更大并按三倍金币结算。"
+      : "@回复节奏 第三跳应该留到接近落点时修正，落地以后跳数才会重置。";
+    return new Response(JSON.stringify({
+      candidates: [{
+        content: { role: "model", parts: [{ text }] },
+        finishReason: "STOP",
+      }],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  try {
+    const normalStartedAt = Date.now();
+    await api(env, "/api/chat", {
+      token: player.token,
+      body: { action: "send", text: "@小砚 第三跳什么时候按比较稳？" },
+    });
+    let stored = await env.LEADERBOARD.get("cloud-jumper:chat:index:v1", { type: "json" });
+    const normalReply = stored.messages.find((message) =>
+      String(message.playerId).startsWith("rival-") &&
+      String(message.text).includes("@回复节奏") &&
+      String(message.text).includes("第三跳"));
+    assert.ok(normalReply, "a normal direct mention should still receive a scheduled reply");
+    assert.ok(normalReply.createdAt >= normalStartedAt + 18000, "a normal @ should wait at least 18 seconds");
+
+    await env.LEADERBOARD.put(`cloud-jumper:chat:rate:${player.account.id}`, String(Date.now() - 1000));
+    await env.LEADERBOARD.put(`cloud-jumper:chat:gemini-rate:${player.account.id}`, String(Date.now() - 2000));
+    await api(env, "/api/chat", {
+      token: player.token,
+      body: { action: "send", text: "@小砚 admin：蟹老板为什么有时吸不到金币？" },
+    });
+    stored = await env.LEADERBOARD.get("cloud-jumper:chat:index:v1", { type: "json" });
+    const adminReply = stored.messages.find((message) =>
+      String(message.playerId).startsWith("rival-") &&
+      String(message.text).includes("@回复节奏") &&
+      String(message.text).includes("金蟹局"));
+    assert.ok(adminReply, "the admin: fast-call syntax should receive a reply");
+    assert.ok(adminReply.createdAt <= Date.now(), "the admin: fast-call reply should be immediately visible");
+    assert.equal(requests.length, 2);
+    const adminPrompt = requests[1].contents[0].parts[0].text;
+    assert.match(adminPrompt, /必须回答的消息：蟹老板为什么有时吸不到金币/);
+    assert.doesNotMatch(adminPrompt.split("必须回答的消息：").at(-1), /^admin\s*[:：]/i);
+    assert.match(requests[1].systemInstruction.parts[0].text, /游戏玩家/);
+    assert.match(requests[1].systemInstruction.parts[0].text, /研究关卡路线/);
+
+    const visible = await api(env, "/api/chat", { token: player.token });
+    assert.ok(visible.messages.some((message) => message.id === adminReply.id));
+    assert.ok(!visible.messages.some((message) => message.id === normalReply.id), "the normal reply must remain hidden until its delay ends");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 }
 
 async function testDailyChatterYieldsToRealPlayerMessages() {
@@ -1266,7 +1389,7 @@ function testResponsiveChatAndCliffRescueArePackaged() {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../game.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../globals.css", import.meta.url), "utf8");
-  assert.match(html, /长按任意头像可单独 @对方/);
+  assert.match(html, /长按头像可以 @ 对方/);
   assert.match(script, /function formatChatMessageText/);
   assert.match(script, /button\.addEventListener\("contextmenu"/);
   assert.match(script, /function groundGapAt/);
@@ -1286,7 +1409,7 @@ function testResponsiveChatAndCliffRescueArePackaged() {
   assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\)/);
 }
 
-function testV53GeminiRepliesArePackaged() {
+function testV56GeminiRepliesArePackaged() {
   const html = readFileSync(new URL("../admin/index.html", import.meta.url), "utf8");
   const adminScript = readFileSync(new URL("../admin.js", import.meta.url), "utf8");
   const workerScript = readFileSync(new URL("../_worker.js", import.meta.url), "utf8");
@@ -1298,9 +1421,14 @@ function testV53GeminiRepliesArePackaged() {
   assert.match(workerScript, /OPENAI_API_KEY/);
   assert.match(workerScript, /OPENAI_WEB_SEARCH/);
   assert.match(workerScript, /GEMINI_API_KEY/);
+  assert.match(workerScript, /gemini-3\.6-flash/);
   assert.match(workerScript, /gemini-3\.5-flash-lite/);
+  assert.match(workerScript, /requestGeminiWithFallback/);
   assert.match(workerScript, /generativelanguage\.googleapis\.com/);
-  assert.match(workerScript, /CHAT_DIRECT_AI_COOLDOWN_MS = 6 \* 1000/);
+  assert.match(workerScript, /CHAT_ADMIN_AI_COOLDOWN_MS = 1500/);
+  assert.match(workerScript, /CHAT_DIRECT_AI_COOLDOWN_MS = 12 \* 1000/);
+  assert.match(workerScript, /adminPriority/);
+  assert.match(workerScript, /RIVAL_PLAYER_PERSONAS/);
   assert.match(workerScript, /isCompetitorReplyRelevant/);
   assert.match(workerScript, /openAILastCheck/);
 }
@@ -1315,8 +1443,8 @@ function testSiteControlAndYuanyuanUiArePackaged() {
   assert.match(html, /id="siteLockCountdown"/);
   assert.match(html, /id="yuanyuanOffer"/);
   assert.match(html, /id="yuanyuanStock"/);
-  assert.match(html, /globals\.css\?v=53/);
-  assert.match(html, /game\.js\?v=53/);
+  assert.match(html, /globals\.css\?v=56/);
+  assert.match(html, /game\.js\?v=56/);
   assert.match(script, /accountRequest\("purchaseYuanyuan"/);
   assert.match(script, /function drawYuanyuanCharacter/);
   assert.match(script, /function triggerYuanyuanSmash/);
@@ -1392,8 +1520,8 @@ function testPremiumVisualsAndFrameSmoothingArePackaged() {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../game.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../globals.css", import.meta.url), "utf8");
-  assert.match(html, /globals\.css\?v=53/);
-  assert.match(html, /game\.js\?v=53/);
+  assert.match(html, /globals\.css\?v=56/);
+  assert.match(html, /game\.js\?v=56/);
   assert.match(script, /function characterVisualTier/);
   assert.match(script, /function updatePremiumCharacterEffects/);
   assert.match(script, /function drawPremiumCharacterEffects/);
@@ -1404,6 +1532,126 @@ function testPremiumVisualsAndFrameSmoothingArePackaged() {
   assert.match(css, /v49 — premium home/);
   assert.match(css, /@keyframes v49CloudFloat/);
   assert.match(css, /\.campaign-launch-card::after/);
+}
+
+async function testAccountAdminsCanEnterManageRolesAndPermanentlyDeleteChat() {
+  const env = createEnv();
+  const first = await register(env, {
+    name: "权限测试甲",
+    playerId: "player-admin-role-test-0001",
+  });
+  const second = await register(env, {
+    name: "权限测试乙",
+    playerId: "player-admin-role-test-0002",
+  });
+  const ordinary = await register(env, {
+    name: "普通玩家",
+    playerId: "player-admin-role-test-0003",
+  });
+
+  const beforeGrant = await apiError(env, "/api/admin", { token: first.token });
+  assert.equal(beforeGrant.response.status, 401);
+
+  const granted = await api(env, "/api/admin-roles", {
+    admin: true,
+    body: { action: "grantAdmin", playerId: first.account.playerId },
+  });
+  assert.equal(granted.accounts.find((account) => account.playerId === first.account.playerId)?.isAdmin, true);
+
+  const delegatedDashboard = await api(env, "/api/admin", { token: first.token });
+  assert.equal(delegatedDashboard.access.role, "admin");
+  assert.equal(delegatedDashboard.access.name, "权限测试甲");
+
+  const delegatedGrant = await api(env, "/api/admin-roles", {
+    token: first.token,
+    body: { action: "grantAdmin", playerId: second.account.playerId },
+  });
+  assert.equal(delegatedGrant.accounts.find((account) => account.playerId === second.account.playerId)?.isAdmin, true);
+  const secondDashboard = await api(env, "/api/admin", { token: second.token });
+  assert.equal(secondDashboard.access.role, "admin", "an assigned account should enter the backend with its normal login token");
+
+  const sent = await api(env, "/api/chat", {
+    token: second.token,
+    body: {
+      action: "send",
+      text: "这条消息会被管理员永久删除",
+      imageData: "data:image/png;base64,aGVsbG8=",
+    },
+  });
+  assert.ok(await env.LEADERBOARD.get(`cloud-jumper:chat:image:${sent.message.id}`));
+  const chat = await api(env, "/api/chat", { token: first.token });
+  assert.equal(chat.viewerIsAdmin, true);
+  assert.equal(chat.messages.find((message) => message.id === sent.message.id)?.isAdmin, true);
+  assert.equal(chat.messages.find((message) => message.id === sent.message.id)?.adminDeletable, true);
+
+  const ordinaryChat = await api(env, "/api/chat", { token: ordinary.token });
+  assert.equal(ordinaryChat.viewerIsAdmin, false);
+  assert.equal(
+    ordinaryChat.messages.find((message) => message.id === sent.message.id)?.adminDeletable,
+    false,
+    "ordinary players must not receive chat moderation controls",
+  );
+  const ordinaryDelete = await apiError(env, "/api/chat", {
+    token: ordinary.token,
+    body: { action: "adminDelete", messageIds: [sent.message.id] },
+  });
+  assert.equal(ordinaryDelete.response.status, 403);
+
+  const removed = await api(env, "/api/chat", {
+    token: first.token,
+    body: { action: "adminDelete", messageIds: [sent.message.id] },
+  });
+  assert.equal(removed.deletedCount, 1);
+  assert.equal(await env.LEADERBOARD.get(`cloud-jumper:chat:image:${sent.message.id}`), null);
+  const afterDelete = await api(env, "/api/chat", { token: first.token });
+  assert.equal(afterDelete.messages.some((message) => message.id === sent.message.id), false);
+  const rawChat = await env.LEADERBOARD.get("cloud-jumper:chat:index:v1", { type: "json" });
+  assert.equal(rawChat.messages.some((message) => message.id === sent.message.id), false, "permanent deletion must leave no tombstone");
+
+  const selfRevoke = await apiError(env, "/api/admin-roles", {
+    token: first.token,
+    body: { action: "revokeAdmin", playerId: first.account.playerId },
+  });
+  assert.equal(selfRevoke.response.status, 409);
+  await api(env, "/api/admin-roles", {
+    admin: true,
+    body: { action: "revokeAdmin", playerId: first.account.playerId },
+  });
+  const afterRevoke = await apiError(env, "/api/admin", { token: first.token });
+  assert.equal(afterRevoke.response.status, 401);
+
+  const board = await api(env, "/api/leaderboard");
+  assert.equal(board.entries.find((entry) => entry.inviteId === second.account.playerId)?.isAdmin, true);
+  const aiStatus = await api(env, "/api/admin-ai", { token: second.token });
+  assert.equal(aiStatus.configured, false);
+}
+
+function testAdminRolesAiAndChatModerationUiArePackaged() {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const script = readFileSync(new URL("../game.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../globals.css", import.meta.url), "utf8");
+  const adminHtml = readFileSync(new URL("../admin/index.html", import.meta.url), "utf8");
+  const adminScript = readFileSync(new URL("../admin.js", import.meta.url), "utf8");
+  assert.match(adminHtml, /data-admin-tab="roles"[\s\S]*管理员/);
+  assert.match(adminHtml, /data-admin-tab="ai"[\s\S]*AI 助手/);
+  assert.match(adminHtml, /id="accountAdminLoginButton"/);
+  assert.match(adminHtml, /id="adminRoleList"/);
+  assert.match(adminHtml, /id="adminAiConversation"/);
+  assert.match(adminScript, /"\/api\/admin-roles"/);
+  assert.match(adminScript, /"\/api\/admin-ai"/);
+  assert.match(adminScript, /cloud-jumper-account-token/);
+  assert.match(html, /id="chatAdminToolbar"/);
+  assert.match(html, /id="chatInteractionNote"/);
+  assert.match(script, /action === "summary"/);
+  assert.match(script, /chatRequest\("adminDelete"/);
+  assert.match(script, /function toggleChatAdminMessage/);
+  assert.match(script, /data-chat-message/);
+  assert.match(script, /setTimeout\(triggerLongPress, 460\)/);
+  assert.match(script, /chat-admin-badge/);
+  assert.match(css, /\.chat-admin-toolbar/);
+  assert.match(css, /\.chat-admin-badge/);
+  assert.match(css, /\.chat-message\.is-message-pressing/);
+  assert.match(css, /\.chat-list\.is-admin-selecting/);
 }
 
 await testRepeatedSaveDoesNotMintBattleRewardAgain();
@@ -1426,8 +1674,11 @@ await testRivalChatHasDailyThreadsAndContextualReplies();
 await testRivalRepliesUnderstandIntentAndWaitForBattleConsent();
 await testDirectMentionsUseCloudReplyAndRejectIrrelevantOutput();
 await testGeminiRepliesTakePriorityAndLocalFallbackStaysNatural();
+await testGeminiUsesSmartPrimaryAndFallsBackByModel();
+await testAdminMentionIsImmediateAndNormalMentionWaitsNaturally();
 await testDailyChatterYieldsToRealPlayerMessages();
 await testOnlineStatusIsPrivateByChoiceAndExactForAdmin();
+await testAccountAdminsCanEnterManageRolesAndPermanentlyDeleteChat();
 await testAdminRouteRedirectsOnlyOnce();
 testAdminBrowserUsesRootApiPaths();
 testShopNavigationAndHeartUpgradeRemainVisible();
@@ -1435,8 +1686,9 @@ testAdminCharacterManagementUiIsPackaged();
 testLeaderboardUsesProfileOnlySystemDisclosureAndSeasonRules();
 testRedeemCodeManagementUiIsPackaged();
 testResponsiveChatAndCliffRescueArePackaged();
-testV53GeminiRepliesArePackaged();
+testV56GeminiRepliesArePackaged();
 testSiteControlAndYuanyuanUiArePackaged();
 testPresenceAndBlackHoleGuidanceArePackaged();
 testPremiumVisualsAndFrameSmoothingArePackaged();
+testAdminRolesAiAndChatModerationUiArePackaged();
 console.log("worker regression tests passed");
