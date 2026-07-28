@@ -4931,6 +4931,42 @@ body {
   background: #e4f4dc;
 }
 
+.chat-battle-accept {
+  display: grid;
+  width: min(100%, 300px);
+  min-height: 48px;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(191, 131, 25, .28);
+  border-radius: 11px;
+  background: linear-gradient(135deg, #fff1ac, #ffd067);
+  color: #65420e;
+  text-align: left;
+  box-shadow: 0 4px 10px rgba(113, 77, 13, .12);
+}
+
+.chat-battle-accept > i {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .62);
+  font-style: normal;
+}
+
+.chat-battle-accept > span { display: grid; min-width: 0; gap: 1px; }
+.chat-battle-accept strong { font-size: 11px; }
+.chat-battle-accept small { overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.chat-battle-accept > b { font-size: 18px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .chat-battle-accept:hover { filter: brightness(1.025); transform: translateY(-1px); }
+}
+
 .chat-image-open {
   width: min(240px, 48vw);
   background: #e5edeb;
