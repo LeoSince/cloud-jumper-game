@@ -116,6 +116,7 @@
   const ownProfileEditor = document.getElementById("ownProfileEditor");
   const avatarOptions = document.getElementById("avatarOptions");
   const profileSaveButton = document.getElementById("profileSaveButton");
+  const profileAdminLink = document.getElementById("profileAdminLink");
   const profilePublicStats = document.getElementById("profilePublicStats");
   const profileCurrentCharacter = document.getElementById("profileCurrentCharacter");
   const profileCharacterTrait = document.getElementById("profileCharacterTrait");
@@ -156,6 +157,13 @@
   const chatCard = document.getElementById("chatCard");
   const chatFullscreenButton = document.getElementById("chatFullscreenButton");
   const chatUnreadBadge = document.getElementById("chatUnreadBadge");
+  const chatAdminToolbar = document.getElementById("chatAdminToolbar");
+  const chatAdminManageButton = document.getElementById("chatAdminManageButton");
+  const chatAdminSelection = document.getElementById("chatAdminSelection");
+  const chatAdminSelectionCount = document.getElementById("chatAdminSelectionCount");
+  const chatAdminSelectAllButton = document.getElementById("chatAdminSelectAllButton");
+  const chatAdminDeleteButton = document.getElementById("chatAdminDeleteButton");
+  const chatAdminCancelButton = document.getElementById("chatAdminCancelButton");
   const profileInviteButton = document.getElementById("profileInviteButton");
   const battleEntryButton = document.getElementById("battleEntryButton");
   const battleDialog = document.getElementById("battleDialog");
@@ -1079,6 +1087,7 @@
   let accountShowCoins = readSetting("cloud-jumper-show-coins", false) === true;
   let accountShowOnlineStatus = readSetting("cloud-jumper-show-online-status", true) !== false;
   let accountName = "";
+  let accountIsAdmin = false;
   let accountAvatar = AVATAR_DEFS.some((item) => item.id === String(readSetting("cloud-jumper-avatar", "cloud")))
     ? String(readSetting("cloud-jumper-avatar", "cloud"))
     : "cloud";
@@ -1119,6 +1128,9 @@
   let chatRenderFingerprint = "";
   let chatFullscreen = false;
   let chatForceScrollToBottom = false;
+  let chatViewerIsAdmin = false;
+  let chatAdminSelectionMode = false;
+  const chatAdminSelectedIds = new Set();
   let publicProfileTarget = null;
   let battleSocket = null;
   let battleSocketState = "offline";
@@ -1825,7 +1837,7 @@
     pendingProfileAvatar = accountAvatar;
     if (ownProfileEditor) ownProfileEditor.classList.remove("is-hidden");
     coinHistorySection?.classList.remove("is-hidden");
-    if (profileDialogKicker) profileDialogKicker.textContent = "我的个人中心";
+    if (profileDialogKicker) profileDialogKicker.textContent = accountIsAdmin ? "我的个人中心 · 管理员" : "我的个人中心";
     if (profileDialogTitle) profileDialogTitle.textContent = playerName || "玩家";
     if (profileDialogSubtitle) profileDialogSubtitle.textContent = "头像、名称和肤色会自动保存到云端";
     if (profileDialogAvatar) profileDialogAvatar.textContent = avatarDefinition(accountAvatar).icon;
@@ -1837,6 +1849,7 @@
     setupSkinPicker();
     renderCoinHistory();
     renderProfileCharacters(selectedCharacter, [...unlockedCharacters]);
+    profileAdminLink?.classList.toggle("is-hidden", !accountIsAdmin);
     publicProfileTarget = null;
     profileInviteButton?.classList.add("is-hidden");
     profileDialog?.classList.remove("is-hidden");
@@ -1855,7 +1868,14 @@
     const score = Math.max(0, Number(entry.score) || 0);
     if (ownProfileEditor) ownProfileEditor.classList.add("is-hidden");
     coinHistorySection?.classList.add("is-hidden");
-    if (profileDialogKicker) profileDialogKicker.textContent = entry.systemRival === true ? "系统挑战者资料 · 不参与冠军奖励" : "全站玩家资料";
+    profileAdminLink?.classList.add("is-hidden");
+    if (profileDialogKicker) {
+      profileDialogKicker.textContent = entry.isAdmin === true
+        ? "全站玩家资料 · 管理员"
+        : entry.systemRival === true
+          ? "系统挑战者资料 · 不参与冠军奖励"
+          : "全站玩家资料";
+    }
     if (profileDialogTitle) profileDialogTitle.textContent = cleanPlayerName(entry.name) || "玩家";
     if (profileDialogSubtitle) profileDialogSubtitle.textContent = `${SKIN_NAMES[entry.selectedSkin] || SKIN_NAMES.light} · 正在使用 ${characterDefinition(selected).name}`;
     if (profileDialogAvatar) profileDialogAvatar.textContent = avatar.icon;
@@ -2278,6 +2298,7 @@
 
   function showAccountGate(mode = "register", message = "") {
     accountAuthenticated = false;
+    accountIsAdmin = false;
     window.clearTimeout(presenceTimer);
     presenceTimer = 0;
     disconnectBattleSocket();
@@ -2835,6 +2856,8 @@
     leaderboardSourceSnapshot = Array.isArray(entries) ? [...entries] : [];
     const ranked = sortLeaderboard(leaderboardSourceSnapshot, selectedRankingMode);
     leaderboardSnapshot = ranked;
+    const ownEntry = leaderboardSourceSnapshot.find((entry) => String(entry?.inviteId || "") === String(playerId));
+    if (ownEntry) accountIsAdmin = ownEntry.isAdmin === true;
     for (const button of rankingModeButtons) button.classList.toggle("is-active", button.dataset.rankingMode === selectedRankingMode);
     leaderboardList.innerHTML = ranked.length
       ? ranked.map((entry, index) => {
@@ -2856,7 +2879,8 @@
               ? "已登记 · 尚未挑战"
               : `第 ${Math.max(1, Number(entry.level) || 1)} 关 · ${scoreValue} 分${timeValue > 0 ? ` · ${timeValue.toFixed(1)} 秒` : ""}`;
         const coinText = entry.showCoins === true && Number.isFinite(Number(entry.coins)) ? ` · ●${Math.max(0, Math.round(Number(entry.coins)))}` : "";
-        return `<li><button class="leader-profile-trigger" type="button" data-profile-index="${index}" aria-label="查看 ${escapeHtml(cleanPlayerName(entry.name))} 的个人资料"><span class="mini-profile-avatar" aria-hidden="true">${avatar.icon}${presenceDot}</span><span class="leader-player-copy"><span class="leader-name-line">${escapeHtml(cleanPlayerName(entry.name))}</span><small class="leader-character-chip"><i aria-hidden="true">${escapeHtml(activeCharacter.badge)}</i>${escapeHtml(activeCharacter.name)}</small></span></button><b>${result}${coinText}</b></li>`;
+        const adminBadge = entry.isAdmin === true ? "<em class=\"leader-admin-badge\">管理员</em>" : "";
+        return `<li><button class="leader-profile-trigger" type="button" data-profile-index="${index}" aria-label="查看 ${escapeHtml(cleanPlayerName(entry.name))} 的个人资料"><span class="mini-profile-avatar" aria-hidden="true">${avatar.icon}${presenceDot}</span><span class="leader-player-copy"><span class="leader-name-line">${escapeHtml(cleanPlayerName(entry.name))}${adminBadge}</span><small class="leader-character-chip"><i aria-hidden="true">${escapeHtml(activeCharacter.badge)}</i>${escapeHtml(activeCharacter.name)}</small></span></button><b>${result}${coinText}</b></li>`;
       }).join("")
       : "<li class=\"is-empty\"><span>还没有成绩</span><b>—</b></li>";
     for (const button of leaderboardList.querySelectorAll("[data-profile-index]")) {
@@ -3277,6 +3301,8 @@
         invalid_image: "这个图片格式不支持",
         recall_expired: "已经超过 5 分钟，不能撤回",
         message_not_found: "这条消息已经不存在",
+        admin_required: "你的管理员权限已失效，请刷新后重试",
+        no_messages_selected: "请先选择要删除的消息",
         kv_not_bound: "聊天室存储尚未连接，请联系管理员检查 LEADERBOARD KV",
         server_error: "聊天室服务器暂时忙碌，会自动重连",
       };
@@ -3302,10 +3328,64 @@
     return escapeHtml(String(value || "")).replace(/(^|\s)(@[^\s@]{1,12})/g, "$1<mark class=\"chat-mention\">$2</mark>");
   }
 
+  function updateChatAdminTools() {
+    chatAdminToolbar?.classList.toggle("is-hidden", !chatViewerIsAdmin);
+    chatAdminManageButton?.classList.toggle("is-hidden", chatAdminSelectionMode);
+    chatAdminSelection?.classList.toggle("is-hidden", !chatAdminSelectionMode);
+    const count = chatAdminSelectedIds.size;
+    if (chatAdminSelectionCount) chatAdminSelectionCount.textContent = `已选 ${count} 条`;
+    if (chatAdminDeleteButton) chatAdminDeleteButton.disabled = count === 0;
+  }
+
+  function applyChatAdminAccess(value) {
+    chatViewerIsAdmin = value === true;
+    accountIsAdmin = chatViewerIsAdmin;
+    if (!chatViewerIsAdmin) {
+      chatAdminSelectionMode = false;
+      chatAdminSelectedIds.clear();
+    }
+    updateChatAdminTools();
+  }
+
+  function setChatAdminSelectionMode(active) {
+    chatAdminSelectionMode = chatViewerIsAdmin && active === true;
+    if (!chatAdminSelectionMode) chatAdminSelectedIds.clear();
+    chatRenderFingerprint = "";
+    updateChatAdminTools();
+    renderChatMessages(chatMessagesSnapshot);
+  }
+
+  async function deleteSelectedChatMessages() {
+    const messageIds = [...chatAdminSelectedIds];
+    if (!chatViewerIsAdmin || !messageIds.length) return;
+    if (!window.confirm(`确定永久删除选中的 ${messageIds.length} 条消息？\n删除后聊天中不会留下占位记录。`)) return;
+    if (chatAdminDeleteButton) chatAdminDeleteButton.disabled = true;
+    setChatStatus("正在永久删除消息…");
+    try {
+      const payload = await chatRequest("adminDelete", { messageIds });
+      const selected = new Set(messageIds);
+      chatMessagesSnapshot = chatMessagesSnapshot.filter((message) => !selected.has(message.id));
+      chatAdminSelectedIds.clear();
+      chatAdminSelectionMode = false;
+      chatRenderFingerprint = "";
+      updateChatAdminTools();
+      renderChatMessages(chatMessagesSnapshot);
+      await loadChatMessages(true);
+      setChatStatus(`已永久删除 ${Math.max(0, Number(payload.deletedCount) || 0)} 条消息`);
+    } catch (error) {
+      setChatStatus(error.message || "删除失败，请稍后重试", true);
+      updateChatAdminTools();
+    }
+  }
+
   function renderChatMessages(messages, forceBottom = false) {
     if (!chatList) return;
     const list = Array.isArray(messages) ? messages : [];
-    const fingerprint = JSON.stringify(list.map((message) => [message.id, message.text, message.imageUrl, message.recalled, message.canRecall, message.name, message.avatar, message.battleInvite]));
+    const fingerprint = JSON.stringify([
+      chatAdminSelectionMode,
+      [...chatAdminSelectedIds].sort(),
+      list.map((message) => [message.id, message.text, message.imageUrl, message.recalled, message.canRecall, message.name, message.avatar, message.battleInvite, message.isAdmin, message.adminDeletable]),
+    ]);
     if (fingerprint === chatRenderFingerprint) {
       chatMessagesSnapshot = list;
       if (forceBottom) settleChatScroll(true);
@@ -3330,6 +3410,12 @@
       const recallButton = mine && message.canRecall === true && !recalled
         ? `<button class="chat-recall" type="button" data-chat-recall="${index}">撤回</button>`
         : "";
+      const adminBadge = message.isAdmin === true
+        ? "<em class=\"chat-admin-badge\">管理员</em>"
+        : "";
+      const adminSelectionButton = chatAdminSelectionMode && message.adminDeletable === true
+        ? `<button class="chat-admin-check${chatAdminSelectedIds.has(message.id) ? " is-selected" : ""}" type="button" data-chat-admin-select="${index}" aria-pressed="${chatAdminSelectedIds.has(message.id)}" aria-label="${chatAdminSelectedIds.has(message.id) ? "取消选择" : "选择"}这条消息">✓</button>`
+        : "";
       const imageMarkup = imageUrl
         ? `<button class="chat-image-open" type="button" data-chat-image="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 发送的图片"><img class="chat-message-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(message.name || "玩家")} 发送的图片" loading="lazy" /></button>`
         : "";
@@ -3343,9 +3429,20 @@
         : "";
       const bubbleContents = `${text ? `<span>${text}</span>` : ""}${imageMarkup}${battleInvite}`;
       const mentionBadge = mentionsMe ? "<em class=\"chat-mentioned-me\">提到你</em>" : "";
-      return `<article class="chat-message${mine ? " is-mine" : ""}${mentionsMe ? " is-mention" : ""}"><button class="chat-message-avatar" type="button" data-chat-avatar="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 的资料；长按可以单独@他" title="点击看资料，长按@玩家">${avatar.icon}</button><div class="chat-message-body"><div class="chat-message-meta"><b>${escapeHtml(message.name || "玩家")}</b><span>${chatTimeLabel(message.createdAt)}</span>${mentionBadge}${recallButton}</div><div class="chat-bubble${recalled ? " is-recalled" : ""}">${bubbleContents}</div></div></article>`;
+      return `<article class="chat-message${mine ? " is-mine" : ""}${mentionsMe ? " is-mention" : ""}${chatAdminSelectedIds.has(message.id) ? " is-admin-selected" : ""}">${adminSelectionButton}<button class="chat-message-avatar" type="button" data-chat-avatar="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 的资料；长按可以单独@他" title="点击看资料，长按@玩家">${avatar.icon}</button><div class="chat-message-body"><div class="chat-message-meta"><b>${escapeHtml(message.name || "玩家")}</b>${adminBadge}<span>${chatTimeLabel(message.createdAt)}</span>${mentionBadge}${recallButton}</div><div class="chat-bubble${recalled ? " is-recalled" : ""}">${bubbleContents}</div></div></article>`;
     }).join("") : "<div class=\"chat-empty\">还没有消息，来打个招呼吧！</div>";
 
+    for (const button of chatList.querySelectorAll("[data-chat-admin-select]")) {
+      button.addEventListener("click", () => {
+        const message = chatMessagesSnapshot[Number(button.dataset.chatAdminSelect)];
+        if (!message?.id || message.adminDeletable !== true) return;
+        if (chatAdminSelectedIds.has(message.id)) chatAdminSelectedIds.delete(message.id);
+        else chatAdminSelectedIds.add(message.id);
+        chatRenderFingerprint = "";
+        updateChatAdminTools();
+        renderChatMessages(chatMessagesSnapshot);
+      });
+    }
     for (const button of chatList.querySelectorAll("[data-chat-recall]")) {
       button.addEventListener("click", () => recallChatMessage(chatMessagesSnapshot[Number(button.dataset.chatRecall)]));
     }
@@ -3434,6 +3531,7 @@
     if (!silent) setChatStatus("正在连接全站聊天室…");
     try {
       const payload = await chatRequest("list");
+      applyChatAdminAccess(payload.viewerIsAdmin);
       adoptCloudChatReadMarker(payload.chatLastReadAt);
       const messages = Array.isArray(payload.messages) ? payload.messages : [];
       renderChatMessages(messages);
@@ -10403,6 +10501,20 @@
   }
   chatRefreshButton?.addEventListener("click", () => loadChatMessages(false));
   chatFullscreenButton?.addEventListener("click", () => setChatFullscreen(!chatFullscreen));
+  chatAdminManageButton?.addEventListener("click", () => setChatAdminSelectionMode(true));
+  chatAdminCancelButton?.addEventListener("click", () => setChatAdminSelectionMode(false));
+  chatAdminSelectAllButton?.addEventListener("click", () => {
+    const deletable = chatMessagesSnapshot.filter((message) => message.adminDeletable === true);
+    const allSelected = deletable.length > 0 && deletable.every((message) => chatAdminSelectedIds.has(message.id));
+    chatAdminSelectedIds.clear();
+    if (!allSelected) {
+      for (const message of deletable) chatAdminSelectedIds.add(message.id);
+    }
+    chatRenderFingerprint = "";
+    updateChatAdminTools();
+    renderChatMessages(chatMessagesSnapshot);
+  });
+  chatAdminDeleteButton?.addEventListener("click", deleteSelectedChatMessages);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden || gameState !== "home" || selectedHomeTab === "chat" || !accountAuthenticated) return;
     stopChatUnreadPolling();
