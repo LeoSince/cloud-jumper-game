@@ -1079,6 +1079,102 @@ async function testRivalRepliesUnderstandIntentAndWaitForBattleConsent() {
     message.battleInvite?.difficulty === "hard"));
 }
 
+async function testDirectMentionsUseCloudReplyAndRejectIrrelevantOutput() {
+  const env = createEnv();
+  env.OPENAI_API_KEY = "sk-test-only";
+  env.OPENAI_MODEL = "gpt-5.6-terra";
+  env.OPENAI_WEB_SEARCH = "true";
+  const player = await register(env, {
+    name: "连续提问",
+    playerId: "player-direct-ai-reply-test-0001",
+  });
+  const originalFetch = globalThis.fetch;
+  const requestBodies = [];
+  let calls = 0;
+  globalThis.fetch = async (input, init) => {
+    if (String(input) !== "https://api.openai.com/v1/responses") return originalFetch(input, init);
+    calls += 1;
+    requestBodies.push(JSON.parse(String(init?.body || "{}")));
+    return new Response(JSON.stringify({
+      output_text: calls === 1
+        ? "@连续提问 我刚才在复测悬崖路线，你想问哪一段？"
+        : "我刚才就是这样，刚上线，今天打算从第5关开始。我先学一下你们的路线。",
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+
+  try {
+    await env.LEADERBOARD.put(`cloud-jumper:chat:ai-rate:${player.account.id}`, String(Date.now() - 7000));
+    await api(env, "/api/chat", {
+      token: player.token,
+      body: { action: "send", text: "@雾中第七码头 你好，你刚才在聊什么？" },
+    });
+    assert.equal(calls, 1, "an explicit mention should use OpenAI even for a greeting or casual question");
+    const firstInput = requestBodies[0].input[0].content[0].text;
+    assert.equal((firstInput.match(/你刚才在聊什么/g) || []).length, 1, "the current question must not be duplicated into recent context");
+
+    let stored = await env.LEADERBOARD.get("cloud-jumper:chat:index:v1", { type: "json" });
+    let replies = stored.messages.filter((message) =>
+      String(message.playerId).startsWith("rival-") &&
+      String(message.text).includes("@连续提问"));
+    assert.match(replies.at(-1).text, /复测悬崖路线/);
+
+    await env.LEADERBOARD.put(`cloud-jumper:chat:rate:${player.account.id}`, String(Date.now() - 1000));
+    await env.LEADERBOARD.put(`cloud-jumper:chat:ai-rate:${player.account.id}`, String(Date.now() - 7000));
+    await api(env, "/api/chat", {
+      token: player.token,
+      body: { action: "send", text: "@雾中第七码头 广州今天天气怎么样？" },
+    });
+    assert.equal(calls, 2, "a direct follow-up after six seconds should not be trapped by the old 45-second cooldown");
+    stored = await env.LEADERBOARD.get("cloud-jumper:chat:index:v1", { type: "json" });
+    replies = stored.messages.filter((message) =>
+      String(message.playerId).startsWith("rival-") &&
+      String(message.text).includes("@连续提问"));
+    const weatherReply = replies.at(-1).text;
+    assert.match(weatherReply, /天气|城市|查询/);
+    assert.doesNotMatch(weatherReply, /刚上线|第5关|学一下你们的路线/);
+
+    const health = await api(env, "/api/health");
+    assert.equal(health.openAIConfigured, true);
+    assert.equal(health.openAIWebSearchEnabled, true);
+    assert.equal(health.openAILastCheck?.ok, true);
+    assert.equal(health.openAILastCheck?.status, 200);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+async function testDailyChatterYieldsToRealPlayerMessages() {
+  const env = createEnv();
+  const player = await register(env, {
+    name: "安静窗口",
+    playerId: "player-chat-quiet-window-test-0001",
+  });
+  const initial = await api(env, "/api/chat", { token: player.token });
+  const scheduled = initial.messages.filter((message) => message.systemRival === true).at(-1);
+  assert.ok(scheduled, "the fixture needs an existing scheduled rival message");
+  await env.LEADERBOARD.put("cloud-jumper:chat:index:v1", JSON.stringify({
+    version: 2,
+    messages: [{
+      id: "chat-real-quiet-window",
+      accountId: player.account.id,
+      playerId: player.account.playerId,
+      name: player.account.name,
+      avatar: player.account.avatar,
+      text: "这是一条真人正在讨论的消息",
+      createdAt: scheduled.createdAt,
+      recalled: false,
+      selectedCharacter: "cloud",
+      unlockedCharacters: ["cloud"],
+      selectedSkin: "light",
+      coins: 0,
+      showCoins: false,
+    }],
+  }));
+  const after = await api(env, "/api/chat", { token: player.token });
+  assert.ok(!after.messages.some((message) => message.id === scheduled.id), "scheduled chatter must yield near a real player's message");
+  assert.ok(after.messages.some((message) => message.id === "chat-real-quiet-window"));
+}
+
 function testResponsiveChatAndCliffRescueArePackaged() {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../game.js", import.meta.url), "utf8");
@@ -1103,7 +1199,7 @@ function testResponsiveChatAndCliffRescueArePackaged() {
   assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\)/);
 }
 
-function testV51RepairAndOptionalOpenAIIntegrationArePackaged() {
+function testV52RelevantOpenAIRepliesArePackaged() {
   const html = readFileSync(new URL("../admin/index.html", import.meta.url), "utf8");
   const adminScript = readFileSync(new URL("../admin.js", import.meta.url), "utf8");
   const workerScript = readFileSync(new URL("../_worker.js", import.meta.url), "utf8");
@@ -1114,6 +1210,9 @@ function testV51RepairAndOptionalOpenAIIntegrationArePackaged() {
   assert.match(workerScript, /https:\/\/api\.openai\.com\/v1\/responses/);
   assert.match(workerScript, /OPENAI_API_KEY/);
   assert.match(workerScript, /OPENAI_WEB_SEARCH/);
+  assert.match(workerScript, /CHAT_DIRECT_AI_COOLDOWN_MS = 6 \* 1000/);
+  assert.match(workerScript, /isCompetitorReplyRelevant/);
+  assert.match(workerScript, /openAILastCheck/);
 }
 
 function testSiteControlAndYuanyuanUiArePackaged() {
@@ -1126,8 +1225,8 @@ function testSiteControlAndYuanyuanUiArePackaged() {
   assert.match(html, /id="siteLockCountdown"/);
   assert.match(html, /id="yuanyuanOffer"/);
   assert.match(html, /id="yuanyuanStock"/);
-  assert.match(html, /globals\.css\?v=51/);
-  assert.match(html, /game\.js\?v=51/);
+  assert.match(html, /globals\.css\?v=52/);
+  assert.match(html, /game\.js\?v=52/);
   assert.match(script, /accountRequest\("purchaseYuanyuan"/);
   assert.match(script, /function drawYuanyuanCharacter/);
   assert.match(script, /function triggerYuanyuanSmash/);
@@ -1203,8 +1302,8 @@ function testPremiumVisualsAndFrameSmoothingArePackaged() {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../game.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../globals.css", import.meta.url), "utf8");
-  assert.match(html, /globals\.css\?v=51/);
-  assert.match(html, /game\.js\?v=51/);
+  assert.match(html, /globals\.css\?v=52/);
+  assert.match(html, /game\.js\?v=52/);
   assert.match(script, /function characterVisualTier/);
   assert.match(script, /function updatePremiumCharacterEffects/);
   assert.match(script, /function drawPremiumCharacterEffects/);
@@ -1235,6 +1334,8 @@ await testTimedSiteLockBlocksPlayersButNeverAdmin();
 await testYuanyuanLimitedSaleIsServerAuthoritativeAndIdempotent();
 await testRivalChatHasDailyThreadsAndContextualReplies();
 await testRivalRepliesUnderstandIntentAndWaitForBattleConsent();
+await testDirectMentionsUseCloudReplyAndRejectIrrelevantOutput();
+await testDailyChatterYieldsToRealPlayerMessages();
 await testOnlineStatusIsPrivateByChoiceAndExactForAdmin();
 await testAdminRouteRedirectsOnlyOnce();
 testAdminBrowserUsesRootApiPaths();
@@ -1243,7 +1344,7 @@ testAdminCharacterManagementUiIsPackaged();
 testLeaderboardUsesProfileOnlySystemDisclosureAndSeasonRules();
 testRedeemCodeManagementUiIsPackaged();
 testResponsiveChatAndCliffRescueArePackaged();
-testV51RepairAndOptionalOpenAIIntegrationArePackaged();
+testV52RelevantOpenAIRepliesArePackaged();
 testSiteControlAndYuanyuanUiArePackaged();
 testPresenceAndBlackHoleGuidanceArePackaged();
 testPremiumVisualsAndFrameSmoothingArePackaged();
