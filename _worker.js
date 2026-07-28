@@ -34,10 +34,14 @@ const ACCOUNT_AVATARS = new Set(["cloud", "lightning", "star", "crown", "footbal
 const CHAT_INDEX_KEY = "cloud-jumper:chat:index:v1";
 const CHAT_IMAGE_PREFIX = "cloud-jumper:chat:image:";
 const CHAT_RATE_PREFIX = "cloud-jumper:chat:rate:";
+const CHAT_AI_RATE_PREFIX = "cloud-jumper:chat:ai-rate:";
+const CHAT_AI_OUTREACH_PREFIX = "cloud-jumper:chat:outreach:";
 const CHAT_MAX_MESSAGES = 120;
 const CHAT_RECALL_MS = 5 * 60 * 1000;
 const CHAT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const CHAT_RETENTION_SECONDS = 7 * 24 * 60 * 60;
+const ACCOUNT_SCAN_VERSION = 2;
+const ACCOUNT_SCAN_INTERVAL_MS = 5 * 60 * 1000;
 const PRESENCE_ONLINE_MS = 5 * 60 * 1000;
 const PRESENCE_RECENT_MS = 24 * 60 * 60 * 1000;
 const PRESENCE_WRITE_THROTTLE_MS = 75 * 1000;
@@ -799,11 +803,73 @@ const RIVAL_REPLY_PARTS = {
     "经常掉悬崖就优先三连跳，经常漏币再考虑吸附",
     "灵敏高的人物起跳也更容易提前，先适应两局",
   ],
+  controls: [
+    "手机轻点是跳，向下滑后要一直按住才会蹲，松手就站起来",
+    "普通闯关会自动前进，只有好友对战才显示方向控制和一次大招",
+    "撞到低平台要提前按住蹲，不是点一下以后一直趴着",
+    "连续跳没反应时先等脚落地，落地前跳数不会自动重置",
+    "如果手机误触，先避开右上角暂停和简洁模式按钮再起跳",
+  ],
+  hazards: [
+    "飞机本体撞到会掉血，它丢的炸弹落地后还有一圈爆炸范围",
+    "足球只扣半颗心，但石头和飞机的伤害不一样，别按同一种节奏躲",
+    "听到飞机声先看高度，人在空中时不要急着把最后一跳交掉",
+    "乌鸦是横向路线，落石和足球是预警后下落，躲法不能混在一起",
+    "炸弹落地后离爆点远一点，擦着边也可能吃到半颗心",
+  ],
+  battle: [
+    "好友对战可以选难度，双方准备后才开始，左边控制移动，右边大招每局一次",
+    "对战看综合表现，不只是先到终点，金币、连击、受伤和完成度都会影响结果",
+    "要开房就选同一难度再比，人物可以不同，路线和大招时机更重要",
+    "我可以接邀请，不过先说难度，轻松、标准、困难还是疯狂",
+    "大招最好等对方在空中或过复杂路段时用，太早交掉容易浪费",
+  ],
+  ranking: [
+    "综合榜会把闯关和好友对战一起算，单人榜和对战榜可以分开看",
+    "刚注册但没挑战的人也应该显示，只是成绩会写成尚未挑战",
+    "金币是否公开由玩家自己决定，隐藏以后榜上不会显示余额",
+    "排名更新有一点云端延迟，刷新后还不对就把玩家名和时间说清楚",
+    "赛季榜看的是本赛季记录，账号和已买人物不会因为换季消失",
+  ],
+  account: [
+    "账号记录跟名字和密码走，换设备登录后会从云端恢复",
+    "改名要在右上角头像里的个人资料保存，榜单会跟着更新",
+    "金币、人物或关卡没恢复时先别重复购买，重新登录一次再看云端记录",
+    "公开金币和在线状态是两个独立开关，都能在个人资料里修改",
+    "同一个名字只能注册一次，已有账号应该点登录，不要重复注册",
+  ],
   coins: [
     "大金币那条线风险高，血量不够就先保通关",
     "为了一个大金币掉半颗血不一定划算，我刚吃过亏",
     "金币高度每关都在变，不能照搬上一关的按法",
     "先把{anchor}的落点走顺，再考虑全收",
+  ],
+  bug: [
+    "先报关卡、人物、血量和出问题前最后两个操作，我才能按同样步骤复现",
+    "如果同一个位置连续两局都发生，记下分数和障碍类型，这样比较像稳定问题",
+    "我会先区分碰撞判定、画面位置和网络同步，三种问题看起来很像但原因不同",
+    "先别连续刷新或重复点购买，把出现问题的顺序写清楚，比较容易查到",
+    "这个描述还差一个条件：你当时在地面、二层还是空中？补上我再判断",
+    "我不想乱猜；能说一下哪一关、用谁、碰到了什么，以及之后发生了什么吗",
+  ],
+  weather: [
+    "你在中国哪个城市？天气差得很大，给城市我才能准确回答",
+    "实时天气会变化，我不想随口编；如果云端智能查询已开启，我可以按城市查",
+    "你们今天那边是什么天气？我这里先不替任何城市乱报😂",
+    "要聊天气最好带城市和时间，比如“今天上海下午”，这样不会答偏",
+  ],
+  news: [
+    "你想聊游戏、体育、科技还是国内新闻？给个方向我再接着说",
+    "新闻变化快，我不想拿旧消息当今天的；云端查询开启后可以核对来源再聊",
+    "刚看到“新闻”两个字还不够，你说是哪件事，我按那个话题聊",
+    "体育新闻可以，先说球队或球员；国内消息也最好给个关键词",
+  ],
+  casual: [
+    "这句我接得上，不过你先说今天准备打哪一关",
+    "哈哈先聊两句也行，我刚好不想马上重开",
+    "我今天只打算玩一小会儿，结果又被排行榜勾住了",
+    "先不卷成绩，你最近最顺手的是哪个人物",
+    "我在，刚才去跑了一局，回来正好看到这条",
   ],
   challenge: [
     "这句话先记下，开个房间跑一局就知道",
@@ -832,6 +898,17 @@ const RIVAL_REPLY_PARTS = {
   ],
 };
 
+function countLocalReplyVariants() {
+  const voiceCombinations = Object.values(RIVAL_CHAT_VOICES).reduce((sum, voice) =>
+    sum + Math.max(1, voice.openers.length) * Math.max(1, voice.endings.length), 0);
+  const intentBodies = Object.values(RIVAL_REPLY_PARTS).reduce((sum, parts) =>
+    sum + Math.max(1, Array.isArray(parts) ? parts.length : 0), 0);
+  // Each compatible opener/body/ending also has five sentence layouts.
+  return voiceCombinations * intentBodies * 5;
+}
+
+const LOCAL_REPLY_VARIANT_COUNT = countLocalReplyVariants();
+
 const RIVAL_AMBIENT_PARTS = [
   ["第{level}关刚才那条低路线反而顺一点", "有人想开一局标准难度吗", "我先跑一把，回来报结果"],
   ["刚才第三跳留晚了，居然真的救回来了", "别问前两次去哪了😂", "下一局我不抢最上面的金币"],
@@ -841,6 +918,14 @@ const RIVAL_AMBIENT_PARTS = [
   ["洞里那段现在亮多了", "但我还是把最后一跳留给飞机", "别为了不存在的金币绕路"],
   ["我刚才在崖边停住半秒，画面也跟着停了", "三连跳人物确实有机会回来", "基础人物就别贪上面那排币"],
   ["今天手感一般，先不吹", "等我过了第{level}关再说", "你们可以先质疑着"],
+  ["我在复测一个问题：同一关、同一人物连续跑三次", "先记最后两次操作，不然只说“又掉了”查不出来", "等有稳定步骤我再发结论"],
+  ["第{level}关上层金币不用全吃，先走中层会稳很多", "最后那个长崖再留第三跳", "这条路线分不高，但通关率高"],
+  ["刚把飞机和炸弹分开测了", "飞机本体是在空中碰撞，炸弹是落地后的范围", "难怪我之前总躲错方向"],
+  ["有人遇到碰撞不准先报关卡和人物", "最好再说当时在地面、二层还是空中", "条件齐一点才知道是不是同一个问题"],
+  ["你们今天那边天气怎么样", "先说城市，别让我对着整个中国猜😂", "下雨天在家跑两局倒是挺合适"],
+  ["今天有什么体育或游戏新闻值得聊", "给个关键词，旧消息就别拿来当今天的了", "我想看完再开一局"],
+  ["我把第{level}关的低、中、高三条线都跑了一遍", "高线金币多但最吃体力，中线比较适合保命", "基础人物先别硬追最高那排"],
+  ["刚才那个异常我暂时没稳定复现", "只出现一次我先不说它一定是bug", "下一次记下分数和障碍再对"],
 ];
 
 function pickRivalPart(list, seed, shift = 0) {
@@ -1024,7 +1109,23 @@ function competitorChatTextSeed(value) {
   return seed >>> 0;
 }
 
-function competitorChatMessage(profile, text, createdAt, restartAt, idSuffix = "note") {
+function normalizeChatBattleInvite(value) {
+  if (!value || typeof value !== "object") return null;
+  const rivalId = cleanPlayerId(value.rivalId);
+  const rival = DAILY_COMPETITORS.find((profile) => profile.playerId === rivalId);
+  if (!rival) return null;
+  const difficulty = ["easy", "normal", "hard", "extreme"].includes(String(value.difficulty))
+    ? String(value.difficulty)
+    : "normal";
+  return {
+    rivalId,
+    rivalName: rival.name,
+    difficulty,
+    expiresAt: Math.max(0, Number(value.expiresAt) || 0),
+  };
+}
+
+function competitorChatMessage(profile, text, createdAt, restartAt, idSuffix = "note", metadata = {}) {
   const snapshot = simulateCompetitor(profile, createdAt, restartAt);
   const cleanText = cleanChatText(String(text || "")
     .replaceAll("{level}", String(snapshot.level))
@@ -1046,6 +1147,7 @@ function competitorChatMessage(profile, text, createdAt, restartAt, idSuffix = "
     selectedSkin: snapshot.selectedSkin,
     coins: snapshot.coins,
     showCoins: snapshot.showCoins,
+    battleInvite: normalizeChatBattleInvite(metadata?.battleInvite),
   };
 }
 
@@ -1059,6 +1161,11 @@ function dailyCompetitorChatMessages(now = Date.now(), restartAt = RIVAL_RESTART
   for (let dayIndex = firstDay; dayIndex <= lastDay; dayIndex += 1) {
     const threadIndex = competitorActivityValue(1459, dayIndex) % RIVAL_CHAT_THREADS.length;
     const thread = RIVAL_CHAT_THREADS[threadIndex] || RIVAL_CHAT_THREADS[0];
+    const firstActive = competitorActivityValue(1511, dayIndex) % DAILY_COMPETITORS.length;
+    let secondActive = competitorActivityValue(1543, dayIndex + 7) % DAILY_COMPETITORS.length;
+    if (secondActive === firstActive) secondActive = (secondActive + 1 + dayIndex) % DAILY_COMPETITORS.length;
+    const activeProfiles = [DAILY_COMPETITORS[firstActive], DAILY_COMPETITORS[secondActive]];
+    const activePlayerIds = new Set(activeProfiles.map((profile) => profile.playerId));
     const dayJitter = (competitorActivityValue(1777, dayIndex) % 19) - 9;
     const threadStart = restartAt + dayIndex * RIVAL_DAY_MS + (4 + dayJitter) * RIVAL_MINUTE_MS;
     let offsetSeconds = 0;
@@ -1066,6 +1173,7 @@ function dailyCompetitorChatMessages(now = Date.now(), restartAt = RIVAL_RESTART
     for (let index = 0; index < thread.length; index += 1) {
       const [profileIndex, text] = thread[index];
       const profile = DAILY_COMPETITORS[Math.max(0, Math.min(DAILY_COMPETITORS.length - 1, Number(profileIndex) || 0))];
+      if (!activePlayerIds.has(profile.playerId)) continue;
       offsetSeconds += index === 0 ? 0 : 31 + (competitorActivityValue(profile.seed + dayIndex, index) % 48);
       const createdAt = threadStart + offsetSeconds * 1000;
       if (createdAt > now || createdAt < oldestAllowed) continue;
@@ -1073,7 +1181,7 @@ function dailyCompetitorChatMessages(now = Date.now(), restartAt = RIVAL_RESTART
     }
 
     if (dayIndex % 2 === 0) {
-      const profile = DAILY_COMPETITORS[competitorActivityValue(2213, dayIndex) % DAILY_COMPETITORS.length];
+      const profile = activeProfiles[competitorActivityValue(2213, dayIndex) % activeProfiles.length];
       const createdAt = threadStart + (8.3 + (competitorActivityValue(2243, dayIndex) % 50) / 100) * RIVAL_MINUTE_MS;
       if (createdAt <= now && createdAt >= oldestAllowed) {
         const lineIndex = competitorActivityValue(profile.seed + 1201, dayIndex) % profile.chatLines.length;
@@ -1082,9 +1190,9 @@ function dailyCompetitorChatMessages(now = Date.now(), restartAt = RIVAL_RESTART
     }
 
     const ambientGroup = RIVAL_AMBIENT_PARTS[competitorActivityValue(3181, dayIndex) % RIVAL_AMBIENT_PARTS.length];
-    const ambientCount = 2 + (competitorActivityValue(3253, dayIndex) % 2);
+    const ambientCount = 2;
     for (let index = 0; index < ambientCount; index += 1) {
-      const profile = DAILY_COMPETITORS[competitorActivityValue(3319 + index, dayIndex) % DAILY_COMPETITORS.length];
+      const profile = activeProfiles[competitorActivityValue(3319 + index, dayIndex) % activeProfiles.length];
       const createdAt = threadStart + (2.1 + index * 2.35 + (competitorActivityValue(profile.seed, dayIndex + index) % 47) / 100) * RIVAL_MINUTE_MS;
       if (createdAt > now || createdAt < oldestAllowed) continue;
       const line = ambientGroup[(index + competitorActivityValue(profile.seed + 47, dayIndex)) % ambientGroup.length];
@@ -1094,61 +1202,374 @@ function dailyCompetitorChatMessages(now = Date.now(), restartAt = RIVAL_RESTART
   return messages.sort((a, b) => a.createdAt - b.createdAt).slice(-CHAT_MAX_MESSAGES);
 }
 
-function competitorReplyCategory(text) {
-  const value = String(text || "").toLocaleLowerCase();
-  if (/悬崖|洞口|掉下|掉进|深坑|长洞|边缘/.test(value)) return "cliff";
-  if (/洞穴|黑暗|手电|太阳|看不见/.test(value)) return "cave";
-  if (/三连跳|二连跳|第三跳|跳跃|起跳|落地/.test(value)) return "jump";
-  if (/人物|角色|商店|灵敏|体力|强哥|贝贝|梅西|姆巴佩|哈兰德|蟹老板|志炫/.test(value)) return "character";
-  if (/金币|大金币|兑换|余额/.test(value)) return "coins";
-  if (/卡|bug|失败|死了|判定|不对|有问题|异常/.test(value)) return "problem";
-  if (/吹|不信|假的|质疑|挑战|来比|厉害|第一/.test(value)) return "challenge";
-  if (/你好|早上好|晚上好|嗨|hello|hi|有人吗|在吗/.test(value)) return "greeting";
-  if (/[?？]|怎么|为什么|多少|哪个|能不能|是不是/.test(value)) return "question";
-  return "general";
-}
+const RIVAL_INTENT_RULES = [
+  ["weather", /天气|气温|下雨|暴雨|台风|下雪|高温|冷不冷|热不热|空气质量|雾霾/, 16],
+  ["news", /新闻|热搜|头条|时事|体育消息|科技消息|国内消息/, 16],
+  ["ranking", /排行榜|排名|赛季|冠军|第一名|只显示|几个人|玩家列表|成绩榜/, 15],
+  ["account", /账号|登录|注册|密码|换设备|恢复记录|改名|头像|公开金币|在线状态/, 14],
+  ["battle", /好友对战|对战|pk|PK|开房|房间|邀请|大招|摇杆|比一局|来一局/, 14],
+  ["controls", /蹲|下滑|向下键|方向键|控制器|怎么按|按住|松手|简洁模式/, 13],
+  ["hazards", /飞机|炸弹|足球|乌鸦|落石|石头|树枝|爆炸|砸到|掉血/, 13],
+  ["cave", /洞穴|黑暗|手电|太阳|看不见|逐渐变暗/, 13],
+  ["cliff", /悬崖|洞口|掉下|掉进|深坑|长洞|边缘|崖沿|掉到底/, 12],
+  ["jump", /三连跳|二连跳|第三跳|跳跃|起跳|落地|补跳|空中跳|后空翻/, 11],
+  ["coins", /金币|大金币|兑换|余额|吸币|三倍|金币记录|金币明细/, 11],
+  ["bug", /bug|BUG|卡住|卡顿|闪退|判定|异常|穿模|重复|一直这样|不对|没碰到|无法连接/, 11],
+  ["character", /人物|角色|商店|灵敏|体力|技能|强哥|贝贝|梅西|姆巴佩|哈兰德|蟹老板|志炫|元元|果果|启航|云青|哆啦a梦|哆啦A梦/, 6],
+  ["challenge", /吹|不信|假的|质疑|厉害|稳赢|肯定赢|超过|追上/, 7],
+  ["greeting", /你好|早上好|中午好|下午好|晚上好|嗨|hello|hi|有人吗|在吗/, 8],
+  ["casual", /哈哈|笑死|无聊|聊什么|今天玩|刚上线|睡了|晚安|早安/, 5],
+];
 
-function triggeredCompetitorChatReplies(text, accountName, now = Date.now(), restartAt = RIVAL_RESTART_AT) {
+function analyzeCompetitorIntent(text, recentMessages = []) {
   const cleanText = cleanChatText(text);
-  const cleanAccountName = cleanName(accountName) || "玩家";
-  if (!cleanText) return [];
   const lowerText = cleanText.toLocaleLowerCase();
+  const scores = new Map();
+  for (const [intent, pattern, weight] of RIVAL_INTENT_RULES) {
+    const match = lowerText.match(pattern);
+    if (!match) continue;
+    const repeats = Math.min(3, lowerText.split(match[0]).length - 1);
+    scores.set(intent, (scores.get(intent) || 0) + weight + Math.max(0, repeats - 1) * 2);
+  }
+  const isQuestion = /[?？]|怎么|为什么|为啥|多少|哪个|能不能|是不是|如何|咋/.test(cleanText);
   const directProfile = DAILY_COMPETITORS.find((profile) =>
     lowerText.includes(`@${profile.name.toLocaleLowerCase()}`) ||
     lowerText.includes(profile.name.toLocaleLowerCase()));
-  const seed = competitorChatTextSeed(`${cleanText}|${cleanAccountName}|${Math.floor(now / 45000)}`);
-  const isQuestion = /[?？]|怎么|为什么|能不能|是不是/.test(cleanText);
-  const shouldReply = Boolean(directProfile || isQuestion || cleanText.includes("@") || seed % 100 < 68);
+  if (isQuestion && scores.size === 0) scores.set("question", 5);
+  if (cleanText.length <= 12 && scores.size <= 1) {
+    const recent = [...(Array.isArray(recentMessages) ? recentMessages : [])]
+      .reverse()
+      .find((message) => message && !message.recalled && cleanChatText(message.text));
+    if (recent) {
+      for (const [intent, pattern, weight] of RIVAL_INTENT_RULES) {
+        if (pattern.test(String(recent.text || "").toLocaleLowerCase())) {
+          scores.set(intent, Math.max(scores.get(intent) || 0, Math.ceil(weight * 0.55)));
+        }
+      }
+    }
+  }
+  const ordered = [...scores.entries()].sort((left, right) => right[1] - left[1]);
+  return {
+    cleanText,
+    lowerText,
+    directProfile,
+    isQuestion,
+    intent: ordered[0]?.[0] || "general",
+    secondaryIntent: ordered[1]?.[0] || "",
+    confidence: ordered[0]?.[1] || 0,
+  };
+}
+
+function competitorReplyCategory(text, recentMessages = []) {
+  return analyzeCompetitorIntent(text, recentMessages).intent;
+}
+
+function specificCompetitorAnswer(analysis, accountName) {
+  const value = analysis.lowerText;
+  const mention = `@${cleanName(accountName) || "玩家"}`;
+  if (/蟹老板/.test(value) && /金币|吸币|三倍/.test(value)) {
+    return `${mention} 蟹老板不是每局都三倍：每 3 局只有 1 局进入金蟹局，那一局吸币范围更大、金币按三倍结算。先看开局有没有金蟹提示。`;
+  }
+  if (/第三跳|三连跳/.test(value) && /一直|无限|飞|重置|落地/.test(value)) {
+    return `${mention} 第三跳用完后必须真正落地才会重置；它比前两跳矮、耗体力更多，连续狂按反而容易卡在错误节奏。`;
+  }
+  if (/洞穴/.test(value) && /掉血|扣血|死/.test(value)) {
+    return `${mention} 正常进入洞穴会先清掉入口附近危险、回满生命并给短暂无敌，不应该因为“进入”本身掉血。要是还发生，请说关卡和碰到的东西，我按顺序复现。`;
+  }
+  if (/排行榜|玩家列表|排名/.test(value) && /只有|只显示|看不到|几个人|其他人/.test(value)) {
+    return `${mention} 已注册但没成绩的人也应该显示成“尚未挑战”。如果只看到少数人，属于账号列表没有完整同步，不是其他玩家被删除；后台可以重新扫描全部注册账号。`;
+  }
+  if (/蹲|下滑|向下键/.test(value) && /二层|平台|上面|撞/.test(value)) {
+    return `${mention} 低平台要在碰到前按住向下，松手会马上站起；只是点一下不会持续蹲。没蹲却穿过去的话，把关卡和平台位置说一下，那是碰撞判定问题。`;
+  }
+  if (/飞机/.test(value) && /炸弹|掉血|撞/.test(value)) {
+    return `${mention} 飞机本体在空中撞到会必掉血；炸弹落地后按爆炸范围扣半颗心。听见飞机声先留一次空中跳，别马上把跳数用完。`;
+  }
+  return "";
+}
+
+function extractOpenAIResponseText(payload) {
+  if (typeof payload?.output_text === "string") return payload.output_text;
+  for (const output of (Array.isArray(payload?.output) ? payload.output : [])) {
+    for (const content of (Array.isArray(output?.content) ? output.content : [])) {
+      if (typeof content?.text === "string") return content.text;
+    }
+  }
+  return "";
+}
+
+async function generateOpenAICompetitorReply(env, profile, account, analysis, recentMessages, snapshot) {
+  const apiKey = String(env?.OPENAI_API_KEY || "").trim();
+  if (!apiKey || !env?.LEADERBOARD) return "";
+  const rateKey = `${CHAT_AI_RATE_PREFIX}${String(account?.id || cleanPlayerId(account?.playerId) || "unknown")}`;
+  const lastAt = Number(await env.LEADERBOARD.get(rateKey)) || 0;
+  const now = Date.now();
+  if (lastAt && now - lastAt < 45000) return "";
+  await env.LEADERBOARD.put(rateKey, String(now), { expirationTtl: 90 });
+  const context = (Array.isArray(recentMessages) ? recentMessages : [])
+    .filter((message) => message && !message.recalled && cleanChatText(message.text))
+    .slice(-8)
+    .map((message) => `${cleanName(message.name) || "玩家"}：${cleanChatText(message.text)}`)
+    .join("\n");
+  const wantsCurrentInformation = ["weather", "news"].includes(analysis.intent);
+  const useWebSearch = wantsCurrentInformation && String(env.OPENAI_WEB_SEARCH || "").toLocaleLowerCase() === "true";
+  const requestBody = {
+    model: String(env.OPENAI_MODEL || "gpt-5.6-terra").trim(),
+    store: false,
+    max_output_tokens: 180,
+    instructions: [
+      `你是游戏《云朵小勇士》内公开标注为自动挑战者的角色“${profile.name}”。`,
+      "用自然、简短、有逻辑的中文回复，通常 1–3 句，不要机械复述问题。",
+      "只回答玩家实际问的重点；条件不足时只追问最关键的一项（关卡、人物或操作）。",
+      "不要声称自己是现实中的真人，不要编造刚刚发生的战绩、新闻或天气。",
+      "游戏规则：每关100分；三连跳落地才重置；第三跳更矮；洞穴入口回满血；好友对战可选难度且大招每局一次。",
+      "如果使用网络查询，只陈述能核对的当前信息，不确定就说明不确定。",
+      `回复开头自然地带上 @${cleanName(account?.name) || "玩家"}，总长度不超过 180 个汉字。`,
+    ].join("\n"),
+    input: [{
+      role: "user",
+      content: [{
+        type: "input_text",
+        text: [
+          `当前意图：${analysis.intent}${analysis.secondaryIntent ? `；次要意图：${analysis.secondaryIntent}` : ""}`,
+          `角色当前进度：第${snapshot.level}关；正在使用${snapshot.selectedCharacter}`,
+          context ? `最近对话：\n${context}` : "最近对话：无",
+          `需要回复的玩家消息：${analysis.cleanText}`,
+        ].join("\n\n"),
+      }],
+    }],
+  };
+  if (useWebSearch) requestBody.tools = [{ type: "web_search" }];
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8500);
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+    if (!response.ok) return "";
+    const payload = await response.json();
+    return cleanChatText(extractOpenAIResponseText(payload));
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function chatBattleInviteMetadata(profile, difficulty, now) {
+  return {
+    battleInvite: {
+      rivalId: profile.playerId,
+      rivalName: profile.name,
+      difficulty: ["easy", "normal", "hard", "extreme"].includes(difficulty) ? difficulty : "normal",
+      expiresAt: now + 30 * 60 * 1000,
+    },
+  };
+}
+
+async function triggeredCompetitorChatReplies(text, account, recentMessages, env, now = Date.now(), restartAt = RIVAL_RESTART_AT) {
+  const cleanAccountName = cleanName(account?.name) || "玩家";
+  const analysis = analyzeCompetitorIntent(text, recentMessages);
+  if (!analysis.cleanText) return [];
+  const seed = competitorChatTextSeed(`${analysis.cleanText}|${cleanAccountName}|${Math.floor(now / 45000)}`);
+  const gameIntent = !["general", "casual", "greeting", "weather", "news"].includes(analysis.intent);
+  const shouldReply = Boolean(
+    analysis.directProfile ||
+    (analysis.isQuestion && gameIntent && seed % 100 < 84) ||
+    (["weather", "news"].includes(analysis.intent) && analysis.isQuestion && seed % 100 < 48) ||
+    seed % 100 < 12
+  );
   if (!shouldReply) return [];
 
-  const profile = directProfile || DAILY_COMPETITORS[seed % DAILY_COMPETITORS.length];
-  const category = competitorReplyCategory(cleanText);
+  const profile = analysis.directProfile || DAILY_COMPETITORS[seed % DAILY_COMPETITORS.length];
   const snapshot = simulateCompetitor(profile, now, restartAt);
-  const primaryText = composeCompetitorReply(profile, category, cleanText, cleanAccountName, snapshot, seed);
-  const firstDelay = 7000 + (seed % 17000);
+  let primaryText = "";
+  const useCloudReply = Boolean(
+    env?.OPENAI_API_KEY &&
+    (analysis.directProfile || analysis.isQuestion) &&
+    (gameIntent || ["weather", "news"].includes(analysis.intent))
+  );
+  if (useCloudReply) {
+    primaryText = await generateOpenAICompetitorReply(env, profile, account, analysis, recentMessages, snapshot);
+  }
+  if (!primaryText) primaryText = specificCompetitorAnswer(analysis, cleanAccountName);
+  if (!primaryText) {
+    primaryText = composeCompetitorReply(
+      profile,
+      RIVAL_REPLY_PARTS[analysis.intent] ? analysis.intent : "general",
+      analysis.cleanText,
+      cleanAccountName,
+      snapshot,
+      seed,
+    );
+  }
+  const firstDelay = 5000 + (seed % 12000);
+  const directBattleRequest = Boolean(analysis.directProfile && ["battle", "challenge"].includes(analysis.intent));
   const replies = [
-    competitorChatMessage(profile, primaryText, now + firstDelay, restartAt, `r${(seed % 1679616).toString(36)}-0`),
+    competitorChatMessage(
+      profile,
+      primaryText,
+      now + firstDelay,
+      restartAt,
+      `r${(seed % 1679616).toString(36)}-0`,
+      directBattleRequest ? chatBattleInviteMetadata(profile, "normal", now) : {},
+    ),
   ];
 
-  const debateWanted = /不信|假的|质疑|吹|厉害|第一|不对|肯定|一定/.test(cleanText) || (seed >>> 8) % 100 < 24;
+  const debateWanted = /不信|假的|质疑|吹|厉害|第一|不对|肯定|一定/.test(analysis.cleanText) && (seed >>> 8) % 100 < 38;
   if (debateWanted) {
     const otherProfiles = DAILY_COMPETITORS.filter((item) => item.playerId !== profile.playerId);
     const other = otherProfiles[(seed >>> 12) % otherProfiles.length];
     const secondLines = [
       `@${profile.name} 先别说满，我觉得 @${cleanAccountName} 这次描述得挺具体`,
       `等 @${cleanAccountName} 跑完这一把再判，@${profile.name} 你上次也改过口`,
-      `我先站 @${cleanAccountName} 一半，另一半开房间跑一局验证`,
-      `@${profile.name} 你说的是前半段，@${cleanAccountName} 问的明显是后面吧`,
-      `你们继续争，我开同一难度试一次，回来只报结果`,
-      `@${cleanAccountName} 把人物也说一下，不然 @${profile.name} 又要默认你用三连跳`,
-      `这题口头说不清，@${cleanAccountName} 要不要直接和 @${profile.name} PK一局`,
-      `我觉得两边都漏了一个条件：体力掉下来以后手感会变`,
-      `先停一下，刚才那句“肯定”是谁说的，我准备截图了`,
+      `我先站 @${cleanAccountName} 一半，另一半开同一难度验证`,
+      `@${profile.name} 你说的是前半段，@${cleanAccountName} 问的明显是后面`,
+      `你们继续争，我开同一关试一次，回来只报结果`,
+      `@${cleanAccountName} 把人物也说一下，不然结论会差很多`,
     ];
     const secondText = secondLines[(seed >>> 17) % secondLines.length];
-    replies.push(competitorChatMessage(other, secondText, now + firstDelay + 11000 + ((seed >>> 5) % 16000), restartAt, `r${(seed % 1679616).toString(36)}-1`));
+    replies.push(competitorChatMessage(other, secondText, now + firstDelay + 12000 + ((seed >>> 5) % 12000), restartAt, `r${(seed % 1679616).toString(36)}-1`));
   }
   return replies;
+}
+
+function competitorOutreachKey(accountId) {
+  return `${CHAT_AI_OUTREACH_PREFIX}${String(accountId || "").replace(/[^a-z0-9_-]/gi, "").slice(0, 80)}`;
+}
+
+function normalizeCompetitorOutreach(value, now = Date.now()) {
+  if (!value || typeof value !== "object") return {
+    lastOfferedAt: 0,
+    pending: null,
+  };
+  const rivalId = cleanPlayerId(value?.pending?.rivalId);
+  const profile = DAILY_COMPETITORS.find((item) => item.playerId === rivalId);
+  const expiresAt = Math.max(0, Number(value?.pending?.expiresAt) || 0);
+  return {
+    lastOfferedAt: Math.max(0, Number(value.lastOfferedAt) || 0),
+    pending: profile && expiresAt > now ? {
+      rivalId: profile.playerId,
+      rivalName: profile.name,
+      difficulty: ["easy", "normal", "hard", "extreme"].includes(String(value.pending.difficulty))
+        ? String(value.pending.difficulty)
+        : "normal",
+      createdAt: Math.max(0, Number(value.pending.createdAt) || now),
+      expiresAt,
+    } : null,
+  };
+}
+
+async function loadCompetitorOutreach(binding, accountId, now = Date.now()) {
+  const stored = await binding.get(competitorOutreachKey(accountId), { type: "json" });
+  return normalizeCompetitorOutreach(stored, now);
+}
+
+async function saveCompetitorOutreach(binding, accountId, state) {
+  await binding.put(competitorOutreachKey(accountId), JSON.stringify(state), {
+    expirationTtl: 14 * 24 * 60 * 60,
+  });
+}
+
+function consentToCompetitorInvite(text) {
+  const value = cleanChatText(text).replace(/@[^\s@]{1,12}/g, "").trim();
+  if (/不|没空|下次|拒绝|算了|不要/.test(value)) return "decline";
+  if (/^(?:好|好啊|可以|行|来|来吧|同意|接受|开吧|走|ok|yes|准备好了)[！!。.~～\s]*$/i.test(value)) return "accept";
+  return "";
+}
+
+async function maybeScheduleCompetitorOutreach(binding, account, messages, now, restartAt) {
+  if (!binding || !account?.id || !cleanName(account.name)) return false;
+  const state = await loadCompetitorOutreach(binding, account.id, now);
+  if (state.pending) return false;
+  const cooldown = 48 * 60 * 60 * 1000;
+  if (state.lastOfferedAt && now - state.lastOfferedAt < cooldown) return false;
+  const accountCreatedAt = Math.max(0, Number(account.createdAt) || 0);
+  if (accountCreatedAt && now - accountCreatedAt < 10 * 60 * 1000) return false;
+  const recentlyChatted = (Array.isArray(messages) ? messages : []).some((message) =>
+    String(message?.accountId) === String(account.id) &&
+    Number(message?.createdAt) >= now - 72 * 60 * 60 * 1000);
+  if (!recentlyChatted) return false;
+  const halfDay = Math.floor(now / (12 * 60 * 60 * 1000));
+  const seed = competitorChatTextSeed(`${account.id}|outreach|${halfDay}`);
+  if (seed % 100 >= 14) return false;
+  const profile = DAILY_COMPETITORS[seed % DAILY_COMPETITORS.length];
+  const difficulty = ["easy", "normal", "normal", "hard"][(seed >>> 8) % 4];
+  const difficultyName = ({ easy: "轻松", normal: "标准", hard: "困难" })[difficulty] || "标准";
+  const offers = [
+    `@${cleanName(account.name)} 你刚才那条路线我有点想验证。要不要来一局${difficultyName}对战？回复“同意”我再发邀请。`,
+    `@${cleanName(account.name)} 今天想找个人跑一局${difficultyName}难度，你有空吗？同意的话回我一声，我等你。`,
+    `@${cleanName(account.name)} 我看你最近在榜上动了，来一局${difficultyName}对战？你回复“同意”以后我再开房。`,
+    `@${cleanName(account.name)} 先不争路线了，直接用${difficultyName}难度试一次？你说“同意”我就发邀请。`,
+    `@${cleanName(account.name)} 我只玩一局，${difficultyName}难度。你要是同意，我再把对战入口发出来。`,
+  ];
+  const createdAt = now + 7000 + (seed % 16000);
+  messages.push(competitorChatMessage(
+    profile,
+    offers[(seed >>> 12) % offers.length],
+    createdAt,
+    restartAt,
+    `offer-${(seed % 1679616).toString(36)}`,
+  ));
+  await saveCompetitorOutreach(binding, account.id, {
+    lastOfferedAt: now,
+    pending: {
+      rivalId: profile.playerId,
+      rivalName: profile.name,
+      difficulty,
+      createdAt,
+      expiresAt: now + 45 * 60 * 1000,
+    },
+  });
+  return true;
+}
+
+async function competitorInviteConsentReply(binding, account, text, now, restartAt) {
+  if (!binding || !account?.id) return [];
+  const choice = consentToCompetitorInvite(text);
+  if (!choice) return [];
+  const state = await loadCompetitorOutreach(binding, account.id, now);
+  if (!state.pending) return [];
+  const profile = DAILY_COMPETITORS.find((item) => item.playerId === state.pending.rivalId);
+  if (!profile) return [];
+  await saveCompetitorOutreach(binding, account.id, {
+    lastOfferedAt: state.lastOfferedAt || now,
+    pending: null,
+  });
+  const seed = competitorChatTextSeed(`${account.id}|${text}|${now}`);
+  if (choice === "decline") {
+    const declineLines = [
+      `@${cleanName(account.name)} 行，那就下次，不催你`,
+      `收到 @${cleanName(account.name)}，这局我先自己跑`,
+      `没事 @${cleanName(account.name)}，等你想玩再叫我`,
+    ];
+    return [competitorChatMessage(
+      profile,
+      declineLines[seed % declineLines.length],
+      now + 3500 + seed % 5000,
+      restartAt,
+      `decline-${(seed % 1679616).toString(36)}`,
+    )];
+  }
+  const acceptLines = [
+    `@${cleanName(account.name)} 好，我准备好了。点下面“接受对战”，我在房间里等你。`,
+    `收到 @${cleanName(account.name)}，邀请给你了，点一下就进对战准备页。`,
+    `@${cleanName(account.name)} 来，按刚才说的难度跑一局；先点下面接受邀请。`,
+  ];
+  return [competitorChatMessage(
+    profile,
+    acceptLines[seed % acceptLines.length],
+    now + 3000 + seed % 4500,
+    restartAt,
+    `accept-${(seed % 1679616).toString(36)}`,
+    chatBattleInviteMetadata(profile, state.pending.difficulty, now),
+  )];
 }
 
 function normalizeResets(resets) {
@@ -1184,6 +1605,8 @@ function newSeason(now, entries = []) {
     endAt: now + SEASON_LENGTH_MS,
     entries: rank(entries),
     accountsBackfilledAt: 0,
+    accountScanVersion: 0,
+    registeredAccountCount: Math.max(0, Array.isArray(entries) ? entries.length : 0),
     winners: [],
     resets: [],
     gifts: [],
@@ -1201,6 +1624,8 @@ function normalizeState(value, now) {
     endAt,
     entries: rank(Array.isArray(value.entries) ? value.entries : []),
     accountsBackfilledAt: Math.max(0, Number(value.accountsBackfilledAt) || 0),
+    accountScanVersion: Math.max(0, Math.round(Number(value.accountScanVersion) || 0)),
+    registeredAccountCount: Math.max(0, Math.round(Number(value.registeredAccountCount) || 0)),
     winners: Array.isArray(value.winners)
       ? value.winners.filter((winner) => winner && cleanName(winner.name) && cleanPlayerId(winner.playerId)).slice(-26)
       : [],
@@ -1262,6 +1687,14 @@ function publicPayload(state, playerId, rivalRestartAt = RIVAL_RESTART_AT) {
   const gifts = playerId ? state.gifts.filter((item) => item.playerId === playerId) : [];
   return {
     shared: true,
+    registeredPlayerCount: Math.max(
+      state.entries.length,
+      Math.max(0, Number(state.registeredAccountCount) || 0),
+    ),
+    rankingSync: {
+      version: Math.max(0, Number(state.accountScanVersion) || 0),
+      lastScanAt: Math.max(0, Number(state.accountsBackfilledAt) || 0),
+    },
     entries: ranked.map((rankedEntry) => {
       const {
         playerId: rawPlayerId,
@@ -1752,6 +2185,7 @@ function normalizeChatMessage(value, now) {
     selectedSkin: ACCOUNT_SKINS.has(String(value.selectedSkin)) ? String(value.selectedSkin) : "light",
     coins: Math.max(0, Math.min(1000000000, Math.round(Number(value.coins) || 0))),
     showCoins: value.showCoins === true,
+    battleInvite: normalizeChatBattleInvite(value.battleInvite),
   };
 }
 
@@ -1776,6 +2210,7 @@ async function saveChatMessages(binding, messages) {
 function publicChatMessage(message, accountId, now) {
   const mine = String(message.accountId) === String(accountId);
   const publicPlayerId = cleanPlayerId(message.playerId);
+  const chatBattleInvite = normalizeChatBattleInvite(message.battleInvite);
   return {
     id: message.id,
     name: message.name,
@@ -1788,6 +2223,9 @@ function publicChatMessage(message, accountId, now) {
     // System competitors use the same invitation entry point as other profiles.
     // The realtime room still decides whether the target is a human or a rival.
     inviteId: publicPlayerId,
+    battleInvite: chatBattleInvite && (!chatBattleInvite.expiresAt || chatBattleInvite.expiresAt > now)
+      ? chatBattleInvite
+      : null,
     canRecall: mine && !message.recalled && now - message.createdAt <= CHAT_RECALL_MS,
     imageUrl: !message.recalled && message.imageMime && message.mediaToken
       ? `/api/chat-image?id=${encodeURIComponent(message.id)}&key=${encodeURIComponent(message.mediaToken)}`
@@ -1810,15 +2248,27 @@ async function handleChat(request, env) {
   const now = Date.now();
 
   if (request.method === "GET") {
-    const storedMessages = await loadChatMessages(env.LEADERBOARD, now);
+    const storedMessages = await loadChatMessages(env.LEADERBOARD, now, true);
     const rivalRestartAt = await loadRivalRestartAt(env.LEADERBOARD, now);
+    try {
+      const scheduled = await maybeScheduleCompetitorOutreach(
+        env.LEADERBOARD,
+        account,
+        storedMessages,
+        now,
+        rivalRestartAt,
+      );
+      if (scheduled) await saveChatMessages(env.LEADERBOARD, storedMessages);
+    } catch {
+      // Optional rival invitations never block normal chat reads.
+    }
     let competitorMessages = [];
     try {
       competitorMessages = dailyCompetitorChatMessages(now, rivalRestartAt);
     } catch {
       competitorMessages = [];
     }
-    const messages = [...storedMessages, ...competitorMessages]
+    const messages = [...storedMessages.filter((message) => message.createdAt <= now), ...competitorMessages]
       .sort((a, b) => a.createdAt - b.createdAt)
       .slice(-CHAT_MAX_MESSAGES);
     const gameData = sanitizeGameData(account.gameData);
@@ -1895,7 +2345,25 @@ async function handleChat(request, env) {
     messages.push(message);
     try {
       const rivalRestartAt = await loadRivalRestartAt(env.LEADERBOARD, now);
-      messages.push(...triggeredCompetitorChatReplies(text, account.name, now, rivalRestartAt));
+      const consentReplies = await competitorInviteConsentReply(
+        env.LEADERBOARD,
+        account,
+        text,
+        now,
+        rivalRestartAt,
+      );
+      if (consentReplies.length) {
+        messages.push(...consentReplies);
+      } else {
+        messages.push(...await triggeredCompetitorChatReplies(
+          text,
+          account,
+          messages.slice(-10),
+          env,
+          now,
+          rivalRestartAt,
+        ));
+      }
     } catch {
       // A player message must still be delivered if the optional in-game chatter fails.
     }
@@ -2024,6 +2492,10 @@ async function syncAccountRanking(binding, account) {
     });
   }
   loaded.state.entries = rank(loaded.state.entries);
+  loaded.state.registeredAccountCount = Math.max(
+    loaded.state.entries.length,
+    Math.max(0, Number(loaded.state.registeredAccountCount) || 0),
+  );
   await binding.put(SEASON_KEY, JSON.stringify(loaded.state));
 }
 
@@ -2738,11 +3210,19 @@ async function listRegisteredAccounts(binding) {
   }
 }
 
-async function backfillRegisteredAccounts(binding, state, now = Date.now()) {
-  if (!state || Math.max(0, Number(state.accountsBackfilledAt) || 0) > 0) return false;
+async function backfillRegisteredAccounts(binding, state, now = Date.now(), options = {}) {
+  if (!state) return false;
+  const force = options?.force === true;
+  const lastScanAt = Math.max(0, Number(state.accountsBackfilledAt) || 0);
+  const scanVersion = Math.max(0, Number(state.accountScanVersion) || 0);
+  const scanExpired = !lastScanAt || now - lastScanAt >= ACCOUNT_SCAN_INTERVAL_MS;
+  const knownCount = Math.max(0, Number(state.registeredAccountCount) || 0);
+  const visiblyMissing = knownCount > state.entries.length;
+  if (!force && scanVersion >= ACCOUNT_SCAN_VERSION && !scanExpired && !visiblyMissing) return false;
   const accounts = await listRegisteredAccounts(binding);
   if (!accounts) return false;
   const entriesByPlayerId = new Map(state.entries.map((entry) => [entry.playerId, entry]));
+  let restoredCount = 0;
   for (const account of accounts) {
     const playerId = cleanPlayerId(account.playerId);
     if (!playerId) continue;
@@ -2758,11 +3238,23 @@ async function backfillRegisteredAccounts(binding, state, now = Date.now()) {
       };
       state.entries.push(entry);
       entriesByPlayerId.set(playerId, entry);
+      restoredCount += 1;
     }
     updateRankingEntryFromAccount(entry, account, now);
   }
   state.entries = rank(state.entries);
   state.accountsBackfilledAt = now;
+  state.accountScanVersion = ACCOUNT_SCAN_VERSION;
+  state.registeredAccountCount = accounts.length;
+  if (options && typeof options === "object") {
+    const result = {
+      scannedCount: accounts.length,
+      restoredCount,
+      totalVisible: state.entries.length,
+    };
+    if (options.result && typeof options.result === "object") Object.assign(options.result, result);
+    else options.result = result;
+  }
   return true;
 }
 
@@ -2858,6 +3350,7 @@ function adminPayload(state, message = "") {
     message,
     stats: {
       totalPlayers: entries.length,
+      registeredAccounts: Math.max(entries.length, Math.max(0, Number(state.registeredAccountCount) || 0)),
       challengedPlayers: entries.filter((entry) => entry.score > 0 || entry.time > 0).length,
       passedPlayers: entries.filter((entry) => entry.score >= 100).length,
       pendingResets: state.resets.length,
@@ -2868,6 +3361,11 @@ function adminPayload(state, message = "") {
       number: state.seasonNumber,
       startAt: state.startAt,
       endAt: state.endAt,
+    },
+    rankingSync: {
+      version: Math.max(0, Number(state.accountScanVersion) || 0),
+      lastScanAt: Math.max(0, Number(state.accountsBackfilledAt) || 0),
+      intervalMs: ACCOUNT_SCAN_INTERVAL_MS,
     },
     entries,
   };
@@ -3183,8 +3681,10 @@ async function handleAdmin(request, env) {
   } else if (action === "deleteScore") {
     if (!playerId) return json({ error: "invalid_player" }, 400);
     const player = loaded.state.entries.find((entry) => entry.playerId === playerId);
-    loaded.state.entries = loaded.state.entries.filter((entry) => entry.playerId !== playerId);
-    message = `${player?.name || "该玩家"} 的排名记录已删除。`;
+    if (!player) return json({ error: "player_not_found" }, 404);
+    Object.assign(player, { level: 1, score: 0, time: 0, updatedAt: now });
+    loaded.state.entries = rank(loaded.state.entries);
+    message = `${player.name} 的闯关成绩已归零；注册账号仍会保留在玩家列表。`;
   } else if (action === "grantCoins") {
     if (!playerId || !loaded.state.entries.some((entry) => entry.playerId === playerId)) return json({ error: "player_not_found" }, 404);
     const amount = Math.round(Number(body?.amount));
@@ -3218,8 +3718,25 @@ async function handleAdmin(request, env) {
     message = `${player.name} 的金币已从 ${result?.previousBalance ?? previousBalance} 校正为 ${amount}。`;
   } else if (action === "clearLeaderboard") {
     if (String(body?.confirm || "") !== "CLEAR") return json({ error: "confirmation_required" }, 400);
-    loaded.state.entries = [];
-    message = "当前赛季排行榜已清空；玩家本地进度未改变。";
+    loaded.state.entries = rank(loaded.state.entries.map((entry) => ({
+      ...entry,
+      level: 1,
+      score: 0,
+      time: 0,
+      updatedAt: now,
+    })));
+    message = "当前赛季成绩已全部归零；所有注册账号仍保留在玩家列表。";
+  } else if (action === "repairLeaderboard") {
+    const repair = {};
+    const repaired = await backfillRegisteredAccounts(env.LEADERBOARD, loaded.state, now, { force: true, result: repair });
+    const result = repair.scannedCount !== undefined ? repair : {
+      scannedCount: loaded.state.registeredAccountCount,
+      restoredCount: 0,
+      totalVisible: loaded.state.entries.length,
+    };
+    message = repaired
+      ? `已扫描 ${result.scannedCount} 个注册账号，补回 ${result.restoredCount} 人；当前显示 ${result.totalVisible} 位真实玩家。`
+      : "账号扫描暂时没有完成，请稍后再点一次；现有玩家记录没有被删除。";
   } else {
     return json({ error: "unknown_action" }, 400);
   }
@@ -3294,7 +3811,11 @@ export default {
         const lockStatus = siteLockPayload(await loadSiteLock(env.LEADERBOARD), Date.now()).lock;
         return json({
           ok: true,
-          version: "v50",
+          version: "v51",
+          rankingRepairVersion: ACCOUNT_SCAN_VERSION,
+          localReplyVariants: LOCAL_REPLY_VARIANT_COUNT,
+          openAIConfigured: Boolean(env.OPENAI_API_KEY),
+          openAIWebSearchEnabled: String(env.OPENAI_WEB_SEARCH || "").toLocaleLowerCase() === "true",
           kvBound: Boolean(env.LEADERBOARD),
           battleBound: Boolean(env.BATTLE_ROOMS),
           siteLocked: lockStatus.active,
