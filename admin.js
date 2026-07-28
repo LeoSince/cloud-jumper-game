@@ -118,8 +118,25 @@
   const yuanyuanDropRemaining = document.getElementById("yuanyuanDropRemaining");
   const yuanyuanDropRelease = document.getElementById("yuanyuanDropRelease");
   const yuanyuanBuyerList = document.getElementById("yuanyuanBuyerList");
+  const accountAdminLoginButton = document.getElementById("accountAdminLoginButton");
+  const adminIdentityBadge = document.getElementById("adminIdentityBadge");
+  const refreshAdminRolesButton = document.getElementById("refreshAdminRolesButton");
+  const adminRoleIdentity = document.getElementById("adminRoleIdentity");
+  const adminRoleSearchInput = document.getElementById("adminRoleSearchInput");
+  const adminRoleCount = document.getElementById("adminRoleCount");
+  const adminRoleStatus = document.getElementById("adminRoleStatus");
+  const adminRoleList = document.getElementById("adminRoleList");
+  const adminRoleEmptyState = document.getElementById("adminRoleEmptyState");
+  const adminAiModel = document.getElementById("adminAiModel");
+  const adminAiStatus = document.getElementById("adminAiStatus");
+  const adminAiConversation = document.getElementById("adminAiConversation");
+  const adminAiForm = document.getElementById("adminAiForm");
+  const adminAiInput = document.getElementById("adminAiInput");
+  const sendAdminAiButton = document.getElementById("sendAdminAiButton");
+  const clearAdminAiButton = document.getElementById("clearAdminAiButton");
 
   let password = "";
+  let accountToken = String(localStorage.getItem("cloud-jumper-account-token") || "");
   let players = [];
   let characters = [];
   let editingCharacter = null;
@@ -128,15 +145,19 @@
   let siteControlData = null;
   let siteControlServerOffset = 0;
   let selectedAdminTab = "players";
+  let adminAccessData = null;
+  let adminAccounts = [];
+  let adminAiHistory = [];
   let busy = false;
 
   function setBusy(value) {
     busy = Boolean(value);
-    for (const button of [loginButton, refreshButton, repairLeaderboardButton, exportButton, clearButton, refreshCharactersButton, addCharacterButton, saveCharacterButton, deleteCharacterButton, resetCharacterButton, refreshRedeemCodesButton, addRedeemCodeButton, saveRedeemCodeButton, deleteRedeemCodeButton, activateSiteLockButton, unlockSiteButton, refreshSiteControlButton, ...siteLockDurationButtons]) {
+    for (const button of [loginButton, accountAdminLoginButton, refreshButton, repairLeaderboardButton, exportButton, clearButton, refreshCharactersButton, addCharacterButton, saveCharacterButton, deleteCharacterButton, resetCharacterButton, refreshRedeemCodesButton, addRedeemCodeButton, saveRedeemCodeButton, deleteRedeemCodeButton, activateSiteLockButton, unlockSiteButton, refreshSiteControlButton, refreshAdminRolesButton, sendAdminAiButton, clearAdminAiButton, ...siteLockDurationButtons]) {
       if (button) button.disabled = busy;
     }
     for (const button of adminCharacterGrid?.querySelectorAll("button") || []) button.disabled = busy;
     for (const button of adminRedeemCodeGrid?.querySelectorAll("button") || []) button.disabled = busy;
+    for (const button of adminRoleList?.querySelectorAll("button") || []) button.disabled = busy || button.dataset.disabled === "true";
     dashboard?.setAttribute("aria-busy", String(busy));
   }
 
@@ -164,7 +185,7 @@
   }
 
   function setAdminTab(tab) {
-    const selected = ["players", "characters", "redeem-codes", "site-control"].includes(tab) ? tab : "players";
+    const selected = ["players", "characters", "redeem-codes", "site-control", "roles", "ai"].includes(tab) ? tab : "players";
     selectedAdminTab = selected;
     for (const button of adminTabButtons) {
       const active = button.dataset.adminTab === selected;
@@ -225,13 +246,15 @@
     const timer = controller ? window.setTimeout(() => controller.abort(), 12000) : 0;
     let response;
     try {
+      const headers = {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      };
+      if (password) headers["X-Admin-Password"] = password;
+      if (accountToken) headers.Authorization = `Bearer ${accountToken}`;
       response = await fetch(endpoint, {
         method,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-Admin-Password": password,
-        },
+        headers,
         body: body ? JSON.stringify(body) : null,
         ...(controller ? { signal: controller.signal } : {}),
       });
@@ -249,8 +272,13 @@
     let data = {};
     try { data = await response.json(); } catch { data = {}; }
     if (response.status === 401) {
-      const error = new Error("密码错误");
+      const error = new Error(password ? "管理员密码错误" : "当前游戏账号没有后台权限，或登录已过期");
       error.code = "unauthorized";
+      throw error;
+    }
+    if (response.status === 503 && data.error === "gemini_not_configured") {
+      const error = new Error("Gemini 尚未配置，请先在 Cloudflare 添加 GEMINI_API_KEY");
+      error.code = "gemini_not_configured";
       throw error;
     }
     if (response.status === 503) {
@@ -274,6 +302,13 @@
         redeem_character_not_found: "找不到兑换码对应的人物",
         redeem_code_not_found: "找不到这个兑换码，可能已经被删除",
         invalid_site_lock_window: "封锁结束时间必须晚于开始时间，且最长不能超过 30 天",
+        cannot_revoke_self: "普通管理员不能取消自己的权限，请让其他管理员处理",
+        account_not_found: "找不到这个玩家账号",
+        admin_required: "当前账号没有管理员权限",
+        gemini_unavailable: "Gemini 暂时无法连接，请稍后重试",
+        gemini_timeout: "Gemini 响应超时，请稍后重试",
+        gemini_empty_response: "Gemini 没有返回内容，请换一种问法",
+        empty_message: "请输入要问的内容",
       };
       const error = new Error(readableErrors[data.error] || data.error || "后台操作失败");
       error.code = String(data.error || "request_failed");
@@ -284,6 +319,16 @@
 
   function render(data) {
     players = Array.isArray(data.entries) ? data.entries : [];
+    adminAccessData = data?.access || adminAccessData;
+    if (adminIdentityBadge) {
+      const name = String(adminAccessData?.name || "管理员");
+      adminIdentityBadge.textContent = adminAccessData?.owner ? "最高管理员" : `${name} · 管理员`;
+    }
+    if (adminRoleIdentity) {
+      adminRoleIdentity.textContent = adminAccessData?.owner
+        ? "当前：最高管理员"
+        : `当前：${String(adminAccessData?.name || "管理员")} · 管理员`;
+    }
     for (const [key, element] of Object.entries(stats)) element.textContent = String(Number(data.stats?.[key]) || 0);
     if (data.season?.endAt) seasonText.textContent = `第 ${data.season.number} 赛季 · ${formatDate(data.season.startAt)}—${formatDate(data.season.endAt)}`;
     renderRows();
@@ -310,6 +355,12 @@
       playerCell.className = "player-cell";
       const name = document.createElement("strong");
       name.textContent = player.name;
+      if (player.isAdmin) {
+        const adminTag = document.createElement("em");
+        adminTag.className = "admin-role-tag";
+        adminTag.textContent = "管理员";
+        name.append(adminTag);
+      }
       const id = document.createElement("small");
       id.textContent = player.playerId;
       id.title = "玩家编号";
@@ -962,26 +1013,205 @@
     }
   }
 
+  function adminAvatarIcon(value) {
+    return ({
+      cloud: "☁",
+      lightning: "ϟ",
+      star: "★",
+      crown: "♛",
+      football: "⚽",
+      muscle: "💪",
+      rocket: "▲",
+      moon: "☾",
+    })[String(value)] || "☁";
+  }
+
+  function setAdminRoleStatus(message, error = false) {
+    if (!adminRoleStatus) return;
+    adminRoleStatus.textContent = message;
+    adminRoleStatus.classList.toggle("is-error", error);
+  }
+
+  function renderAdminRoles(data) {
+    adminAccounts = Array.isArray(data?.accounts) ? data.accounts : [];
+    adminAccessData = data?.access || adminAccessData;
+    if (adminRoleIdentity) {
+      adminRoleIdentity.textContent = adminAccessData?.owner
+        ? "当前：最高管理员"
+        : `当前：${String(adminAccessData?.name || "管理员")} · 管理员`;
+    }
+    renderAdminRoleList();
+    if (data?.message) setAdminRoleStatus(data.message);
+  }
+
+  function renderAdminRoleList() {
+    if (!adminRoleList) return;
+    const keyword = String(adminRoleSearchInput?.value || "").trim().toLocaleLowerCase();
+    const filtered = adminAccounts.filter((account) =>
+      !keyword ||
+      String(account.name || "").toLocaleLowerCase().includes(keyword) ||
+      String(account.playerId || "").toLocaleLowerCase().includes(keyword));
+    if (adminRoleCount) adminRoleCount.textContent = `${filtered.length} / ${adminAccounts.length} 人`;
+    adminRoleEmptyState?.classList.toggle("is-hidden", filtered.length > 0);
+    adminRoleList.replaceChildren();
+    for (const account of filtered) {
+      const card = document.createElement("article");
+      card.className = `admin-role-card${account.isAdmin ? " is-admin" : ""}`;
+      card.dataset.playerId = account.playerId;
+      const avatar = document.createElement("span");
+      avatar.className = "admin-role-avatar";
+      avatar.textContent = adminAvatarIcon(account.avatar);
+      const copy = document.createElement("div");
+      copy.className = "admin-role-copy";
+      const name = document.createElement("strong");
+      name.textContent = String(account.name || "玩家");
+      if (account.isAdmin) {
+        const tag = document.createElement("em");
+        tag.className = "admin-role-tag";
+        tag.textContent = "管理员";
+        name.append(tag);
+      }
+      const detail = document.createElement("small");
+      detail.textContent = `${String(account.playerId || "—")} · ${account.lastActiveAt ? formatDate(account.lastActiveAt) : "未记录上线"}`;
+      copy.append(name, detail);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.adminRoleAction = account.isAdmin ? "revokeAdmin" : "grantAdmin";
+      button.textContent = account.isAdmin ? (account.isSelf ? "当前账号" : "取消管理员") : "设为管理员";
+      button.classList.toggle("is-revoke", account.isAdmin && !account.isSelf);
+      button.disabled = account.isAdmin && account.isSelf && !adminAccessData?.owner;
+      if (button.disabled) button.dataset.disabled = "true";
+      card.append(avatar, copy, button);
+      adminRoleList.append(card);
+    }
+  }
+
+  async function loadAdminRoles() {
+    if (busy) return;
+    setBusy(true);
+    setAdminRoleStatus("正在读取账号和管理员名单…");
+    try {
+      const data = await requestAdmin("GET", null, "/api/admin-roles");
+      renderAdminRoles(data);
+      setAdminRoleStatus(`已载入 ${data.accounts?.length || 0} 个注册账号`);
+    } catch (error) {
+      setAdminRoleStatus(error.message, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runAdminRoleAction(playerId, action) {
+    if (busy) return;
+    const account = adminAccounts.find((item) => item.playerId === playerId);
+    if (!account) return;
+    const verb = action === "grantAdmin" ? "设为管理员" : "取消管理员权限";
+    if (!confirm(`确定把“${account.name}”${verb}？`)) return;
+    setBusy(true);
+    setAdminRoleStatus("正在保存管理员权限…");
+    try {
+      const data = await requestAdmin("POST", { action, playerId }, "/api/admin-roles");
+      renderAdminRoles(data);
+      setAdminRoleStatus(data.message || "管理员权限已保存");
+    } catch (error) {
+      setAdminRoleStatus(error.message, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function setAdminAiStatus(message, error = false) {
+    if (!adminAiStatus) return;
+    adminAiStatus.textContent = message;
+    adminAiStatus.classList.toggle("is-error", error);
+  }
+
+  function appendAdminAiMessage(role, text) {
+    if (!adminAiConversation) return;
+    const article = document.createElement("article");
+    article.className = role === "user" ? "is-user" : "is-model";
+    const label = document.createElement("span");
+    label.textContent = role === "user" ? (adminAccessData?.name || "管理员") : "Gemini";
+    const paragraph = document.createElement("p");
+    paragraph.textContent = String(text || "");
+    article.append(label, paragraph);
+    adminAiConversation.append(article);
+    adminAiConversation.scrollTop = adminAiConversation.scrollHeight;
+  }
+
+  function resetAdminAiConversation() {
+    adminAiHistory = [];
+    if (adminAiConversation) adminAiConversation.replaceChildren();
+    appendAdminAiMessage("model", "你好，我在这里。你可以问我游戏运营、功能设计或后台使用问题。");
+    setAdminAiStatus("对话已清空");
+  }
+
+  async function loadAdminAiStatus() {
+    try {
+      const data = await requestAdmin("GET", null, "/api/admin-ai");
+      if (adminAiModel) adminAiModel.textContent = data.configured ? `Gemini · ${data.model}` : "Gemini 未配置";
+      setAdminAiStatus(data.configured ? "Gemini 已连接" : "请先配置 GEMINI_API_KEY", !data.configured);
+      return data;
+    } catch (error) {
+      if (adminAiModel) adminAiModel.textContent = "Gemini 暂不可用";
+      setAdminAiStatus(error.message, true);
+      return null;
+    }
+  }
+
+  async function sendAdminAiMessage() {
+    const message = String(adminAiInput?.value || "").trim().slice(0, 1200);
+    if (!message || busy) return;
+    const history = adminAiHistory.slice(-12);
+    adminAiHistory.push({ role: "user", text: message });
+    appendAdminAiMessage("user", message);
+    if (adminAiInput) adminAiInput.value = "";
+    setBusy(true);
+    setAdminAiStatus("Gemini 正在思考…");
+    try {
+      const data = await requestAdmin("POST", { message, history }, "/api/admin-ai");
+      adminAiHistory.push({ role: "model", text: String(data.reply || "") });
+      adminAiHistory = adminAiHistory.slice(-14);
+      appendAdminAiMessage("model", data.reply);
+      if (adminAiModel) adminAiModel.textContent = `Gemini · ${data.model || "已连接"}`;
+      setAdminAiStatus("回答完成 · 对话未写入服务器");
+    } catch (error) {
+      appendAdminAiMessage("model", `暂时没有回答：${error.message}`);
+      setAdminAiStatus(error.message, true);
+    } finally {
+      setBusy(false);
+      adminAiInput?.focus();
+    }
+  }
+
   async function loadDashboard() {
     if (busy) return;
     setBusy(true);
     setStatus("正在读取 Cloudflare KV…");
     try {
-      const [data, characterData, redeemCodeData, siteData] = await Promise.all([
+      accountToken = String(localStorage.getItem("cloud-jumper-account-token") || accountToken || "");
+      const [data, characterData, redeemCodeData, siteData, roleData, aiData] = await Promise.all([
         requestAdmin(),
         requestAdmin("GET", null, "/api/admin-characters"),
         requestAdmin("GET", null, "/api/admin-redeem-codes"),
         requestAdmin("GET", null, "/api/admin-site-control"),
+        requestAdmin("GET", null, "/api/admin-roles"),
+        requestAdmin("GET", null, "/api/admin-ai"),
       ]);
       render(data);
       renderCharacterData(characterData);
       renderRedeemCodeData(redeemCodeData);
       renderSiteControlData(siteData, true);
+      renderAdminRoles(roleData);
+      if (adminAiModel) adminAiModel.textContent = aiData.configured ? `Gemini · ${aiData.model}` : "Gemini 未配置";
+      setAdminAiStatus(aiData.configured ? "Gemini 已连接" : "请先配置 GEMINI_API_KEY", !aiData.configured);
       setStatus(`已载入 ${data.entries?.length || 0} 位玩家`);
       setCharacterStatus(`已载入 ${characterData.characters?.length || 0} 个人物`);
       setRedeemCodeStatus(`已载入 ${redeemCodeData.codes?.length || 0} 个兑换码`);
       setSiteControlStatus("网站状态已更新");
-      sessionStorage.setItem("cloud-jumper-admin-session", password);
+      if (password) sessionStorage.setItem("cloud-jumper-admin-session", password);
+      else sessionStorage.removeItem("cloud-jumper-admin-session");
+      sessionStorage.removeItem("cloud-jumper-admin-autologin-disabled");
       loginScreen.classList.add("is-hidden");
       dashboard.classList.remove("is-hidden");
     } catch (error) {
@@ -1231,6 +1461,19 @@
     runSiteControlAction({ action: "unlockSite" }, "正在解除网站封锁…");
   });
   refreshSiteControlButton?.addEventListener("click", loadSiteControlDashboard);
+  refreshAdminRolesButton?.addEventListener("click", loadAdminRoles);
+  adminRoleSearchInput?.addEventListener("input", renderAdminRoleList);
+  adminRoleList?.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-admin-role-action]");
+    const card = button?.closest("[data-player-id]");
+    if (!button || !card || button.disabled) return;
+    runAdminRoleAction(card.dataset.playerId, button.dataset.adminRoleAction);
+  });
+  adminAiForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    sendAdminAiMessage();
+  });
+  clearAdminAiButton?.addEventListener("click", resetAdminAiConversation);
 
   loginForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1239,20 +1482,32 @@
     loginButton.disabled = true;
     loadDashboard();
   });
+  accountAdminLoginButton?.addEventListener("click", () => {
+    accountToken = String(localStorage.getItem("cloud-jumper-account-token") || "");
+    password = "";
+    loginError.textContent = "";
+    sessionStorage.removeItem("cloud-jumper-admin-autologin-disabled");
+    loadDashboard();
+  });
 
   logoutButton.addEventListener("click", () => {
     password = "";
     players = [];
     characters = [];
     redeemCodes = [];
+    adminAccounts = [];
+    adminAccessData = null;
     siteControlData = null;
     closeCharacterEditor();
     closeRedeemCodeEditor();
     setAdminTab("players");
     sessionStorage.removeItem("cloud-jumper-admin-session");
+    sessionStorage.setItem("cloud-jumper-admin-autologin-disabled", "true");
     passwordInput.value = "";
     dashboard.classList.add("is-hidden");
     loginScreen.classList.remove("is-hidden");
+    accountAdminLoginButton?.classList.toggle("is-hidden", !accountToken);
+    loginError.textContent = "已退出后台；游戏账号仍保持登录。";
   });
 
   refreshButton.addEventListener("click", loadDashboard);
@@ -1299,6 +1554,9 @@
   }, 1000);
 
   password = String(sessionStorage.getItem("cloud-jumper-admin-session") || "");
-  if (password) loadDashboard();
+  accountToken = String(localStorage.getItem("cloud-jumper-account-token") || "");
+  accountAdminLoginButton?.classList.toggle("is-hidden", !accountToken);
+  const autoLoginDisabled = sessionStorage.getItem("cloud-jumper-admin-autologin-disabled") === "true";
+  if (password || (accountToken && !autoLoginDisabled)) loadDashboard();
   else passwordInput.focus();
 })();
