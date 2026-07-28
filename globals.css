@@ -1739,6 +1739,32 @@ button {
   .chat-message.is-mine .chat-admin-check { right: 1px; left: auto; }
 }
 
+/* v56 — long-press moderation without exposing admin controls to players */
+.chat-message-body {
+  -webkit-touch-callout: none;
+}
+
+.chat-message .chat-bubble {
+  transition: transform .14s ease, outline-color .14s ease, box-shadow .14s ease;
+}
+
+.chat-message.is-message-pressing .chat-bubble {
+  transform: scale(.985);
+  outline: 2px solid rgba(76, 157, 137, .28);
+  outline-offset: 2px;
+  box-shadow: 0 5px 14px rgba(38, 88, 80, .1);
+}
+
+.chat-list.is-admin-selecting .chat-message {
+  cursor: pointer;
+  user-select: none;
+}
+
+.chat-list.is-admin-selecting .chat-message:hover .chat-bubble {
+  outline: 1px solid rgba(218, 157, 47, .3);
+  outline-offset: 2px;
+}
+
 /* v16 — simplified game-like home and player profiles */
 .game-card {
   width: min(95vw, 520px);
