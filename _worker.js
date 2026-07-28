@@ -36,10 +36,14 @@ const CHAT_IMAGE_PREFIX = "cloud-jumper:chat:image:";
 const CHAT_RATE_PREFIX = "cloud-jumper:chat:rate:";
 const CHAT_AI_RATE_PREFIX = "cloud-jumper:chat:ai-rate:";
 const CHAT_AI_OUTREACH_PREFIX = "cloud-jumper:chat:outreach:";
+const CHAT_AI_STATUS_KEY = "cloud-jumper:chat:openai-status:v1";
 const CHAT_MAX_MESSAGES = 120;
 const CHAT_RECALL_MS = 5 * 60 * 1000;
 const CHAT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const CHAT_RETENTION_SECONDS = 7 * 24 * 60 * 60;
+const CHAT_DIRECT_AI_COOLDOWN_MS = 6 * 1000;
+const CHAT_QUESTION_AI_COOLDOWN_MS = 30 * 1000;
+const CHAT_AMBIENT_QUIET_WINDOW_MS = 2 * 60 * 1000;
 const ACCOUNT_SCAN_VERSION = 2;
 const ACCOUNT_SCAN_INTERVAL_MS = 5 * 60 * 1000;
 const PRESENCE_ONLINE_MS = 5 * 60 * 1000;
@@ -1202,6 +1206,21 @@ function dailyCompetitorChatMessages(now = Date.now(), restartAt = RIVAL_RESTART
   return messages.sort((a, b) => a.createdAt - b.createdAt).slice(-CHAT_MAX_MESSAGES);
 }
 
+function quietDailyCompetitorMessagesNearPlayers(competitorMessages, storedMessages) {
+  const realPlayerActivity = (Array.isArray(storedMessages) ? storedMessages : [])
+    .filter((message) =>
+      message &&
+      !message.recalled &&
+      !cleanPlayerId(message.playerId).startsWith("rival-") &&
+      Number(message.createdAt) > 0)
+    .map((message) => Number(message.createdAt));
+  if (!realPlayerActivity.length) return Array.isArray(competitorMessages) ? competitorMessages : [];
+  return (Array.isArray(competitorMessages) ? competitorMessages : []).filter((message) =>
+    !realPlayerActivity.some((createdAt) =>
+      Number(message.createdAt) >= createdAt - 15 * 1000 &&
+      Number(message.createdAt) <= createdAt + CHAT_AMBIENT_QUIET_WINDOW_MS));
+}
+
 const RIVAL_INTENT_RULES = [
   ["weather", /天气|气温|下雨|暴雨|台风|下雪|高温|冷不冷|热不热|空气质量|雾霾/, 16],
   ["news", /新闻|热搜|头条|时事|体育消息|科技消息|国内消息/, 16],
@@ -1221,9 +1240,32 @@ const RIVAL_INTENT_RULES = [
   ["casual", /哈哈|笑死|无聊|聊什么|今天玩|刚上线|睡了|晚安|早安/, 5],
 ];
 
-function analyzeCompetitorIntent(text, recentMessages = []) {
+function competitorMentionDetails(text) {
   const cleanText = cleanChatText(text);
   const lowerText = cleanText.toLocaleLowerCase();
+  for (const profile of DAILY_COMPETITORS) {
+    const name = profile.name.toLocaleLowerCase();
+    const atMentioned = lowerText.includes(`@${name}`) || lowerText.includes(`＠${name}`);
+    if (atMentioned || lowerText.includes(name)) {
+      let focusText = cleanText;
+      for (const prefix of [`@${profile.name}`, `＠${profile.name}`, profile.name]) {
+        focusText = focusText.replaceAll(prefix, " ");
+      }
+      return {
+        profile,
+        explicit: atMentioned,
+        focusText: cleanChatText(focusText).replace(/\s+/g, " ").trim(),
+      };
+    }
+  }
+  return { profile: null, explicit: false, focusText: cleanText };
+}
+
+function analyzeCompetitorIntent(text, recentMessages = []) {
+  const cleanText = cleanChatText(text);
+  const mention = competitorMentionDetails(cleanText);
+  const focusText = mention.focusText || cleanText;
+  const lowerText = focusText.toLocaleLowerCase();
   const scores = new Map();
   for (const [intent, pattern, weight] of RIVAL_INTENT_RULES) {
     const match = lowerText.match(pattern);
@@ -1231,10 +1273,8 @@ function analyzeCompetitorIntent(text, recentMessages = []) {
     const repeats = Math.min(3, lowerText.split(match[0]).length - 1);
     scores.set(intent, (scores.get(intent) || 0) + weight + Math.max(0, repeats - 1) * 2);
   }
-  const isQuestion = /[?？]|怎么|为什么|为啥|多少|哪个|能不能|是不是|如何|咋/.test(cleanText);
-  const directProfile = DAILY_COMPETITORS.find((profile) =>
-    lowerText.includes(`@${profile.name.toLocaleLowerCase()}`) ||
-    lowerText.includes(profile.name.toLocaleLowerCase()));
+  const isQuestion = /[?？]|怎么|为什么|为啥|多少|哪个|能不能|是不是|如何|咋/.test(focusText);
+  const directProfile = mention.profile;
   if (isQuestion && scores.size === 0) scores.set("question", 5);
   if (cleanText.length <= 12 && scores.size <= 1) {
     const recent = [...(Array.isArray(recentMessages) ? recentMessages : [])]
@@ -1251,8 +1291,10 @@ function analyzeCompetitorIntent(text, recentMessages = []) {
   const ordered = [...scores.entries()].sort((left, right) => right[1] - left[1]);
   return {
     cleanText,
+    focusText,
     lowerText,
     directProfile,
+    explicitMention: mention.explicit,
     isQuestion,
     intent: ordered[0]?.[0] || "general",
     secondaryIntent: ordered[1]?.[0] || "",
@@ -1288,6 +1330,97 @@ function specificCompetitorAnswer(analysis, accountName) {
   return "";
 }
 
+const RIVAL_REPLY_RELEVANCE = {
+  weather: /天气|气温|温度|下雨|降雨|晴|多云|风力|湿度|空气质量|预报/,
+  news: /新闻|消息|报道|赛事|比赛|发布|宣布|发生|来源/,
+  ranking: /排行|排名|赛季|冠军|成绩|玩家/,
+  account: /账号|登录|注册|密码|记录|名字|头像|金币|在线/,
+  battle: /对战|PK|pk|房间|邀请|难度|大招|准备/,
+  controls: /蹲|下滑|按住|松手|方向|控制|跳/,
+  hazards: /飞机|炸弹|足球|乌鸦|落石|石头|树枝|爆炸|掉血|伤害/,
+  cave: /洞穴|黑暗|手电|太阳|变暗|照亮/,
+  cliff: /悬崖|崖|洞|掉下|掉进|边缘|补跳|落点/,
+  jump: /跳|落地|起跳|空中|后空翻|体力/,
+  coins: /金币|大金币|吸币|三倍|余额|兑换/,
+  bug: /问题|异常|复现|判定|卡|网络|操作|关卡/,
+  character: /人物|角色|技能|灵敏|体力|跳|强哥|贝贝|梅西|姆巴佩|哈兰德|蟹老板|志炫|元元|果果|启航|云青|哆啦/,
+  challenge: /对战|PK|pk|难度|成绩|结果|比/,
+};
+
+function ensurePlayerMention(text, accountName) {
+  const mention = `@${cleanName(accountName) || "玩家"}`;
+  const value = cleanChatText(text);
+  if (!value) return "";
+  return value.includes(mention) ? value : cleanChatText(`${mention} ${value}`);
+}
+
+function isCompetitorReplyRelevant(text, analysis) {
+  const value = cleanChatText(text);
+  if (!value) return false;
+  if (
+    !["greeting", "casual"].includes(analysis.intent) &&
+    /刚上线[，,]今天打算|聊天室刚好缺个人|我先学一下你们的路线|今天准备玩哪关/.test(value)
+  ) return false;
+  const relevance = RIVAL_REPLY_RELEVANCE[analysis.intent];
+  if (relevance && !relevance.test(value)) return false;
+  return true;
+}
+
+function directCompetitorFallback(profile, analysis, accountName, snapshot, seed) {
+  const mention = `@${cleanName(accountName) || "玩家"}`;
+  const specific = specificCompetitorAnswer(analysis, accountName);
+  if (specific) return specific;
+  if (analysis.intent === "weather") {
+    return `${mention} 实时天气查询刚才没有成功，我不想随口编。你把城市和“今天/明天”写清楚，过几秒再问我一次。`;
+  }
+  if (analysis.intent === "news") {
+    return `${mention} 实时新闻查询刚才没有成功，我不想拿旧消息冒充今天的。给我一个球员、球队或新闻关键词，过几秒再试。`;
+  }
+  if (analysis.intent === "greeting") {
+    return `${mention} 在，我看到你叫我了。你想聊关卡路线、人物，还是直接开一局对战？`;
+  }
+  if (["general", "casual", "question"].includes(analysis.intent)) {
+    const topic = cleanChatText(analysis.focusText || analysis.cleanText)
+      .replace(/[?？!！。]+$/g, "")
+      .slice(0, 42);
+    return analysis.isQuestion
+      ? `${mention} 我看到你问的是“${topic || "刚才那件事"}”。这条我暂时没把握，不想答偏；再补一个具体条件，我按那个回答。`
+      : `${mention} 我看到你说的是“${topic || "刚才那件事"}”。我先按这个话题接，不另外扯关卡进度。`;
+  }
+  return composeCompetitorReply(
+    profile,
+    RIVAL_REPLY_PARTS[analysis.intent] ? analysis.intent : "general",
+    analysis.focusText || analysis.cleanText,
+    accountName,
+    snapshot,
+    seed,
+  );
+}
+
+function normalizeOpenAIStatus(value) {
+  if (!value || typeof value !== "object") return null;
+  return {
+    ok: value.ok === true,
+    checkedAt: Math.max(0, Number(value.checkedAt) || 0),
+    status: Math.max(0, Math.min(599, Math.round(Number(value.status) || 0))),
+    reason: String(value.reason || "").replace(/[^a-z0-9_.-]/gi, "").slice(0, 48),
+    model: String(value.model || "").replace(/[^a-z0-9_.-]/gi, "").slice(0, 48),
+  };
+}
+
+async function recordOpenAIStatus(env, value) {
+  if (!env?.LEADERBOARD) return;
+  try {
+    await env.LEADERBOARD.put(CHAT_AI_STATUS_KEY, JSON.stringify(normalizeOpenAIStatus({
+      ...value,
+      checkedAt: Date.now(),
+      model: String(env.OPENAI_MODEL || "gpt-5.6-terra"),
+    })), { expirationTtl: 7 * 24 * 60 * 60 });
+  } catch {
+    // Diagnostics must never block chat.
+  }
+}
+
 function extractOpenAIResponseText(payload) {
   if (typeof payload?.output_text === "string") return payload.output_text;
   for (const output of (Array.isArray(payload?.output) ? payload.output : [])) {
@@ -1304,11 +1437,12 @@ async function generateOpenAICompetitorReply(env, profile, account, analysis, re
   const rateKey = `${CHAT_AI_RATE_PREFIX}${String(account?.id || cleanPlayerId(account?.playerId) || "unknown")}`;
   const lastAt = Number(await env.LEADERBOARD.get(rateKey)) || 0;
   const now = Date.now();
-  if (lastAt && now - lastAt < 45000) return "";
+  const cooldownMs = analysis.directProfile ? CHAT_DIRECT_AI_COOLDOWN_MS : CHAT_QUESTION_AI_COOLDOWN_MS;
+  if (lastAt && now - lastAt < cooldownMs) return "";
   await env.LEADERBOARD.put(rateKey, String(now), { expirationTtl: 90 });
   const context = (Array.isArray(recentMessages) ? recentMessages : [])
     .filter((message) => message && !message.recalled && cleanChatText(message.text))
-    .slice(-8)
+    .slice(-6)
     .map((message) => `${cleanName(message.name) || "玩家"}：${cleanChatText(message.text)}`)
     .join("\n");
   const wantsCurrentInformation = ["weather", "news"].includes(analysis.intent);
@@ -1320,7 +1454,9 @@ async function generateOpenAICompetitorReply(env, profile, account, analysis, re
     instructions: [
       `你是游戏《云朵小勇士》内公开标注为自动挑战者的角色“${profile.name}”。`,
       "用自然、简短、有逻辑的中文回复，通常 1–3 句，不要机械复述问题。",
-      "只回答玩家实际问的重点；条件不足时只追问最关键的一项（关卡、人物或操作）。",
+      "最后一段“必须回答的消息”是唯一主问题；最近对话只用于理解代词，不得跟着其中的旧话题跑。",
+      "第一句必须直接回答玩家实际问的重点；条件不足时只追问最关键的一项（关卡、人物或操作）。",
+      "除非玩家主动问你在做什么，否则不要谈自己刚上线、准备玩哪关或学习谁的路线。",
       "不要声称自己是现实中的真人，不要编造刚刚发生的战绩、新闻或天气。",
       "游戏规则：每关100分；三连跳落地才重置；第三跳更矮；洞穴入口回满血；好友对战可选难度且大招每局一次。",
       "如果使用网络查询，只陈述能核对的当前信息，不确定就说明不确定。",
@@ -1334,7 +1470,7 @@ async function generateOpenAICompetitorReply(env, profile, account, analysis, re
           `当前意图：${analysis.intent}${analysis.secondaryIntent ? `；次要意图：${analysis.secondaryIntent}` : ""}`,
           `角色当前进度：第${snapshot.level}关；正在使用${snapshot.selectedCharacter}`,
           context ? `最近对话：\n${context}` : "最近对话：无",
-          `需要回复的玩家消息：${analysis.cleanText}`,
+          `必须回答的消息：${analysis.focusText || analysis.cleanText}`,
         ].join("\n\n"),
       }],
     }],
@@ -1352,10 +1488,31 @@ async function generateOpenAICompetitorReply(env, profile, account, analysis, re
       body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
-    if (!response.ok) return "";
+    if (!response.ok) {
+      let reason = `http_${response.status}`;
+      try {
+        const errorPayload = await response.json();
+        reason = String(errorPayload?.error?.code || errorPayload?.error?.type || reason);
+      } catch {
+        // The HTTP status is enough for the safe diagnostic.
+      }
+      await recordOpenAIStatus(env, { ok: false, status: response.status, reason });
+      return "";
+    }
     const payload = await response.json();
-    return cleanChatText(extractOpenAIResponseText(payload));
-  } catch {
+    const reply = cleanChatText(extractOpenAIResponseText(payload));
+    await recordOpenAIStatus(env, {
+      ok: Boolean(reply),
+      status: response.status,
+      reason: reply ? "ok" : "empty_response",
+    });
+    return reply;
+  } catch (error) {
+    await recordOpenAIStatus(env, {
+      ok: false,
+      status: 0,
+      reason: error?.name === "AbortError" ? "timeout" : "network_error",
+    });
     return "";
   } finally {
     clearTimeout(timeout);
@@ -1392,24 +1549,25 @@ async function triggeredCompetitorChatReplies(text, account, recentMessages, env
   let primaryText = "";
   const useCloudReply = Boolean(
     env?.OPENAI_API_KEY &&
-    (analysis.directProfile || analysis.isQuestion) &&
-    (gameIntent || ["weather", "news"].includes(analysis.intent))
+    (analysis.directProfile || analysis.isQuestion)
   );
   if (useCloudReply) {
     primaryText = await generateOpenAICompetitorReply(env, profile, account, analysis, recentMessages, snapshot);
   }
-  if (!primaryText) primaryText = specificCompetitorAnswer(analysis, cleanAccountName);
-  if (!primaryText) {
-    primaryText = composeCompetitorReply(
-      profile,
-      RIVAL_REPLY_PARTS[analysis.intent] ? analysis.intent : "general",
-      analysis.cleanText,
-      cleanAccountName,
-      snapshot,
-      seed,
-    );
+  if (primaryText) {
+    primaryText = ensurePlayerMention(primaryText, cleanAccountName);
+    if (!isCompetitorReplyRelevant(primaryText, analysis)) primaryText = "";
   }
-  const firstDelay = 5000 + (seed % 12000);
+  if (!primaryText) primaryText = directCompetitorFallback(
+    profile,
+    analysis,
+    cleanAccountName,
+    snapshot,
+    seed,
+  );
+  const firstDelay = analysis.directProfile
+    ? 1800 + (seed % 3200)
+    : 5000 + (seed % 7000);
   const directBattleRequest = Boolean(analysis.directProfile && ["battle", "challenge"].includes(analysis.intent));
   const replies = [
     competitorChatMessage(
@@ -2264,7 +2422,10 @@ async function handleChat(request, env) {
     }
     let competitorMessages = [];
     try {
-      competitorMessages = dailyCompetitorChatMessages(now, rivalRestartAt);
+      competitorMessages = quietDailyCompetitorMessagesNearPlayers(
+        dailyCompetitorChatMessages(now, rivalRestartAt),
+        storedMessages,
+      );
     } catch {
       competitorMessages = [];
     }
@@ -2358,7 +2519,7 @@ async function handleChat(request, env) {
         messages.push(...await triggeredCompetitorChatReplies(
           text,
           account,
-          messages.slice(-10),
+          messages.filter((item) => item.id !== id).slice(-10),
           env,
           now,
           rivalRestartAt,
@@ -3809,13 +3970,17 @@ export default {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: apiHeaders });
         if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
         const lockStatus = siteLockPayload(await loadSiteLock(env.LEADERBOARD), Date.now()).lock;
+        const openAILastCheck = env.LEADERBOARD
+          ? normalizeOpenAIStatus(await env.LEADERBOARD.get(CHAT_AI_STATUS_KEY, { type: "json" }))
+          : null;
         return json({
           ok: true,
-          version: "v51",
+          version: "v52",
           rankingRepairVersion: ACCOUNT_SCAN_VERSION,
           localReplyVariants: LOCAL_REPLY_VARIANT_COUNT,
           openAIConfigured: Boolean(env.OPENAI_API_KEY),
           openAIWebSearchEnabled: String(env.OPENAI_WEB_SEARCH || "").toLocaleLowerCase() === "true",
+          openAILastCheck,
           kvBound: Boolean(env.LEADERBOARD),
           battleBound: Boolean(env.BATTLE_ROOMS),
           siteLocked: lockStatus.active,
