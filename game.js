@@ -164,6 +164,7 @@
   const chatAdminSelectAllButton = document.getElementById("chatAdminSelectAllButton");
   const chatAdminDeleteButton = document.getElementById("chatAdminDeleteButton");
   const chatAdminCancelButton = document.getElementById("chatAdminCancelButton");
+  const chatInteractionNote = document.getElementById("chatInteractionNote");
   const profileInviteButton = document.getElementById("profileInviteButton");
   const battleEntryButton = document.getElementById("battleEntryButton");
   const battleDialog = document.getElementById("battleDialog");
@@ -3332,9 +3333,15 @@
     chatAdminToolbar?.classList.toggle("is-hidden", !chatViewerIsAdmin);
     chatAdminManageButton?.classList.toggle("is-hidden", chatAdminSelectionMode);
     chatAdminSelection?.classList.toggle("is-hidden", !chatAdminSelectionMode);
+    chatList?.classList.toggle("is-admin-selecting", chatViewerIsAdmin && chatAdminSelectionMode);
     const count = chatAdminSelectedIds.size;
     if (chatAdminSelectionCount) chatAdminSelectionCount.textContent = `已选 ${count} 条`;
     if (chatAdminDeleteButton) chatAdminDeleteButton.disabled = count === 0;
+    if (chatInteractionNote) {
+      chatInteractionNote.textContent = chatViewerIsAdmin
+        ? "长按任意消息开始多选删除 · 长按头像可以 @ 对方"
+        : "长按头像可以 @ 对方 · 长按自己的消息可以撤回";
+    }
   }
 
   function applyChatAdminAccess(value) {
@@ -3353,6 +3360,20 @@
     chatRenderFingerprint = "";
     updateChatAdminTools();
     renderChatMessages(chatMessagesSnapshot);
+  }
+
+  function toggleChatAdminMessage(message, forceSelected = null) {
+    if (!chatViewerIsAdmin || !message?.id || message.adminDeletable !== true) return false;
+    chatAdminSelectionMode = true;
+    const shouldSelect = forceSelected === null
+      ? !chatAdminSelectedIds.has(message.id)
+      : forceSelected === true;
+    if (shouldSelect) chatAdminSelectedIds.add(message.id);
+    else chatAdminSelectedIds.delete(message.id);
+    chatRenderFingerprint = "";
+    updateChatAdminTools();
+    renderChatMessages(chatMessagesSnapshot);
+    return true;
   }
 
   async function deleteSelectedChatMessages() {
@@ -3429,19 +3450,69 @@
         : "";
       const bubbleContents = `${text ? `<span>${text}</span>` : ""}${imageMarkup}${battleInvite}`;
       const mentionBadge = mentionsMe ? "<em class=\"chat-mentioned-me\">提到你</em>" : "";
-      return `<article class="chat-message${mine ? " is-mine" : ""}${mentionsMe ? " is-mention" : ""}${chatAdminSelectedIds.has(message.id) ? " is-admin-selected" : ""}">${adminSelectionButton}<button class="chat-message-avatar" type="button" data-chat-avatar="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 的资料；长按可以单独@他" title="点击看资料，长按@玩家">${avatar.icon}</button><div class="chat-message-body"><div class="chat-message-meta"><b>${escapeHtml(message.name || "玩家")}</b>${adminBadge}<span>${chatTimeLabel(message.createdAt)}</span>${mentionBadge}${recallButton}</div><div class="chat-bubble${recalled ? " is-recalled" : ""}">${bubbleContents}</div></div></article>`;
+      return `<article class="chat-message${mine ? " is-mine" : ""}${mentionsMe ? " is-mention" : ""}${chatAdminSelectedIds.has(message.id) ? " is-admin-selected" : ""}" data-chat-message="${index}">${adminSelectionButton}<button class="chat-message-avatar" type="button" data-chat-avatar="${index}" aria-label="查看 ${escapeHtml(message.name || "玩家")} 的资料；长按可以单独@他" title="点击看资料，长按@玩家">${avatar.icon}</button><div class="chat-message-body"><div class="chat-message-meta"><b>${escapeHtml(message.name || "玩家")}</b>${adminBadge}<span>${chatTimeLabel(message.createdAt)}</span>${mentionBadge}${recallButton}</div><div class="chat-bubble${recalled ? " is-recalled" : ""}">${bubbleContents}</div></div></article>`;
     }).join("") : "<div class=\"chat-empty\">还没有消息，来打个招呼吧！</div>";
 
-    for (const button of chatList.querySelectorAll("[data-chat-admin-select]")) {
-      button.addEventListener("click", () => {
-        const message = chatMessagesSnapshot[Number(button.dataset.chatAdminSelect)];
-        if (!message?.id || message.adminDeletable !== true) return;
-        if (chatAdminSelectedIds.has(message.id)) chatAdminSelectedIds.delete(message.id);
-        else chatAdminSelectedIds.add(message.id);
-        chatRenderFingerprint = "";
-        updateChatAdminTools();
-        renderChatMessages(chatMessagesSnapshot);
+    for (const article of chatList.querySelectorAll("[data-chat-message]")) {
+      let startX = 0;
+      let startY = 0;
+      let pressTimer = 0;
+      const message = chatMessagesSnapshot[Number(article.dataset.chatMessage)];
+      const ignoreHoldTarget = (target) => target instanceof Element && Boolean(target.closest(
+        "[data-chat-avatar], [data-chat-recall], [data-chat-image], [data-chat-battle-invite]",
+      ));
+      const clearPress = () => {
+        if (pressTimer) window.clearTimeout(pressTimer);
+        pressTimer = 0;
+        article.classList.remove("is-message-pressing");
+      };
+      const triggerLongPress = () => {
+        clearPress();
+        if (chatViewerIsAdmin && message?.adminDeletable === true) {
+          toggleChatAdminMessage(message, true);
+          setChatStatus(`已选中消息，可继续点击其他消息多选`);
+          if (window.navigator?.vibrate) window.navigator.vibrate(30);
+          return;
+        }
+        if (!chatViewerIsAdmin && message?.mine && message?.canRecall) {
+          if (window.navigator?.vibrate) window.navigator.vibrate(24);
+          void recallChatMessage(message);
+        }
+      };
+      article.addEventListener("pointerdown", (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
+        if (ignoreHoldTarget(event.target)) return;
+        const canHold = chatViewerIsAdmin
+          ? message?.adminDeletable === true
+          : Boolean(message?.mine && message?.canRecall);
+        if (!canHold) return;
+        clearPress();
+        startX = event.clientX;
+        startY = event.clientY;
+        article.classList.add("is-message-pressing");
+        pressTimer = window.setTimeout(triggerLongPress, 460);
       });
+      article.addEventListener("pointermove", (event) => {
+        if (Math.hypot(event.clientX - startX, event.clientY - startY) > 12) clearPress();
+      });
+      article.addEventListener("pointerup", clearPress);
+      article.addEventListener("pointercancel", clearPress);
+      article.addEventListener("pointerleave", clearPress);
+      article.addEventListener("contextmenu", (event) => {
+        if (ignoreHoldTarget(event.target)) return;
+        const canHold = chatViewerIsAdmin
+          ? message?.adminDeletable === true
+          : Boolean(message?.mine && message?.canRecall);
+        if (!canHold) return;
+        event.preventDefault();
+        triggerLongPress();
+      });
+      article.addEventListener("click", (event) => {
+        if (!chatViewerIsAdmin || !chatAdminSelectionMode || message?.adminDeletable !== true) return;
+        event.preventDefault();
+        event.stopPropagation();
+        toggleChatAdminMessage(message);
+      }, { capture: true });
     }
     for (const button of chatList.querySelectorAll("[data-chat-recall]")) {
       button.addEventListener("click", () => recallChatMessage(chatMessagesSnapshot[Number(button.dataset.chatRecall)]));
